@@ -19,11 +19,18 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
 
   if (opacity <= 0) return null;
 
+  const stops = [
+    { label: "Airolo" },
+    { label: "Passo del San Gottardo" },
+    { label: "Furka" },
+    { label: "Nufenenpass", highlight: true },
+  ];
+
   return (
     <div
       style={{
         position: "absolute",
-        bottom: 86,
+        bottom: 96,
         left: 0,
         right: 0,
         display: "flex",
@@ -34,32 +41,37 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
         fontFamily,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          fontSize: 30,
-          fontWeight: 700,
-          color: "#ffffff",
-          letterSpacing: 1,
-        }}
-      >
-        <span>Airolo</span>
-        <span style={{ color: "#ff9d6f" }}>→</span>
-        <span>Passo del San Gottardo</span>
-        <span style={{ color: "#ff9d6f" }}>→</span>
-        <span>Furka</span>
-        <span style={{ color: "#ff9d6f" }}>→</span>
-        <span style={{ color: "#ffb199" }}>Nufenenpass</span>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+        {stops.map((stop, i) => (
+          <React.Fragment key={stop.label}>
+            {i > 0 && (
+              <div style={{ color: "#ff9d6f", fontSize: 20, lineHeight: "20px" }}>
+                ↓
+              </div>
+            )}
+            <div
+              style={{
+                fontSize: 30,
+                fontWeight: 700,
+                color: stop.highlight ? "#ffb199" : "#ffffff",
+                letterSpacing: 0.5,
+                textAlign: "center",
+              }}
+            >
+              {stop.label}
+            </div>
+          </React.Fragment>
+        ))}
       </div>
       <div
         style={{
-          marginTop: 10,
-          fontSize: 20,
+          marginTop: 16,
+          fontSize: 19,
           fontWeight: 500,
           color: "#9fb2d6",
-          letterSpacing: 2,
+          letterSpacing: 1.5,
+          textAlign: "center",
+          padding: "0 40px",
         }}
       >
         PASSO DELLA NOVENA · 2 478 M S.L.M.

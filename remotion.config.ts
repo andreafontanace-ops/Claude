@@ -11,6 +11,12 @@ Config.setRspack(true);
 Config.setVideoImageFormat("jpeg");
 Config.setOverwriteOutput(true);
 Config.overrideBundlerConfig(enableTailwind);
+// Standard limited-range yuv420p (bt709 forces "-color_range tv") instead
+// of the default full-range yuvj420p: broadest compatibility with mobile
+// chat-app video players (WhatsApp/Telegram/iMessage previews, older
+// Android players, etc), which can fail to preview full-range video.
+Config.setPixelFormat("yuv420p");
+Config.setColorSpace("bt709");
 
 // Some sandboxed environments block downloading Remotion's own headless
 // Chrome and instead ship a pre-installed one. Use it when present.
