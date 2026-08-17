@@ -1,0 +1,21 @@
+// See all configuration options: https://remotion.dev/docs/config
+// Each option also is available as a CLI flag: https://remotion.dev/docs/cli
+
+// Note: When using the Node.JS APIs, the config file doesn't apply. Instead, pass options directly to the APIs
+
+import { existsSync } from "node:fs";
+import { Config } from "@remotion/cli/config";
+import { enableTailwind } from '@remotion/tailwind-v4';
+
+Config.setRspack(true);
+Config.setVideoImageFormat("jpeg");
+Config.setOverwriteOutput(true);
+Config.overrideBundlerConfig(enableTailwind);
+
+// Some sandboxed environments block downloading Remotion's own headless
+// Chrome and instead ship a pre-installed one. Use it when present.
+const sandboxHeadlessShell =
+  "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
+if (existsSync(sandboxHeadlessShell)) {
+  Config.setBrowserExecutable(sandboxHeadlessShell);
+}
