@@ -27,11 +27,11 @@ export const TravelDot: React.FC<{
         left,
         top,
         transform: "translate(-50%, -50%)",
-        width: 16,
-        height: 16,
+        width: 22,
+        height: 22,
         borderRadius: "50%",
         background: "#fff5f0",
-        boxShadow: "0 0 0 4px rgba(255,122,69,0.55), 0 0 14px 4px rgba(255,122,69,0.5)",
+        boxShadow: "0 0 0 5px rgba(255,122,69,0.55), 0 0 18px 6px rgba(255,122,69,0.5)",
       }}
     />
   );

@@ -45,16 +45,16 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
         {stops.map((stop, i) => (
           <React.Fragment key={stop.label}>
             {i > 0 && (
-              <div style={{ color: "#ff9d6f", fontSize: 20, lineHeight: "20px" }}>
+              <div style={{ color: "#ff9d6f", fontSize: 30, lineHeight: "26px" }}>
                 ↓
               </div>
             )}
             <div
               style={{
-                fontSize: 30,
+                fontSize: 46,
                 fontWeight: 700,
                 color: stop.highlight ? "#ffb199" : "#ffffff",
-                letterSpacing: 0.5,
+                letterSpacing: 0.3,
                 textAlign: "center",
               }}
             >
@@ -65,11 +65,11 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
       </div>
       <div
         style={{
-          marginTop: 16,
-          fontSize: 19,
-          fontWeight: 500,
+          marginTop: 20,
+          fontSize: 27,
+          fontWeight: 600,
           color: "#9fb2d6",
-          letterSpacing: 1.5,
+          letterSpacing: 1,
           textAlign: "center",
           padding: "0 40px",
         }}

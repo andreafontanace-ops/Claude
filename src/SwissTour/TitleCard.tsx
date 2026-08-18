@@ -24,7 +24,7 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
 
   const subOpacity = interpolate(
     frame,
-    [TITLE_HOLD[0] - 15, TITLE_HOLD[0] + 15],
+    [TITLE_HOLD[0], TITLE_HOLD[0] + 10],
     [0, 1],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
@@ -35,7 +35,7 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
     <div
       style={{
         position: "absolute",
-        top: 90,
+        top: 100,
         left: 0,
         right: 0,
         display: "flex",
@@ -48,10 +48,10 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
     >
       <div
         style={{
-          fontSize: 88,
+          fontSize: 128,
           fontWeight: 800,
           color: "#ffffff",
-          letterSpacing: 6,
+          letterSpacing: 4,
           textShadow: "0 8px 30px rgba(0,0,0,0.5)",
         }}
       >
@@ -59,12 +59,14 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
       </div>
       <div
         style={{
-          marginTop: 14,
-          fontSize: 28,
-          fontWeight: 500,
+          marginTop: 18,
+          fontSize: 34,
+          fontWeight: 600,
           color: "#a9c1ec",
-          letterSpacing: 4,
+          letterSpacing: 2,
           opacity: subOpacity,
+          textAlign: "center",
+          padding: "0 40px",
         }}
       >
         ALPI LEPONTINE · TICINO · URI · VALAIS

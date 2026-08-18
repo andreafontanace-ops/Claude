@@ -21,7 +21,7 @@ export const RoutePath: React.FC<{
         fill="none"
         stroke={color}
         strokeOpacity={0.35}
-        strokeWidth={5.5}
+        strokeWidth={7}
         strokeLinecap="round"
         strokeLinejoin="round"
         pathLength={1}
@@ -32,7 +32,7 @@ export const RoutePath: React.FC<{
         d={d}
         fill="none"
         stroke={color}
-        strokeWidth={2.3}
+        strokeWidth={3}
         strokeLinecap="round"
         strokeLinejoin="round"
         pathLength={1}

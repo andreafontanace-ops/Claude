@@ -77,10 +77,10 @@ export const PinMarker: React.FC<{
             position: "absolute",
             left: 0,
             top: 0,
-            width: 46,
-            height: 46,
+            width: 60,
+            height: 60,
             borderRadius: "50%",
-            border: "3px solid #e63946",
+            border: "4px solid #e63946",
             transform: `translate(-50%, -50%) scale(${ringScale})`,
             opacity: ringOpacity,
           }}
@@ -97,7 +97,7 @@ export const PinMarker: React.FC<{
           filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
         }}
       >
-        <svg width={56} height={72} viewBox="0 0 56 72">
+        <svg width={74} height={95} viewBox="0 0 56 72">
           <path
             d="M28 2C13.6 2 2 13.6 2 28c0 19.5 26 42 26 42s26-22.5 26-42C54 13.6 42.4 2 28 2z"
             fill="#e63946"
@@ -117,8 +117,8 @@ export const PinMarker: React.FC<{
           opacity: labelOpacity,
           background: "rgba(12, 18, 32, 0.82)",
           border: "1px solid rgba(255,255,255,0.15)",
-          borderRadius: 10,
-          padding: "10px 18px",
+          borderRadius: 14,
+          padding: "14px 24px",
           whiteSpace: "nowrap",
           textAlign: "center",
           boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
@@ -127,9 +127,9 @@ export const PinMarker: React.FC<{
         <div
           style={{
             color: "#ffffff",
-            fontSize: 26,
+            fontSize: 38,
             fontWeight: 700,
-            letterSpacing: 0.2,
+            letterSpacing: 0.1,
           }}
         >
           {waypoint.name}
@@ -143,8 +143,8 @@ export const PinMarker: React.FC<{
         <div
           style={{
             color: "#9fb2d6",
-            fontSize: 17,
-            marginTop: 2,
+            fontSize: 24,
+            marginTop: 4,
             letterSpacing: 0.5,
           }}
         >

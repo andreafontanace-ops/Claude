@@ -76,14 +76,14 @@ export const SwissAlpsTour: React.FC = () => {
           waypoint={gotthard}
           camera={camera}
           frame={frame}
-          revealFrame={284}
+          revealFrame={160}
           showLabel
         />
         <WaypointTick
           waypoint={andermatt}
           camera={camera}
           frame={frame}
-          revealFrame={311}
+          revealFrame={174}
         />
         <WaypointTick
           waypoint={furka}
@@ -96,13 +96,13 @@ export const SwissAlpsTour: React.FC = () => {
           waypoint={oberwald}
           camera={camera}
           frame={frame}
-          revealFrame={402}
+          revealFrame={222}
         />
         <WaypointTick
           waypoint={ulrichen}
           camera={camera}
           frame={frame}
-          revealFrame={427}
+          revealFrame={236}
         />
 
         <PinMarker

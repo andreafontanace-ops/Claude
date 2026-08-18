@@ -25,7 +25,7 @@ export const WaypointTick: React.FC<{
 
   if (opacity <= 0) return null;
 
-  const dotSize = showLabel ? 16 : 11;
+  const dotSize = showLabel ? 22 : 15;
 
   // `left, top` mark the exact geo point. The dot is centered on it and the
   // label (if any) is positioned independently below, so a tall label never
@@ -41,8 +41,8 @@ export const WaypointTick: React.FC<{
           height: dotSize,
           borderRadius: "50%",
           background: "#ffb199",
-          border: "2.5px solid #fff5f0",
-          boxShadow: "0 0 0 4px rgba(255,122,69,0.28)",
+          border: "3px solid #fff5f0",
+          boxShadow: "0 0 0 5px rgba(255,122,69,0.28)",
           transform: `translate(-50%, -50%) scale(${scale})`,
         }}
       />
@@ -55,16 +55,16 @@ export const WaypointTick: React.FC<{
             transform: "translate(-50%, 0)",
             background: "rgba(12, 18, 32, 0.78)",
             border: "1px solid rgba(255,255,255,0.13)",
-            borderRadius: 8,
-            padding: "5px 12px",
+            borderRadius: 12,
+            padding: "9px 18px",
             whiteSpace: "nowrap",
             textAlign: "center",
           }}
         >
-          <div style={{ color: "#fff", fontSize: 19, fontWeight: 700 }}>
+          <div style={{ color: "#fff", fontSize: 29, fontWeight: 700 }}>
             {waypoint.name}
           </div>
-          <div style={{ color: "#9fb2d6", fontSize: 13, marginTop: 1 }}>
+          <div style={{ color: "#9fb2d6", fontSize: 20, marginTop: 2 }}>
             {waypoint.elevation.toLocaleString("it-CH")} m
           </div>
         </div>
