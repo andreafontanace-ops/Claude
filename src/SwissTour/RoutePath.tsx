@@ -13,6 +13,10 @@ export const RoutePath: React.FC<{
     easing: Easing.inOut(Easing.cubic),
   });
 
+  // A round linecap still paints a dot for a zero-length dash, which would
+  // leave a stray blob sitting on the map before the leg starts drawing.
+  if (progress <= 0) return null;
+
   return (
     <>
       {/* white casing so the line reads on any pastel tile underneath */}

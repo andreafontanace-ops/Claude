@@ -20,11 +20,13 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
 
   if (opacity <= 0) return null;
 
+  // The ride is a loop, so it opens and closes on Airolo.
   const stops = [
     { label: "Airolo", color: ROUTE_BLUE },
     { label: "Passo del San Gottardo", color: ROUTE_BLUE },
     { label: "Furka", color: ROUTE_BLUE },
     { label: "Nufenenpass", color: ROUTE_RED },
+    { label: "Airolo", color: ROUTE_RED },
   ];
 
   return (
@@ -44,13 +46,13 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
         {stops.map((stop, i) => (
-          <React.Fragment key={stop.label}>
+          <React.Fragment key={`${stop.label}-${i}`}>
             {i > 0 && (
               <div
                 style={{
                   color: stops[i].color,
-                  fontSize: 34,
-                  lineHeight: "28px",
+                  fontSize: 30,
+                  lineHeight: "24px",
                 }}
               >
                 ↓
@@ -58,7 +60,7 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
             )}
             <div
               style={{
-                fontSize: 58,
+                fontSize: 52,
                 fontWeight: 800,
                 textTransform: "uppercase",
                 color: stop.color,

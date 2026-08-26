@@ -10,7 +10,8 @@ export const PinMarker: React.FC<{
   frame: number;
   dropRange: readonly [number, number];
   labelRange: readonly [number, number];
-}> = ({ waypoint, camera, frame, dropRange, labelRange }) => {
+  labelHideRange?: readonly [number, number];
+}> = ({ waypoint, camera, frame, dropRange, labelRange, labelHideRange }) => {
   const { fps } = useVideoConfig();
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -29,18 +30,19 @@ export const PinMarker: React.FC<{
   const dropY = interpolate(fallProgress, [0, 1], [-320, 0]);
   const landed = frame > dropStart + dropDuration * 0.55;
 
-  const squash = interpolate(
-    fallProgress,
-    [0.85, 1, 1.15],
-    [1, 1.35, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const squashY = interpolate(
-    fallProgress,
-    [0.85, 1, 1.15],
-    [1, 0.72, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
+  // Impact squash, keyed off the frame rather than off `fallProgress`: the
+  // spring settles at exactly 1, so driving the squash from its value left
+  // the landed pin permanently flattened instead of springing back.
+  const impact = dropStart + dropDuration * 0.72;
+  const squashKeys = [impact, impact + 5, impact + 15] as const;
+  const squash = interpolate(frame, squashKeys, [1, 1.24, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const squashY = interpolate(frame, squashKeys, [1, 0.8, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
   const ringScale = interpolate(
     frame,
@@ -55,10 +57,20 @@ export const PinMarker: React.FC<{
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
-  const labelOpacity = interpolate(frame, labelRange, [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  // The label is a wide box; once the final route card slides in below it
+  // they would collide, so it fades back out on the way there.
+  const labelHide = labelHideRange
+    ? interpolate(frame, labelHideRange, [1, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 1;
+
+  const labelOpacity =
+    interpolate(frame, labelRange, [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    }) * labelHide;
   const labelY = interpolate(frame, labelRange, [10, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -98,7 +110,7 @@ export const PinMarker: React.FC<{
           filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
         }}
       >
-        <svg width={86} height={110} viewBox="0 0 56 72">
+        <svg width={84} height={108} viewBox="0 0 56 72">
           <path
             d="M28 2C13.6 2 2 13.6 2 28c0 19.5 26 42 26 42s26-22.5 26-42C54 13.6 42.4 2 28 2z"
             fill="#e63946"

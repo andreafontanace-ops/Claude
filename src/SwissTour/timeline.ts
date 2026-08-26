@@ -3,19 +3,22 @@
 export const FPS = 30;
 export const DURATION = 330; // 11s
 
-export const INTRO_FADE_IN = [0, 15] as const;
-export const TITLE_HOLD = [15, 48] as const;
-export const TITLE_FADE_OUT = [48, 66] as const;
+export const INTRO_FADE_IN = [0, 14] as const;
+export const TITLE_HOLD = [14, 42] as const;
+export const TITLE_FADE_OUT = [42, 58] as const;
 
-export const CAMERA_ZOOM = [42, 105] as const;
+export const CAMERA_ZOOM = [38, 96] as const;
 
-export const PIN_DROP = [95, 124] as const;
-export const PIN_LABEL = [116, 138] as const;
+export const PIN_DROP = [84, 112] as const;
+export const PIN_LABEL = [104, 124] as const;
 
-export const ROUTE_A = [135, 205] as const; // Airolo -> Furka
-export const ROUTE_B = [205, 265] as const; // Furka -> Nufenenpass
+// The ride is one loop, drawn in three legs. Leg spans are proportional to
+// each leg's real length so the line advances at a roughly steady speed.
+export const ROUTE_A = [120, 186] as const; // Airolo -> Gottardo -> Furka
+export const ROUTE_B = [186, 224] as const; // Furka -> Nufenenpass
+export const ROUTE_C = [224, 260] as const; // Nufenenpass -> Val Bedretto -> Airolo
 
-export const ARRIVAL_PULSE = [265, 295] as const;
+export const ARRIVAL_PULSE = [224, 254] as const;
 
-export const FINAL_CARD = [272, 315] as const;
-export const OUTRO_FADE = [312, 330] as const;
+export const FINAL_CARD = [264, 302] as const;
+export const OUTRO_FADE = [314, 330] as const;

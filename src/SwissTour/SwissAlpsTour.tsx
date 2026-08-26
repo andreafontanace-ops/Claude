@@ -12,7 +12,14 @@ import { useCamera } from "./useCamera";
 import { fontFamily } from "./fonts";
 import { ROUTE_BLUE, ROUTE_RED } from "./palette";
 import { routeSegments, waypoints } from "./geoData";
-import { PIN_DROP, PIN_LABEL, ROUTE_A, ROUTE_B } from "./timeline";
+import {
+  FINAL_CARD,
+  PIN_DROP,
+  PIN_LABEL,
+  ROUTE_A,
+  ROUTE_B,
+  ROUTE_C,
+} from "./timeline";
 
 const byId = (id: string) => waypoints.find((w) => w.id === id)!;
 
@@ -23,6 +30,7 @@ export const SwissAlpsTour: React.FC = () => {
 
   const segAirolo = routeSegments[0];
   const segFurka = routeSegments[1];
+  const segBedretto = routeSegments[2];
 
   const nufenen = byId("nufenen");
   const airolo = byId("airolo");
@@ -31,6 +39,8 @@ export const SwissAlpsTour: React.FC = () => {
   const furka = byId("furka");
   const oberwald = byId("oberwald");
   const ulrichen = byId("ulrichen");
+  const allacqua = byId("allacqua");
+  const bedretto = byId("bedretto");
 
   return (
     <AbsoluteFill
@@ -48,6 +58,7 @@ export const SwissAlpsTour: React.FC = () => {
           <SwitzerlandMap />
           <RoutePath d={segAirolo.d} frame={frame} range={ROUTE_A} color={ROUTE_BLUE} />
           <RoutePath d={segFurka.d} frame={frame} range={ROUTE_B} color={ROUTE_RED} />
+          <RoutePath d={segBedretto.d} frame={frame} range={ROUTE_C} color={ROUTE_RED} />
         </g>
       </svg>
 
@@ -66,6 +77,13 @@ export const SwissAlpsTour: React.FC = () => {
           range={ROUTE_B}
           color={ROUTE_RED}
         />
+        <TravelDot
+          points={segBedretto.points}
+          camera={camera}
+          frame={frame}
+          range={ROUTE_C}
+          color={ROUTE_RED}
+        />
 
         <WaypointTick
           waypoint={airolo}
@@ -79,7 +97,7 @@ export const SwissAlpsTour: React.FC = () => {
           waypoint={gotthard}
           camera={camera}
           frame={frame}
-          revealFrame={160}
+          revealFrame={144}
           showLabel
           color={ROUTE_BLUE}
           labelSide="above"
@@ -88,7 +106,7 @@ export const SwissAlpsTour: React.FC = () => {
           waypoint={andermatt}
           camera={camera}
           frame={frame}
-          revealFrame={174}
+          revealFrame={156}
           color={ROUTE_BLUE}
         />
         <WaypointTick
@@ -103,14 +121,28 @@ export const SwissAlpsTour: React.FC = () => {
           waypoint={oberwald}
           camera={camera}
           frame={frame}
-          revealFrame={222}
+          revealFrame={197}
           color={ROUTE_RED}
         />
         <WaypointTick
           waypoint={ulrichen}
           camera={camera}
           frame={frame}
-          revealFrame={236}
+          revealFrame={206}
+          color={ROUTE_RED}
+        />
+        <WaypointTick
+          waypoint={allacqua}
+          camera={camera}
+          frame={frame}
+          revealFrame={241}
+          color={ROUTE_RED}
+        />
+        <WaypointTick
+          waypoint={bedretto}
+          camera={camera}
+          frame={frame}
+          revealFrame={247}
           color={ROUTE_RED}
         />
 
@@ -120,6 +152,7 @@ export const SwissAlpsTour: React.FC = () => {
           frame={frame}
           dropRange={PIN_DROP}
           labelRange={PIN_LABEL}
+          labelHideRange={[FINAL_CARD[0] - 16, FINAL_CARD[0] + 4]}
         />
         <ArrivalPulse
           waypoint={nufenen}

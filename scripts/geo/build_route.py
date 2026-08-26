@@ -13,6 +13,8 @@ W = {
     "oberwald":  (1054.91, 822.92),
     "ulrichen":  (1032.86, 844.19),
     "nufenen":   (1073.90, 858.32),
+    "allacqua":  (1110.36, 852.62),
+    "bedretto":  (1128.56, 844.19),
 }
 
 def zigzag(a, b, t0, t1, n, amp, taper=0.35):
@@ -57,19 +59,28 @@ segA_points += [W["gotthard"], W["andermatt"]]
 segA_points += zigzag(W["andermatt"], W["furka"], 0.5, 0.88, 6, amp=6.5)
 segA_points += [W["furka"]]
 
-# Segment B: Furka -> Oberwald -> Ulrichen -> (Nufenen south-ramp zigzag) -> Nufenenpass
+# Segment B: Furka -> Oberwald -> Ulrichen -> (Nufenen north-ramp zigzag) -> Nufenenpass
 segB_points = [W["furka"], W["oberwald"], W["ulrichen"]]
 segB_points += zigzag(W["ulrichen"], W["nufenen"], 0.28, 0.85, 5, amp=5.5)
 segB_points += [W["nufenen"]]
 
+# Segment C: Nufenenpass -> (south-ramp zigzag) -> All'Acqua -> Bedretto -> Airolo.
+# The Val Bedretto descent, which closes the loop back to where it started.
+segC_points = [W["nufenen"]]
+segC_points += zigzag(W["nufenen"], W["allacqua"], 0.12, 0.58, 5, amp=5.0)
+segC_points += [W["allacqua"], W["bedretto"], W["airolo"]]
+
 dA = catmull_rom_to_bezier(segA_points)
 dB = catmull_rom_to_bezier(segB_points)
+dC = catmull_rom_to_bezier(segC_points)
 
 lenA = path_length(segA_points)
 lenB = path_length(segB_points)
+lenC = path_length(segC_points)
 
 print("segA points", len(segA_points), "approx length (map units)", round(lenA, 1))
 print("segB points", len(segB_points), "approx length (map units)", round(lenB, 1))
+print("segC points", len(segC_points), "approx length (map units)", round(lenC, 1))
 
 def points_literal(points):
     return "[" + ",".join(f"[{x:.2f},{y:.2f}]" for x, y in points) + "]"
@@ -79,6 +90,7 @@ out.append("\nexport type RouteSegment = {\n  id: string;\n  d: string;\n  point
 out.append("export const routeSegments: RouteSegment[] = [")
 out.append(f'  {{ id: "airolo-furka", d: "{dA}", points: {points_literal(segA_points)} }},')
 out.append(f'  {{ id: "furka-nufenen", d: "{dB}", points: {points_literal(segB_points)} }},')
+out.append(f'  {{ id: "nufenen-airolo", d: "{dC}", points: {points_literal(segC_points)} }},')
 out.append("];\n")
 
 with open(OUT_TS, "a") as f:
@@ -86,7 +98,7 @@ with open(OUT_TS, "a") as f:
 
 print("appended route segments to geoData.ts")
 
-all_route_pts = segA_points + segB_points
+all_route_pts = segA_points + segB_points + segC_points
 xs = [p[0] for p in all_route_pts]
 ys = [p[1] for p in all_route_pts]
 pad = 55

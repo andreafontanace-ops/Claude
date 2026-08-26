@@ -86,6 +86,9 @@ with open(OUT_TS, "w") as out:
         ("oberwald", "Oberwald", None, 8.350, 46.533, 1370),
         ("ulrichen", "Ulrichen", None, 8.300, 46.500, 1345),
         ("nufenen", "Nufenenpass", "Passo della Novena", 8.39306, 46.47806, 2478),
+        # Val Bedretto: the Novena's south ramp back down to Airolo.
+        ("allacqua", "All'Acqua", None, 8.47574, 46.48691, 1613),
+        ("bedretto", "Bedretto", None, 8.517, 46.500, 1402),
     ]
     out.write("export const waypoints: Waypoint[] = [\n")
     for wid, name, sub, lon, lat, elev in waypoints:
