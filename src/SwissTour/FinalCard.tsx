@@ -1,6 +1,7 @@
 import React from "react";
 import { interpolate } from "remotion";
 import { fontFamily } from "./fonts";
+import { ROUTE_BLUE, ROUTE_RED } from "./palette";
 import { FINAL_CARD, OUTRO_FADE } from "./timeline";
 
 export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
@@ -20,17 +21,17 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
   if (opacity <= 0) return null;
 
   const stops = [
-    { label: "Airolo" },
-    { label: "Passo del San Gottardo" },
-    { label: "Furka" },
-    { label: "Nufenenpass", highlight: true },
+    { label: "Airolo", color: ROUTE_BLUE },
+    { label: "Passo del San Gottardo", color: ROUTE_BLUE },
+    { label: "Furka", color: ROUTE_BLUE },
+    { label: "Nufenenpass", color: ROUTE_RED },
   ];
 
   return (
     <div
       style={{
         position: "absolute",
-        bottom: 96,
+        bottom: 90,
         left: 0,
         right: 0,
         display: "flex",
@@ -45,16 +46,22 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
         {stops.map((stop, i) => (
           <React.Fragment key={stop.label}>
             {i > 0 && (
-              <div style={{ color: "#c0392b", fontSize: 30, lineHeight: "26px" }}>
+              <div
+                style={{
+                  color: stops[i].color,
+                  fontSize: 34,
+                  lineHeight: "28px",
+                }}
+              >
                 ↓
               </div>
             )}
             <div
               style={{
-                fontSize: 46,
+                fontSize: 58,
                 fontWeight: 800,
                 textTransform: "uppercase",
-                color: stop.highlight ? "#c0392b" : "#231f16",
+                color: stop.color,
                 letterSpacing: 0.3,
                 textAlign: "center",
               }}
@@ -66,8 +73,8 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
       </div>
       <div
         style={{
-          marginTop: 20,
-          fontSize: 27,
+          marginTop: 22,
+          fontSize: 33,
           fontWeight: 700,
           color: "#8a7a52",
           letterSpacing: 1,

@@ -2,6 +2,7 @@ import React from "react";
 import { interpolate } from "remotion";
 import { Camera, project } from "./useCamera";
 import { Waypoint } from "./geoData";
+import { ROUTE_RED } from "./palette";
 
 export const WaypointTick: React.FC<{
   waypoint: Waypoint;
@@ -9,7 +10,17 @@ export const WaypointTick: React.FC<{
   frame: number;
   revealFrame: number;
   showLabel?: boolean;
-}> = ({ waypoint, camera, frame, revealFrame, showLabel = false }) => {
+  color?: string;
+  labelSide?: "above" | "below";
+}> = ({
+  waypoint,
+  camera,
+  frame,
+  revealFrame,
+  showLabel = false,
+  color = ROUTE_RED,
+  labelSide = "below",
+}) => {
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
   const opacity = interpolate(frame, [revealFrame, revealFrame + 16], [0, 1], {
@@ -25,7 +36,7 @@ export const WaypointTick: React.FC<{
 
   if (opacity <= 0) return null;
 
-  const dotSize = showLabel ? 22 : 15;
+  const dotSize = showLabel ? 26 : 18;
 
   // `left, top` mark the exact geo point. The dot is centered on it and the
   // label (if any) is positioned independently below, so a tall label never
@@ -40,7 +51,7 @@ export const WaypointTick: React.FC<{
           width: dotSize,
           height: dotSize,
           borderRadius: "50%",
-          background: "#c0392b",
+          background: color,
           border: "3px solid #faf6ec",
           boxShadow: "0 2px 6px rgba(0,0,0,0.22)",
           transform: `translate(-50%, -50%) scale(${scale})`,
@@ -51,12 +62,13 @@ export const WaypointTick: React.FC<{
           style={{
             position: "absolute",
             left: 0,
-            top: dotSize / 2 + 8,
+            top: labelSide === "below" ? dotSize / 2 + 8 : undefined,
+            bottom: labelSide === "above" ? dotSize / 2 + 8 : undefined,
             transform: "translate(-50%, 0)",
             background: "#faf6ec",
             border: "1px solid rgba(30,25,15,0.1)",
             borderRadius: 12,
-            padding: "9px 18px",
+            padding: "10px 20px",
             whiteSpace: "nowrap",
             textAlign: "center",
             boxShadow: "0 6px 16px rgba(40,30,15,0.16)",
@@ -65,7 +77,7 @@ export const WaypointTick: React.FC<{
           <div
             style={{
               color: "#231f16",
-              fontSize: 29,
+              fontSize: 36,
               fontWeight: 800,
             }}
           >
@@ -74,7 +86,7 @@ export const WaypointTick: React.FC<{
           <div
             style={{
               color: "#8a7a52",
-              fontSize: 20,
+              fontSize: 25,
               fontWeight: 700,
               marginTop: 2,
               textTransform: "uppercase",

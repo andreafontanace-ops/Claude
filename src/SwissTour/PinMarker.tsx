@@ -2,6 +2,7 @@ import React from "react";
 import { interpolate, spring, useVideoConfig } from "remotion";
 import { Camera, project } from "./useCamera";
 import { Waypoint } from "./geoData";
+import { ROUTE_RED } from "./palette";
 
 export const PinMarker: React.FC<{
   waypoint: Waypoint;
@@ -77,8 +78,8 @@ export const PinMarker: React.FC<{
             position: "absolute",
             left: 0,
             top: 0,
-            width: 60,
-            height: 60,
+            width: 68,
+            height: 68,
             borderRadius: "50%",
             border: "4px solid #e63946",
             transform: `translate(-50%, -50%) scale(${ringScale})`,
@@ -97,7 +98,7 @@ export const PinMarker: React.FC<{
           filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
         }}
       >
-        <svg width={74} height={95} viewBox="0 0 56 72">
+        <svg width={86} height={110} viewBox="0 0 56 72">
           <path
             d="M28 2C13.6 2 2 13.6 2 28c0 19.5 26 42 26 42s26-22.5 26-42C54 13.6 42.4 2 28 2z"
             fill="#e63946"
@@ -117,9 +118,9 @@ export const PinMarker: React.FC<{
           opacity: labelOpacity,
           background: "#faf6ec",
           border: "1px solid rgba(30,25,15,0.1)",
-          borderRadius: 14,
-          padding: "14px 24px",
-          whiteSpace: "nowrap",
+          borderRadius: 16,
+          padding: "18px 28px",
+          maxWidth: 900,
           textAlign: "center",
           boxShadow: "0 8px 20px rgba(40,30,15,0.18)",
         }}
@@ -127,14 +128,15 @@ export const PinMarker: React.FC<{
         <div
           style={{
             color: "#231f16",
-            fontSize: 38,
+            fontSize: 48,
             fontWeight: 800,
             letterSpacing: 0.1,
+            lineHeight: 1.15,
           }}
         >
           {waypoint.name}
           {waypoint.subtitle ? (
-            <span style={{ color: "#c0392b", fontWeight: 700 }}>
+            <span style={{ color: ROUTE_RED, fontWeight: 700 }}>
               {" "}
               ({waypoint.subtitle})
             </span>
@@ -143,9 +145,9 @@ export const PinMarker: React.FC<{
         <div
           style={{
             color: "#8a7a52",
-            fontSize: 24,
+            fontSize: 29,
             fontWeight: 700,
-            marginTop: 4,
+            marginTop: 6,
             letterSpacing: 0.5,
             textTransform: "uppercase",
           }}

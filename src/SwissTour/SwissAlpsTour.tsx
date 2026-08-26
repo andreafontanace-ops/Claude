@@ -10,6 +10,7 @@ import { FinalCard } from "./FinalCard";
 import { ArrivalPulse } from "./ArrivalPulse";
 import { useCamera } from "./useCamera";
 import { fontFamily } from "./fonts";
+import { ROUTE_BLUE, ROUTE_RED } from "./palette";
 import { routeSegments, waypoints } from "./geoData";
 import { PIN_DROP, PIN_LABEL, ROUTE_A, ROUTE_B } from "./timeline";
 
@@ -45,8 +46,8 @@ export const SwissAlpsTour: React.FC = () => {
       >
         <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
           <SwitzerlandMap />
-          <RoutePath d={segAirolo.d} frame={frame} range={ROUTE_A} />
-          <RoutePath d={segFurka.d} frame={frame} range={ROUTE_B} />
+          <RoutePath d={segAirolo.d} frame={frame} range={ROUTE_A} color={ROUTE_BLUE} />
+          <RoutePath d={segFurka.d} frame={frame} range={ROUTE_B} color={ROUTE_RED} />
         </g>
       </svg>
 
@@ -56,12 +57,14 @@ export const SwissAlpsTour: React.FC = () => {
           camera={camera}
           frame={frame}
           range={ROUTE_A}
+          color={ROUTE_BLUE}
         />
         <TravelDot
           points={segFurka.points}
           camera={camera}
           frame={frame}
           range={ROUTE_B}
+          color={ROUTE_RED}
         />
 
         <WaypointTick
@@ -70,6 +73,7 @@ export const SwissAlpsTour: React.FC = () => {
           frame={frame}
           revealFrame={ROUTE_A[0]}
           showLabel
+          color={ROUTE_BLUE}
         />
         <WaypointTick
           waypoint={gotthard}
@@ -77,12 +81,15 @@ export const SwissAlpsTour: React.FC = () => {
           frame={frame}
           revealFrame={160}
           showLabel
+          color={ROUTE_BLUE}
+          labelSide="above"
         />
         <WaypointTick
           waypoint={andermatt}
           camera={camera}
           frame={frame}
           revealFrame={174}
+          color={ROUTE_BLUE}
         />
         <WaypointTick
           waypoint={furka}
@@ -90,18 +97,21 @@ export const SwissAlpsTour: React.FC = () => {
           frame={frame}
           revealFrame={ROUTE_A[1]}
           showLabel
+          color={ROUTE_BLUE}
         />
         <WaypointTick
           waypoint={oberwald}
           camera={camera}
           frame={frame}
           revealFrame={222}
+          color={ROUTE_RED}
         />
         <WaypointTick
           waypoint={ulrichen}
           camera={camera}
           frame={frame}
           revealFrame={236}
+          color={ROUTE_RED}
         />
 
         <PinMarker

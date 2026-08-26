@@ -48,7 +48,7 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
     >
       <div
         style={{
-          fontSize: 132,
+          fontSize: 152,
           fontWeight: 800,
           color: "#231f16",
           letterSpacing: 1,
@@ -58,14 +58,14 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
       </div>
       <div
         style={{
-          marginTop: 16,
-          fontSize: 32,
+          marginTop: 18,
+          fontSize: 40,
           fontWeight: 700,
           color: "#c0392b",
           letterSpacing: 1.5,
           opacity: subOpacity,
           textAlign: "center",
-          padding: "0 40px",
+          padding: "0 30px",
           textTransform: "uppercase",
         }}
       >
