@@ -11,7 +11,7 @@ import { useCamera } from "./useCamera";
 import { fontFamily } from "./fonts";
 import { ROUTE_BLUE, ROUTE_RED } from "./palette";
 import { routeSegments, waypoints } from "./geoData";
-import { PIN_DROP, ROUTE_A, ROUTE_B, ROUTE_C } from "./timeline";
+import { PIN_DROP, PIN_LABEL, ROUTE_A, ROUTE_B, ROUTE_C } from "./timeline";
 
 const byId = (id: string) => waypoints.find((w) => w.id === id)!;
 
@@ -83,6 +83,9 @@ export const SwissAlpsTour: React.FC = () => {
           frame={frame}
           revealFrame={ROUTE_A[0]}
           color={ROUTE_BLUE}
+          showLabel
+          labelDx={0}
+          labelDy={58}
         />
         <WaypointTick
           waypoint={gotthard}
@@ -91,7 +94,9 @@ export const SwissAlpsTour: React.FC = () => {
           revealFrame={144}
           showLabel
           color={ROUTE_BLUE}
-          labelSide="above"
+          labelDx={-165}
+          labelDy={-40}
+          labelWidth={280}
         />
         <WaypointTick
           waypoint={andermatt}
@@ -106,6 +111,9 @@ export const SwissAlpsTour: React.FC = () => {
           frame={frame}
           revealFrame={ROUTE_A[1]}
           color={ROUTE_BLUE}
+          showLabel
+          labelDx={-95}
+          labelDy={-62}
         />
         <WaypointTick
           waypoint={oberwald}
@@ -141,6 +149,8 @@ export const SwissAlpsTour: React.FC = () => {
           camera={camera}
           frame={frame}
           dropRange={PIN_DROP}
+          labelRange={PIN_LABEL}
+          labelDy={72}
         />
         <ArrivalPulse
           waypoint={nufenen}

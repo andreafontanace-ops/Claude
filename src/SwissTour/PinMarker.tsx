@@ -2,13 +2,17 @@ import React from "react";
 import { interpolate, spring, useVideoConfig } from "remotion";
 import { Camera, project } from "./useCamera";
 import { Waypoint } from "./geoData";
+import { ROUTE_RED } from "./palette";
+import { mapLabelStyle } from "./labelStyle";
 
 export const PinMarker: React.FC<{
   waypoint: Waypoint;
   camera: Camera;
   frame: number;
   dropRange: readonly [number, number];
-}> = ({ waypoint, camera, frame, dropRange }) => {
+  labelRange: readonly [number, number];
+  labelDy?: number;
+}> = ({ waypoint, camera, frame, dropRange, labelRange, labelDy = 78 }) => {
   const { fps } = useVideoConfig();
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -54,6 +58,15 @@ export const PinMarker: React.FC<{
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
+  const labelOpacity = interpolate(frame, labelRange, [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const labelRise = interpolate(frame, labelRange, [10, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
   if (!visible) return null;
 
   // `left, top` mark the exact geo point (Nufenenpass). The pin and the
@@ -96,6 +109,27 @@ export const PinMarker: React.FC<{
           />
           <circle cx={28} cy={27} r={10.5} fill="#fff5f0" />
         </svg>
+      </div>
+
+      <div
+        style={{
+          ...mapLabelStyle,
+          position: "absolute",
+          left: 0,
+          top: labelDy,
+          transform: `translate(-50%, 0) translateY(${labelRise}px)`,
+          opacity: labelOpacity,
+          textAlign: "center",
+          fontSize: 50,
+          lineHeight: 1.1,
+        }}
+      >
+        <div>{waypoint.name}</div>
+        {waypoint.subtitle ? (
+          <div style={{ color: ROUTE_RED, fontSize: 42 }}>
+            ({waypoint.subtitle})
+          </div>
+        ) : null}
       </div>
     </div>
   );

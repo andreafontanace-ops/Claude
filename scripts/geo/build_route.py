@@ -101,7 +101,7 @@ print("appended route segments to geoData.ts")
 all_route_pts = segA_points + segB_points + segC_points
 xs = [p[0] for p in all_route_pts]
 ys = [p[1] for p in all_route_pts]
-pad = 55
+pad = 30
 bbox = (min(xs) - pad, min(ys) - pad, max(xs) + pad, max(ys) + pad)
 print("region bbox", bbox)
 

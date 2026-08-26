@@ -3,6 +3,7 @@ import { interpolate } from "remotion";
 import { Camera, project } from "./useCamera";
 import { Waypoint } from "./geoData";
 import { ROUTE_RED } from "./palette";
+import { mapLabelStyle } from "./labelStyle";
 
 export const WaypointTick: React.FC<{
   waypoint: Waypoint;
@@ -11,7 +12,13 @@ export const WaypointTick: React.FC<{
   revealFrame: number;
   showLabel?: boolean;
   color?: string;
-  labelSide?: "above" | "below";
+  // Where the name sits relative to the marker, in screen px. Tuned per
+  // waypoint so the names sit clear of the route line rather than on it.
+  labelDx?: number;
+  labelDy?: number;
+  // Set to let a long name wrap onto two lines instead of running wide,
+  // which makes it far easier to park clear of the route.
+  labelWidth?: number;
 }> = ({
   waypoint,
   camera,
@@ -19,7 +26,9 @@ export const WaypointTick: React.FC<{
   revealFrame,
   showLabel = false,
   color = ROUTE_RED,
-  labelSide = "below",
+  labelDx = 0,
+  labelDy = 46,
+  labelWidth,
 }) => {
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -39,8 +48,8 @@ export const WaypointTick: React.FC<{
   const dotSize = showLabel ? 26 : 18;
 
   // `left, top` mark the exact geo point. The dot is centered on it and the
-  // label (if any) is positioned independently below, so a tall label never
-  // pulls the dot off the real coordinate.
+  // name is offset independently, so the name never drags the dot off the
+  // real coordinate.
   return (
     <div style={{ position: "absolute", left, top, width: 0, height: 0, opacity }}>
       <div
@@ -60,29 +69,18 @@ export const WaypointTick: React.FC<{
       {showLabel && (
         <div
           style={{
+            ...mapLabelStyle,
             position: "absolute",
-            left: 0,
-            top: labelSide === "below" ? dotSize / 2 + 8 : undefined,
-            bottom: labelSide === "above" ? dotSize / 2 + 8 : undefined,
-            transform: "translate(-50%, 0)",
-            background: "#faf6ec",
-            border: "1px solid rgba(30,25,15,0.1)",
-            borderRadius: 12,
-            padding: "10px 20px",
-            whiteSpace: "nowrap",
-            textAlign: "center",
-            boxShadow: "0 6px 16px rgba(40,30,15,0.16)",
+            left: labelDx,
+            top: labelDy,
+            transform: "translate(-50%, -50%)",
+            fontSize: 40,
+            ...(labelWidth
+              ? { width: labelWidth, whiteSpace: "normal", textAlign: "center", lineHeight: 1.1 }
+              : null),
           }}
         >
-          <div
-            style={{
-              color: "#231f16",
-              fontSize: 36,
-              fontWeight: 800,
-            }}
-          >
-            {waypoint.name}
-          </div>
+          {waypoint.name}
         </div>
       )}
     </div>

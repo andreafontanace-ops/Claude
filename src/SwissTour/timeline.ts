@@ -10,6 +10,7 @@ export const TITLE_FADE_OUT = [42, 58] as const;
 export const CAMERA_ZOOM = [38, 96] as const;
 
 export const PIN_DROP = [84, 112] as const;
+export const PIN_LABEL = [104, 124] as const;
 
 // The ride is one loop, drawn in three legs. Leg spans are proportional to
 // each leg's real length so the line advances at a roughly steady speed.

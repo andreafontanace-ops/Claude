@@ -76,5 +76,5 @@ export const routeSegments: RouteSegment[] = [
 
 
 export type BBox = { x0: number; y0: number; x1: number; y1: number };
-export const REGION_BBOX: BBox = { x0: 977.86, y0: 702.89, x1: 1228.29, y1: 917.58 };
+export const REGION_BBOX: BBox = { x0: 1002.86, y0: 727.89, x1: 1203.29, y1: 892.58 };
 export const FULL_BBOX: BBox = { x0: 0, y0: 0, x1: 2000, y1: 1283.03 };
