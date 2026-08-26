@@ -45,15 +45,16 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
         {stops.map((stop, i) => (
           <React.Fragment key={stop.label}>
             {i > 0 && (
-              <div style={{ color: "#ff9d6f", fontSize: 30, lineHeight: "26px" }}>
+              <div style={{ color: "#c0392b", fontSize: 30, lineHeight: "26px" }}>
                 ↓
               </div>
             )}
             <div
               style={{
                 fontSize: 46,
-                fontWeight: 700,
-                color: stop.highlight ? "#ffb199" : "#ffffff",
+                fontWeight: 800,
+                textTransform: "uppercase",
+                color: stop.highlight ? "#c0392b" : "#231f16",
                 letterSpacing: 0.3,
                 textAlign: "center",
               }}
@@ -67,14 +68,15 @@ export const FinalCard: React.FC<{ frame: number }> = ({ frame }) => {
         style={{
           marginTop: 20,
           fontSize: 27,
-          fontWeight: 600,
-          color: "#9fb2d6",
+          fontWeight: 700,
+          color: "#8a7a52",
           letterSpacing: 1,
           textAlign: "center",
           padding: "0 40px",
+          textTransform: "uppercase",
         }}
       >
-        PASSO DELLA NOVENA · 2 478 M S.L.M.
+        Passo della Novena &middot; 2 478 m s.l.m.
       </div>
     </div>
   );

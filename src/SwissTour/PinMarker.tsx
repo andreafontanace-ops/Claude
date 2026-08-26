@@ -115,26 +115,26 @@ export const PinMarker: React.FC<{
           top: 14,
           transform: `translate(-50%, 0) translateY(${labelY}px)`,
           opacity: labelOpacity,
-          background: "rgba(12, 18, 32, 0.82)",
-          border: "1px solid rgba(255,255,255,0.15)",
+          background: "#faf6ec",
+          border: "1px solid rgba(30,25,15,0.1)",
           borderRadius: 14,
           padding: "14px 24px",
           whiteSpace: "nowrap",
           textAlign: "center",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+          boxShadow: "0 8px 20px rgba(40,30,15,0.18)",
         }}
       >
         <div
           style={{
-            color: "#ffffff",
+            color: "#231f16",
             fontSize: 38,
-            fontWeight: 700,
+            fontWeight: 800,
             letterSpacing: 0.1,
           }}
         >
           {waypoint.name}
           {waypoint.subtitle ? (
-            <span style={{ color: "#ffb199", fontWeight: 600 }}>
+            <span style={{ color: "#c0392b", fontWeight: 700 }}>
               {" "}
               ({waypoint.subtitle})
             </span>
@@ -142,10 +142,12 @@ export const PinMarker: React.FC<{
         </div>
         <div
           style={{
-            color: "#9fb2d6",
+            color: "#8a7a52",
             fontSize: 24,
+            fontWeight: 700,
             marginTop: 4,
             letterSpacing: 0.5,
+            textTransform: "uppercase",
           }}
         >
           {waypoint.elevation.toLocaleString("it-CH")} m s.l.m.

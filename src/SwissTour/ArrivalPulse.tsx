@@ -36,7 +36,7 @@ export const ArrivalPulse: React.FC<{
               width: 30,
               height: 30,
               borderRadius: "50%",
-              border: "2.5px solid #ffb199",
+              border: "2.5px solid #c0392b",
               transform: `translate(-50%, -50%) scale(${scale})`,
               opacity,
             }}

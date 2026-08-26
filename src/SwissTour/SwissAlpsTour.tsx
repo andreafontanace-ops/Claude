@@ -34,8 +34,7 @@ export const SwissAlpsTour: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background:
-          "radial-gradient(120% 120% at 50% 0%, #16233d 0%, #0a1120 60%, #060a14 100%)",
+        background: "linear-gradient(180deg, #f7f2e6 0%, #f2ebd9 100%)",
       }}
     >
       <svg

@@ -40,9 +40,9 @@ export const WaypointTick: React.FC<{
           width: dotSize,
           height: dotSize,
           borderRadius: "50%",
-          background: "#ffb199",
-          border: "3px solid #fff5f0",
-          boxShadow: "0 0 0 5px rgba(255,122,69,0.28)",
+          background: "#c0392b",
+          border: "3px solid #faf6ec",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.22)",
           transform: `translate(-50%, -50%) scale(${scale})`,
         }}
       />
@@ -53,18 +53,33 @@ export const WaypointTick: React.FC<{
             left: 0,
             top: dotSize / 2 + 8,
             transform: "translate(-50%, 0)",
-            background: "rgba(12, 18, 32, 0.78)",
-            border: "1px solid rgba(255,255,255,0.13)",
+            background: "#faf6ec",
+            border: "1px solid rgba(30,25,15,0.1)",
             borderRadius: 12,
             padding: "9px 18px",
             whiteSpace: "nowrap",
             textAlign: "center",
+            boxShadow: "0 6px 16px rgba(40,30,15,0.16)",
           }}
         >
-          <div style={{ color: "#fff", fontSize: 29, fontWeight: 700 }}>
+          <div
+            style={{
+              color: "#231f16",
+              fontSize: 29,
+              fontWeight: 800,
+            }}
+          >
             {waypoint.name}
           </div>
-          <div style={{ color: "#9fb2d6", fontSize: 20, marginTop: 2 }}>
+          <div
+            style={{
+              color: "#8a7a52",
+              fontSize: 20,
+              fontWeight: 700,
+              marginTop: 2,
+              textTransform: "uppercase",
+            }}
+          >
             {waypoint.elevation.toLocaleString("it-CH")} m
           </div>
         </div>

@@ -6,7 +6,7 @@ export const RoutePath: React.FC<{
   frame: number;
   range: readonly [number, number];
   color?: string;
-}> = ({ d, frame, range, color = "#ff7a45" }) => {
+}> = ({ d, frame, range, color = "#c0392b" }) => {
   const progress = interpolate(frame, range, [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
@@ -15,13 +15,12 @@ export const RoutePath: React.FC<{
 
   return (
     <>
-      {/* soft underlay glow */}
+      {/* white casing so the line reads on any pastel tile underneath */}
       <path
         d={d}
         fill="none"
-        stroke={color}
-        strokeOpacity={0.35}
-        strokeWidth={7}
+        stroke="#faf6ec"
+        strokeWidth={6.5}
         strokeLinecap="round"
         strokeLinejoin="round"
         pathLength={1}
@@ -32,7 +31,7 @@ export const RoutePath: React.FC<{
         d={d}
         fill="none"
         stroke={color}
-        strokeWidth={3}
+        strokeWidth={3.4}
         strokeLinecap="round"
         strokeLinejoin="round"
         pathLength={1}
