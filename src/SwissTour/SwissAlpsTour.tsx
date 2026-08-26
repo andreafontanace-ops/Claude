@@ -6,20 +6,12 @@ import { PinMarker } from "./PinMarker";
 import { WaypointTick } from "./WaypointTick";
 import { TravelDot } from "./TravelDot";
 import { TitleCard } from "./TitleCard";
-import { FinalCard } from "./FinalCard";
 import { ArrivalPulse } from "./ArrivalPulse";
 import { useCamera } from "./useCamera";
 import { fontFamily } from "./fonts";
 import { ROUTE_BLUE, ROUTE_RED } from "./palette";
 import { routeSegments, waypoints } from "./geoData";
-import {
-  FINAL_CARD,
-  PIN_DROP,
-  PIN_LABEL,
-  ROUTE_A,
-  ROUTE_B,
-  ROUTE_C,
-} from "./timeline";
+import { PIN_DROP, ROUTE_A, ROUTE_B, ROUTE_C } from "./timeline";
 
 const byId = (id: string) => waypoints.find((w) => w.id === id)!;
 
@@ -90,7 +82,6 @@ export const SwissAlpsTour: React.FC = () => {
           camera={camera}
           frame={frame}
           revealFrame={ROUTE_A[0]}
-          showLabel
           color={ROUTE_BLUE}
         />
         <WaypointTick
@@ -114,7 +105,6 @@ export const SwissAlpsTour: React.FC = () => {
           camera={camera}
           frame={frame}
           revealFrame={ROUTE_A[1]}
-          showLabel
           color={ROUTE_BLUE}
         />
         <WaypointTick
@@ -151,8 +141,6 @@ export const SwissAlpsTour: React.FC = () => {
           camera={camera}
           frame={frame}
           dropRange={PIN_DROP}
-          labelRange={PIN_LABEL}
-          labelHideRange={[FINAL_CARD[0] - 16, FINAL_CARD[0] + 4]}
         />
         <ArrivalPulse
           waypoint={nufenen}
@@ -162,7 +150,6 @@ export const SwissAlpsTour: React.FC = () => {
         />
 
         <TitleCard frame={frame} />
-        <FinalCard frame={frame} />
       </AbsoluteFill>
     </AbsoluteFill>
   );

@@ -2,16 +2,13 @@ import React from "react";
 import { interpolate, spring, useVideoConfig } from "remotion";
 import { Camera, project } from "./useCamera";
 import { Waypoint } from "./geoData";
-import { ROUTE_RED } from "./palette";
 
 export const PinMarker: React.FC<{
   waypoint: Waypoint;
   camera: Camera;
   frame: number;
   dropRange: readonly [number, number];
-  labelRange: readonly [number, number];
-  labelHideRange?: readonly [number, number];
-}> = ({ waypoint, camera, frame, dropRange, labelRange, labelHideRange }) => {
+}> = ({ waypoint, camera, frame, dropRange }) => {
   const { fps } = useVideoConfig();
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -57,31 +54,11 @@ export const PinMarker: React.FC<{
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
-  // The label is a wide box; once the final route card slides in below it
-  // they would collide, so it fades back out on the way there.
-  const labelHide = labelHideRange
-    ? interpolate(frame, labelHideRange, [1, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      })
-    : 1;
-
-  const labelOpacity =
-    interpolate(frame, labelRange, [0, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    }) * labelHide;
-  const labelY = interpolate(frame, labelRange, [10, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
   if (!visible) return null;
 
-  // `left, top` mark the exact geo point (Nufenenpass). Everything below is
-  // positioned relative to that single anchor, independently, so the pin's
-  // tip and the ground ring stay glued to the real coordinate regardless of
-  // how tall the label happens to be.
+  // `left, top` mark the exact geo point (Nufenenpass). The pin and the
+  // ground ring are positioned independently off that single anchor, so the
+  // pin's tip stays glued to the real coordinate.
   return (
     <div style={{ position: "absolute", left, top, width: 0, height: 0 }}>
       {landed && (
@@ -119,53 +96,6 @@ export const PinMarker: React.FC<{
           />
           <circle cx={28} cy={27} r={10.5} fill="#fff5f0" />
         </svg>
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          top: 14,
-          transform: `translate(-50%, 0) translateY(${labelY}px)`,
-          opacity: labelOpacity,
-          background: "#faf6ec",
-          border: "1px solid rgba(30,25,15,0.1)",
-          borderRadius: 16,
-          padding: "18px 28px",
-          maxWidth: 900,
-          textAlign: "center",
-          boxShadow: "0 8px 20px rgba(40,30,15,0.18)",
-        }}
-      >
-        <div
-          style={{
-            color: "#231f16",
-            fontSize: 48,
-            fontWeight: 800,
-            letterSpacing: 0.1,
-            lineHeight: 1.15,
-          }}
-        >
-          {waypoint.name}
-          {waypoint.subtitle ? (
-            <span style={{ color: ROUTE_RED, fontWeight: 700 }}>
-              {" "}
-              ({waypoint.subtitle})
-            </span>
-          ) : null}
-        </div>
-        <div
-          style={{
-            color: "#8a7a52",
-            fontSize: 29,
-            fontWeight: 700,
-            marginTop: 6,
-            letterSpacing: 0.5,
-            textTransform: "uppercase",
-          }}
-        >
-          {waypoint.elevation.toLocaleString("it-CH")} m s.l.m.
-        </div>
       </div>
     </div>
   );

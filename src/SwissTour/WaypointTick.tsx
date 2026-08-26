@@ -83,17 +83,6 @@ export const WaypointTick: React.FC<{
           >
             {waypoint.name}
           </div>
-          <div
-            style={{
-              color: "#8a7a52",
-              fontSize: 25,
-              fontWeight: 700,
-              marginTop: 2,
-              textTransform: "uppercase",
-            }}
-          >
-            {waypoint.elevation.toLocaleString("it-CH")} m
-          </div>
         </div>
       )}
     </div>

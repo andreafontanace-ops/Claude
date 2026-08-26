@@ -69,7 +69,7 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
           textTransform: "uppercase",
         }}
       >
-        Alpi Lepontine &middot; Ticino &middot; Uri &middot; Valais
+        Ticino &middot; Uri &middot; Valais
       </div>
     </div>
   );
