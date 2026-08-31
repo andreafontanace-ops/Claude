@@ -3,7 +3,16 @@ import { interpolate, spring, useVideoConfig } from "remotion";
 import { fontFamily } from "./fonts";
 import { INTRO_FADE_IN, TITLE_FADE_OUT, TITLE_HOLD } from "./timeline";
 
-export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
+export const TitleCard: React.FC<{
+  frame: number;
+  // Null drops the second line entirely.
+  subtitle?: string | null;
+  top?: number;
+}> = ({
+  frame,
+  subtitle = "Ticino · Uri · Valais",
+  top = 110,
+}) => {
   const { fps } = useVideoConfig();
 
   const pop = spring({
@@ -35,7 +44,7 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
     <div
       style={{
         position: "absolute",
-        top: 110,
+        top,
         left: 0,
         right: 0,
         display: "flex",
@@ -56,21 +65,23 @@ export const TitleCard: React.FC<{ frame: number }> = ({ frame }) => {
       >
         SVIZZERA
       </div>
-      <div
-        style={{
-          marginTop: 18,
-          fontSize: 40,
-          fontWeight: 700,
-          color: "#c0392b",
-          letterSpacing: 1.5,
-          opacity: subOpacity,
-          textAlign: "center",
-          padding: "0 30px",
-          textTransform: "uppercase",
-        }}
-      >
-        Ticino &middot; Uri &middot; Valais
-      </div>
+      {subtitle ? (
+        <div
+          style={{
+            marginTop: 18,
+            fontSize: 40,
+            fontWeight: 700,
+            color: "#c0392b",
+            letterSpacing: 1.5,
+            opacity: subOpacity,
+            textAlign: "center",
+            padding: "0 30px",
+            textTransform: "uppercase",
+          }}
+        >
+          {subtitle}
+        </div>
+      ) : null}
     </div>
   );
 };

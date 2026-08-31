@@ -10,19 +10,17 @@ import { useCamera } from "./useCamera";
 import { fontFamily } from "./fonts";
 import { ROUTE_BLUE, ROUTE_RED } from "./palette";
 import { forkBranches, FORK_BBOX, waypoints } from "./geoData";
+import { SAFE_RECT, SAFE_TITLE_TOP } from "./safeArea";
 import {
   FORK_PIN_DROP,
   FORK_PIN_LABEL,
   GHOST_FADE,
-  GOMS_LINK,
   OUTBOUND,
   RETURN,
 } from "./forkTimeline";
 
 const byId = (id: string) => waypoints.find((w) => w.id === id)!;
 const branchById = (id: string) => forkBranches.find((b) => b.id === id)!;
-
-const LINK_COLOR = "#8a7a52";
 
 // Where each branch is, as a fraction of its own length, when it reaches a
 // given place - measured off the real geometry by scripts/geo/build_route.py.
@@ -32,11 +30,12 @@ const at = (range: readonly [number, number], fraction: number) =>
 export const AiroloFork: React.FC = () => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
-  const camera = useCamera(frame, width, height, FORK_BBOX);
+  // Composed inside the platform-safe rect, not the whole frame, so nothing
+  // that matters ends up under the action rail or the caption block.
+  const camera = useCamera(frame, width, height, FORK_BBOX, SAFE_RECT);
 
   const north = branchById("gottardo-furka");
   const novena = branchById("novena");
-  const link = branchById("goms-link");
 
   const airolo = byId("airolo");
   const gotthard = byId("gotthard");
@@ -73,14 +72,6 @@ export const AiroloFork: React.FC = () => {
       >
         <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
           <SwitzerlandMap />
-
-          <RoutePath
-            d={link.d}
-            frame={frame}
-            range={GOMS_LINK}
-            color={LINK_COLOR}
-            width={2.4}
-          />
 
           <RoutePath
             d={north.d}
@@ -167,7 +158,7 @@ export const AiroloFork: React.FC = () => {
           waypoint={gotthard}
           camera={camera}
           frame={frame}
-          revealFrame={at(OUTBOUND, 0.313)}
+          revealFrame={at(OUTBOUND, 0.284)}
           showLabel
           color={ROUTE_BLUE}
           labelDx={-165}
@@ -178,14 +169,14 @@ export const AiroloFork: React.FC = () => {
           waypoint={andermatt}
           camera={camera}
           frame={frame}
-          revealFrame={at(OUTBOUND, 0.482)}
+          revealFrame={at(OUTBOUND, 0.438)}
           color={ROUTE_BLUE}
         />
         <WaypointTick
           waypoint={furka}
           camera={camera}
           frame={frame}
-          revealFrame={at(OUTBOUND, 0.874)}
+          revealFrame={at(OUTBOUND, 0.794)}
           showLabel
           color={ROUTE_BLUE}
           labelDx={-95}
@@ -195,7 +186,7 @@ export const AiroloFork: React.FC = () => {
           waypoint={oberwald}
           camera={camera}
           frame={frame}
-          revealFrame={OUTBOUND[1]}
+          revealFrame={at(OUTBOUND, 0.908)}
           showLabel
           color={ROUTE_BLUE}
           labelDx={-118}
@@ -224,18 +215,19 @@ export const AiroloFork: React.FC = () => {
           revealFrame={at(OUTBOUND, 0.66)}
           showLabel
           color={ROUTE_RED}
-          labelDx={0}
-          labelDy={86}
+          labelDx={30}
+          labelDy={116}
         />
+        {/* Where both branches land, so it belongs to neither colour. */}
         <WaypointTick
           waypoint={ulrichen}
           camera={camera}
           frame={frame}
           revealFrame={OUTBOUND[1]}
           showLabel
-          color={ROUTE_RED}
-          labelDx={-30}
-          labelDy={62}
+          color="#231f16"
+          labelDx={18}
+          labelDy={74}
         />
 
         {/* The start: both roads leave from under this pin. */}
@@ -248,7 +240,7 @@ export const AiroloFork: React.FC = () => {
           labelDy={72}
         />
 
-        <TitleCard frame={frame} />
+        <TitleCard frame={frame} subtitle={null} top={SAFE_TITLE_TOP} />
       </AbsoluteFill>
     </AbsoluteFill>
   );

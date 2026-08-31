@@ -120,7 +120,10 @@ with open(OUT_TS, "a") as f:
 def reverse(points):
     return list(reversed(points))
 
-branch_north_points = segA_points + [W["oberwald"]]
+# Both branches run all the way to Ulrichen, so they converge on one point
+# rather than on two neighbouring villages: the Furka side carries on down
+# the valley through Oberwald to get there.
+branch_north_points = segA_points + [W["oberwald"], W["ulrichen"]]
 
 nufenen_north_ramp = (
     [W["ulrichen"]]
@@ -129,13 +132,9 @@ nufenen_north_ramp = (
 )
 branch_novena_points = reverse(segC_points) + reverse(nufenen_north_ramp)[1:]
 
-# The short valley road that ties the two arrival points together.
-goms_link_points = [W["oberwald"], W["ulrichen"]]
-
 fork_branches = [
     ("gottardo-furka", branch_north_points),
     ("novena", branch_novena_points),
-    ("goms-link", goms_link_points),
 ]
 
 fork_out = ["\nexport const forkBranches: RouteSegment[] = ["]
@@ -145,10 +144,15 @@ for bid, pts in fork_branches:
     )
 fork_out.append("];\n")
 
+# The fork composition frames itself inside the short-form safe area, which
+# is narrower than the frame, so it keeps a tighter margin around the roads
+# to win that width back.
+fork_pad = 18
 fork_pts = branch_north_points + branch_novena_points
 fxs = [p[0] for p in fork_pts]
 fys = [p[1] for p in fork_pts]
-fbox = (min(fxs) - pad, min(fys) - pad, max(fxs) + pad, max(fys) + pad)
+fbox = (min(fxs) - fork_pad, min(fys) - fork_pad,
+        max(fxs) + fork_pad, max(fys) + fork_pad)
 fork_out.append(
     f"export const FORK_BBOX: BBox = {{ x0: {fbox[0]:.2f}, y0: {fbox[1]:.2f}, "
     f"x1: {fbox[2]:.2f}, y1: {fbox[3]:.2f} }};\n"
@@ -162,7 +166,8 @@ def cumfrac(points, idx):
 
 print("branch north points", len(branch_north_points),
       "length", round(path_length(branch_north_points), 1))
-for label, idx in [("gotthard", 8), ("andermatt", 9), ("furka", 16), ("oberwald", 17)]:
+for label, idx in [("gotthard", 8), ("andermatt", 9), ("furka", 16),
+                   ("oberwald", 17), ("ulrichen", 18)]:
     print("  north", label, round(cumfrac(branch_north_points, idx), 3))
 
 print("branch novena points", len(branch_novena_points),
