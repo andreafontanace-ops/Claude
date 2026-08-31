@@ -3,7 +3,9 @@ import { Composition } from "remotion";
 import { HelloWorld, myCompSchema } from "./HelloWorld";
 import { Logo, myCompSchema2 } from "./HelloWorld/Logo";
 import { SwissAlpsTour } from "./SwissTour/SwissAlpsTour";
+import { AiroloFork } from "./SwissTour/AiroloFork";
 import { DURATION, FPS } from "./SwissTour/timeline";
+import { FORK_DURATION } from "./SwissTour/forkTimeline";
 
 // Each <Composition> is an entry in the sidebar!
 
@@ -14,6 +16,15 @@ export const RemotionRoot: React.FC = () => {
         id="SwissAlpsTour"
         component={SwissAlpsTour}
         durationInFrames={DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      <Composition
+        id="AiroloFork"
+        component={AiroloFork}
+        durationInFrames={FORK_DURATION}
         fps={FPS}
         width={1080}
         height={1920}

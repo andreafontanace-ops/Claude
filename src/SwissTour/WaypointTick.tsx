@@ -80,7 +80,12 @@ export const WaypointTick: React.FC<{
               : null),
           }}
         >
-          {waypoint.name}
+          <div>{waypoint.name}</div>
+          {waypoint.subtitle ? (
+            <div style={{ color: ROUTE_RED, fontSize: 34 }}>
+              ({waypoint.subtitle})
+            </div>
+          ) : null}
         </div>
       )}
     </div>

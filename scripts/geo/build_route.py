@@ -109,3 +109,65 @@ with open(OUT_TS, "a") as f:
     f.write("\nexport type BBox = { x0: number; y0: number; x1: number; y1: number };\n")
     f.write(f"export const REGION_BBOX: BBox = {{ x0: {bbox[0]:.2f}, y0: {bbox[1]:.2f}, x1: {bbox[2]:.2f}, y1: {bbox[3]:.2f} }};\n")
     f.write(f"export const FULL_BBOX: BBox = {{ x0: 0, y0: 0, x1: {2000}, y1: {1283.03} }};\n")
+
+
+# --- Fork composition -------------------------------------------------------
+# Two ways out of Airolo that meet again in the Goms: over the Gotthard and
+# the Furka down to Oberwald, or up the Val Bedretto and over the Novena to
+# Ulrichen. Both are built from the same road geometry as the loop above,
+# just re-cut so each branch starts at Airolo.
+
+def reverse(points):
+    return list(reversed(points))
+
+branch_north_points = segA_points + [W["oberwald"]]
+
+nufenen_north_ramp = (
+    [W["ulrichen"]]
+    + zigzag(W["ulrichen"], W["nufenen"], 0.28, 0.85, 5, amp=5.5)
+    + [W["nufenen"]]
+)
+branch_novena_points = reverse(segC_points) + reverse(nufenen_north_ramp)[1:]
+
+# The short valley road that ties the two arrival points together.
+goms_link_points = [W["oberwald"], W["ulrichen"]]
+
+fork_branches = [
+    ("gottardo-furka", branch_north_points),
+    ("novena", branch_novena_points),
+    ("goms-link", goms_link_points),
+]
+
+fork_out = ["\nexport const forkBranches: RouteSegment[] = ["]
+for bid, pts in fork_branches:
+    fork_out.append(
+        f'  {{ id: "{bid}", d: "{catmull_rom_to_bezier(pts)}", points: {points_literal(pts)} }},'
+    )
+fork_out.append("];\n")
+
+fork_pts = branch_north_points + branch_novena_points
+fxs = [p[0] for p in fork_pts]
+fys = [p[1] for p in fork_pts]
+fbox = (min(fxs) - pad, min(fys) - pad, max(fxs) + pad, max(fys) + pad)
+fork_out.append(
+    f"export const FORK_BBOX: BBox = {{ x0: {fbox[0]:.2f}, y0: {fbox[1]:.2f}, "
+    f"x1: {fbox[2]:.2f}, y1: {fbox[3]:.2f} }};\n"
+)
+
+with open(OUT_TS, "a") as f:
+    f.write("\n".join(fork_out) + "\n")
+
+def cumfrac(points, idx):
+    return path_length(points[: idx + 1]) / path_length(points)
+
+print("branch north points", len(branch_north_points),
+      "length", round(path_length(branch_north_points), 1))
+for label, idx in [("gotthard", 8), ("andermatt", 9), ("furka", 16), ("oberwald", 17)]:
+    print("  north", label, round(cumfrac(branch_north_points, idx), 3))
+
+print("branch novena points", len(branch_novena_points),
+      "length", round(path_length(branch_novena_points), 1))
+for label, idx in [("bedretto", 1), ("allacqua", 2), ("nufenen", 8), ("ulrichen", 14)]:
+    print("  novena", label, round(cumfrac(branch_novena_points, idx), 3))
+
+print("fork bbox", fbox)

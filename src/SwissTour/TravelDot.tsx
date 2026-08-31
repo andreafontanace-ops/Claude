@@ -10,7 +10,8 @@ export const TravelDot: React.FC<{
   frame: number;
   range: readonly [number, number];
   color?: string;
-}> = ({ points, camera, frame, range, color = ROUTE_RED }) => {
+  reverse?: boolean;
+}> = ({ points, camera, frame, range, color = ROUTE_RED, reverse = false }) => {
   const active = frame >= range[0] && frame <= range[1];
   if (!active) return null;
 
@@ -19,7 +20,7 @@ export const TravelDot: React.FC<{
     extrapolateRight: "clamp",
     easing: Easing.inOut(Easing.cubic),
   });
-  const { x, y } = pointAtProgress(points, progress);
+  const { x, y } = pointAtProgress(points, reverse ? 1 - progress : progress);
   const { left, top } = project(camera, x, y);
 
   return (
