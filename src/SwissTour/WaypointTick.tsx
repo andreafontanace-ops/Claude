@@ -19,6 +19,7 @@ export const WaypointTick: React.FC<{
   // Set to let a long name wrap onto two lines instead of running wide,
   // which makes it far easier to park clear of the route.
   labelWidth?: number;
+  showElevation?: boolean;
 }> = ({
   waypoint,
   camera,
@@ -29,6 +30,7 @@ export const WaypointTick: React.FC<{
   labelDx = 0,
   labelDy = 46,
   labelWidth,
+  showElevation = false,
 }) => {
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -84,6 +86,11 @@ export const WaypointTick: React.FC<{
           {waypoint.subtitle ? (
             <div style={{ color: ROUTE_RED, fontSize: 34 }}>
               ({waypoint.subtitle})
+            </div>
+          ) : null}
+          {showElevation ? (
+            <div style={{ color: "#6b5f47", fontSize: 30 }}>
+              {waypoint.elevation.toLocaleString("it-CH")} m
             </div>
           ) : null}
         </div>

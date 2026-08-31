@@ -62,6 +62,11 @@ export const waypoints: Waypoint[] = [
   { id: "bedretto", name: "Bedretto", subtitle: undefined, lon: 8.517, lat: 46.5, x: 1128.56, y: 844.19, elevation: 1402 },
 ];
 
+export const peaks: Waypoint[] = [
+  { id: "rotondo", name: "Pizzo Rotondo", subtitle: undefined, lon: 8.46583, lat: 46.51694, x: 1105.99, y: 833.27, elevation: 3192 },
+  { id: "lucendro", name: "Pizzo Lucendro", subtitle: undefined, lon: 8.51944, lat: 46.53889, x: 1129.63, y: 819.12, elevation: 2963 },
+];
+
 export type RouteSegment = {
   id: string;
   d: string;
@@ -86,3 +91,6 @@ export const forkBranches: RouteSegment[] = [
 
 export const FORK_BBOX: BBox = { x0: 1014.86, y0: 739.89, x1: 1191.29, y1: 880.58 };
 
+
+export const MASSIF_RING_D = "M1170.62,825.75L1173.29,818.05L1161.95,827.42L1169.56,815.85L1159.39,823.93L1165.82,813.65L1156.83,820.43L1162.09,811.45L1150.95,807.94L1162.32,757.89L1120.03,771.87L1119.67,786.09L1108.46,778.70L1107.30,791.29L1096.90,785.53L1094.92,796.50L1083.57,797.47L1054.91,822.92L1032.86,844.19L1042.56,853.35L1051.83,845.41L1054.57,856.46L1063.22,850.35L1066.58,859.58L1073.90,858.32L1079.05,862.58L1081.76,852.47L1087.30,860.40L1090.28,852.03L1095.55,858.22L1110.36,852.62L1128.56,844.19Z";
+export const MASSIF_CENTER = { x: 1108.65, y: 825.09 };

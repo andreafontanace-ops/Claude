@@ -6,20 +6,32 @@ import { PinMarker } from "./PinMarker";
 import { WaypointTick } from "./WaypointTick";
 import { TravelDot } from "./TravelDot";
 import { TitleCard } from "./TitleCard";
-import { useCamera } from "./useCamera";
+import { MassifArea } from "./MassifArea";
+import { PeakMarker } from "./PeakMarker";
+import { useCamera, project } from "./useCamera";
 import { fontFamily } from "./fonts";
+import { mapLabelStyle } from "./labelStyle";
 import { ROUTE_BLUE, ROUTE_RED } from "./palette";
-import { forkBranches, FORK_BBOX, waypoints } from "./geoData";
+import {
+  forkBranches,
+  FORK_BBOX,
+  MASSIF_CENTER,
+  peaks,
+  waypoints,
+} from "./geoData";
 import { SAFE_RECT, SAFE_TITLE_TOP } from "./safeArea";
 import {
   FORK_PIN_DROP,
   FORK_PIN_LABEL,
-  GHOST_FADE,
+  MASSIF_AREA,
+  MASSIF_LABEL,
   OUTBOUND,
-  RETURN,
+  PEAK_LUCENDRO,
+  PEAK_ROTONDO,
 } from "./forkTimeline";
 
 const byId = (id: string) => waypoints.find((w) => w.id === id)!;
+const peakById = (id: string) => peaks.find((p) => p.id === id)!;
 const branchById = (id: string) => forkBranches.find((b) => b.id === id)!;
 
 // Where each branch is, as a fraction of its own length, when it reaches a
@@ -47,13 +59,12 @@ export const AiroloFork: React.FC = () => {
   const allacqua = byId("allacqua");
   const bedretto = byId("bedretto");
 
-  // Once both branches are drawn they fade to a faint trace, so the return
-  // leg has something to redraw over rather than landing on an identical line.
-  const outboundOpacity = interpolate(frame, GHOST_FADE, [1, 0], {
+  const massifLabel = project(camera, MASSIF_CENTER.x, MASSIF_CENTER.y);
+  const massifLabelOpacity = interpolate(frame, MASSIF_LABEL, [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const ghostOpacity = interpolate(frame, GHOST_FADE, [0, 0.22], {
+  const massifLabelRise = interpolate(frame, MASSIF_LABEL, [14, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -72,51 +83,18 @@ export const AiroloFork: React.FC = () => {
       >
         <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
           <SwitzerlandMap />
-
+          <MassifArea frame={frame} range={MASSIF_AREA} />
           <RoutePath
             d={north.d}
             frame={frame}
             range={OUTBOUND}
             color={ROUTE_BLUE}
-            opacity={outboundOpacity}
           />
           <RoutePath
             d={novena.d}
             frame={frame}
             range={OUTBOUND}
             color={ROUTE_RED}
-            opacity={outboundOpacity}
-          />
-
-          {/* faint trace of both roads, left behind for the return leg */}
-          <RoutePath
-            d={north.d}
-            frame={frame}
-            range={GHOST_FADE}
-            color={ROUTE_BLUE}
-            opacity={ghostOpacity}
-          />
-          <RoutePath
-            d={novena.d}
-            frame={frame}
-            range={GHOST_FADE}
-            color={ROUTE_RED}
-            opacity={ghostOpacity}
-          />
-
-          <RoutePath
-            d={north.d}
-            frame={frame}
-            range={RETURN}
-            color={ROUTE_BLUE}
-            reverse
-          />
-          <RoutePath
-            d={novena.d}
-            frame={frame}
-            range={RETURN}
-            color={ROUTE_RED}
-            reverse
           />
         </g>
       </svg>
@@ -136,34 +114,14 @@ export const AiroloFork: React.FC = () => {
           range={OUTBOUND}
           color={ROUTE_RED}
         />
-        <TravelDot
-          points={north.points}
-          camera={camera}
-          frame={frame}
-          range={RETURN}
-          color={ROUTE_BLUE}
-          reverse
-        />
-        <TravelDot
-          points={novena.points}
-          camera={camera}
-          frame={frame}
-          range={RETURN}
-          color={ROUTE_RED}
-          reverse
-        />
 
-        {/* Gotthard / Furka branch */}
+        {/* Gotthard / Furka branch - only the pass carries a name. */}
         <WaypointTick
           waypoint={gotthard}
           camera={camera}
           frame={frame}
           revealFrame={at(OUTBOUND, 0.284)}
-          showLabel
           color={ROUTE_BLUE}
-          labelDx={-165}
-          labelDy={-40}
-          labelWidth={280}
         />
         <WaypointTick
           waypoint={andermatt}
@@ -178,19 +136,17 @@ export const AiroloFork: React.FC = () => {
           frame={frame}
           revealFrame={at(OUTBOUND, 0.794)}
           showLabel
+          showElevation
           color={ROUTE_BLUE}
           labelDx={-95}
-          labelDy={-62}
+          labelDy={-72}
         />
         <WaypointTick
           waypoint={oberwald}
           camera={camera}
           frame={frame}
           revealFrame={at(OUTBOUND, 0.908)}
-          showLabel
           color={ROUTE_BLUE}
-          labelDx={-118}
-          labelDy={-12}
         />
 
         {/* Novena branch */}
@@ -214,10 +170,12 @@ export const AiroloFork: React.FC = () => {
           frame={frame}
           revealFrame={at(OUTBOUND, 0.66)}
           showLabel
+          showElevation
           color={ROUTE_RED}
           labelDx={30}
-          labelDy={116}
+          labelDy={126}
         />
+
         {/* Where both branches land, so it belongs to neither colour. */}
         <WaypointTick
           waypoint={ulrichen}
@@ -229,6 +187,50 @@ export const AiroloFork: React.FC = () => {
           labelDx={18}
           labelDy={74}
         />
+
+        <PeakMarker
+          peak={peakById("rotondo")}
+          camera={camera}
+          frame={frame}
+          revealFrame={PEAK_ROTONDO}
+          labelDy={36}
+        />
+        <PeakMarker
+          peak={peakById("lucendro")}
+          camera={camera}
+          frame={frame}
+          revealFrame={PEAK_LUCENDRO}
+          labelDy={36}
+        />
+
+        {/* Caption sits in the empty map above the massif rather than on top
+            of it, which leaves the shaded area to the two summit markers. */}
+        <div
+          style={{
+            position: "absolute",
+            left: massifLabel.left,
+            top: massifLabel.top - 360,
+            width: 560,
+            transform: `translate(-50%, -100%) translateY(${massifLabelRise}px)`,
+            opacity: massifLabelOpacity,
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              ...mapLabelStyle,
+              fontSize: 44,
+              color: "#3d3527",
+              whiteSpace: "normal",
+              lineHeight: 1.1,
+            }}
+          >
+            MASSICCIO DEL GOTTARDO
+          </div>
+          <div style={{ ...mapLabelStyle, fontSize: 31, color: "#6b5f47" }}>
+            Pizzo Rotondo &middot; 3192 m
+          </div>
+        </div>
 
         {/* The start: both roads leave from under this pin. */}
         <PinMarker

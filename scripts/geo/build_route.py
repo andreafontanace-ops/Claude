@@ -161,6 +161,30 @@ fork_out.append(
 with open(OUT_TS, "a") as f:
     f.write("\n".join(fork_out) + "\n")
 
+# The mountains between the two branches: the area they enclose. The ring
+# runs out along one road and back along the other, following the full road
+# geometry rather than a smoothed shortcut, so its edges tuck exactly under
+# the drawn lines instead of cutting corners away from them.
+def polygon_path(points):
+    head = f"M{points[0][0]:.2f},{points[0][1]:.2f}"
+    rest = "".join(f"L{x:.2f},{y:.2f}" for x, y in points[1:])
+    return head + rest + "Z"
+
+# Both branches run Airolo -> Ulrichen, so one is walked backwards and the
+# shared endpoints are dropped to avoid doubling them up.
+massif_ring = branch_north_points + reverse(branch_novena_points)[1:-1]
+massif_cx = sum(p[0] for p in massif_ring) / len(massif_ring)
+massif_cy = sum(p[1] for p in massif_ring) / len(massif_ring)
+
+with open(OUT_TS, "a") as f:
+    f.write(f'\nexport const MASSIF_RING_D = "{polygon_path(massif_ring)}";\n')
+    f.write(
+        f"export const MASSIF_CENTER = {{ x: {massif_cx:.2f}, y: {massif_cy:.2f} }};\n"
+    )
+
+print("massif center", round(massif_cx, 1), round(massif_cy, 1))
+
+
 def cumfrac(points, idx):
     return path_length(points[: idx + 1]) / path_length(points)
 

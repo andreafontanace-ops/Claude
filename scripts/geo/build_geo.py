@@ -97,6 +97,19 @@ with open(OUT_TS, "w") as out:
         out.write(f'  {{ id: "{wid}", name: "{name}", subtitle: {sub_field}, lon: {lon}, lat: {lat}, x: {x:.2f}, y: {y:.2f}, elevation: {elev} }},\n')
     out.write("];\n")
 
+    # Summits of the Gotthard massif, the block of mountains the two roads
+    # out of Airolo run either side of. Not route points - markers only.
+    peaks = [
+        ("rotondo", "Pizzo Rotondo", None, 8.46583, 46.51694, 3192),
+        ("lucendro", "Pizzo Lucendro", None, 8.51944, 46.53889, 2963),
+    ]
+    out.write("\nexport const peaks: Waypoint[] = [\n")
+    for wid, name, sub, lon, lat, elev in peaks:
+        x, y = project(lon, lat)
+        sub_field = f'"{sub}"' if sub else "undefined"
+        out.write(f'  {{ id: "{wid}", name: "{name}", subtitle: {sub_field}, lon: {lon}, lat: {lat}, x: {x:.2f}, y: {y:.2f}, elevation: {elev} }},\n')
+    out.write("];\n")
+
 print("lon range", lon_min, lon_max)
 print("lat range", lat_min, lat_max)
 print("MAP_HEIGHT", MAP_HEIGHT)
