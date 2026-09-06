@@ -6,6 +6,8 @@ import { SwissAlpsTour } from "./SwissTour/SwissAlpsTour";
 import { AiroloFork } from "./SwissTour/AiroloFork";
 import { DURATION, FPS } from "./SwissTour/timeline";
 import { FORK_DURATION } from "./SwissTour/forkTimeline";
+import { ColDeVars } from "./VarsTour/ColDeVars";
+import { VARS_DURATION } from "./VarsTour/timeline";
 
 // Each <Composition> is an entry in the sidebar!
 
@@ -25,6 +27,15 @@ export const RemotionRoot: React.FC = () => {
         id="AiroloFork"
         component={AiroloFork}
         durationInFrames={FORK_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      <Composition
+        id="ColDeVars"
+        component={ColDeVars}
+        durationInFrames={VARS_DURATION}
         fps={FPS}
         width={1080}
         height={1920}

@@ -1,7 +1,7 @@
 import React from "react";
 import { interpolate } from "remotion";
-import { Camera, project } from "./useCamera";
-import { Waypoint } from "./geoData";
+import { Camera, project } from "./camera";
+import { Waypoint } from "./types";
 import { ROUTE_RED } from "./palette";
 import { mapLabelStyle } from "./labelStyle";
 
@@ -20,6 +20,8 @@ export const WaypointTick: React.FC<{
   // which makes it far easier to park clear of the route.
   labelWidth?: number;
   showElevation?: boolean;
+  // it-CH prints 2'478, it-IT prints 2.478.
+  elevationLocale?: string;
 }> = ({
   waypoint,
   camera,
@@ -31,6 +33,7 @@ export const WaypointTick: React.FC<{
   labelDy = 46,
   labelWidth,
   showElevation = false,
+  elevationLocale = "it-CH",
 }) => {
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -90,7 +93,7 @@ export const WaypointTick: React.FC<{
           ) : null}
           {showElevation ? (
             <div style={{ color: "#6b5f47", fontSize: 30 }}>
-              {waypoint.elevation.toLocaleString("it-CH")} m
+              {waypoint.elevation.toLocaleString(elevationLocale)} m
             </div>
           ) : null}
         </div>

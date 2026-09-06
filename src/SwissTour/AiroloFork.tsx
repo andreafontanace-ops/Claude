@@ -1,17 +1,17 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { SwitzerlandMap } from "./SwitzerlandMap";
-import { RoutePath } from "./RoutePath";
-import { PinMarker } from "./PinMarker";
-import { WaypointTick } from "./WaypointTick";
-import { TravelDot } from "./TravelDot";
+import { RoutePath } from "../shared/RoutePath";
+import { PinMarker } from "../shared/PinMarker";
+import { WaypointTick } from "../shared/WaypointTick";
+import { TravelDot } from "../shared/TravelDot";
 import { TitleCard } from "./TitleCard";
 import { MassifArea } from "./MassifArea";
 import { PeakMarker } from "./PeakMarker";
 import { useCamera, project } from "./useCamera";
-import { fontFamily } from "./fonts";
-import { mapLabelStyle } from "./labelStyle";
-import { ROUTE_BLUE, ROUTE_RED } from "./palette";
+import { fontFamily } from "../shared/fonts";
+import { mapLabelStyle } from "../shared/labelStyle";
+import { ROUTE_BLUE, ROUTE_RED } from "../shared/palette";
 import {
   forkBranches,
   FORK_BBOX,
@@ -19,7 +19,7 @@ import {
   peaks,
   waypoints,
 } from "./geoData";
-import { SAFE_RECT, SAFE_TITLE_TOP } from "./safeArea";
+import { SAFE_RECT, SAFE_TITLE_TOP } from "../shared/safeArea";
 import {
   FORK_PIN_DROP,
   FORK_PIN_LABEL,

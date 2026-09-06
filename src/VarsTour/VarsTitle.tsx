@@ -1,17 +1,12 @@
 import React from "react";
 import { interpolate, spring, useVideoConfig } from "remotion";
 import { fontFamily } from "../shared/fonts";
+import { mapLabelStyle } from "../shared/labelStyle";
 import { INTRO_FADE_IN, TITLE_FADE_OUT, TITLE_HOLD } from "./timeline";
 
-export const TitleCard: React.FC<{
-  frame: number;
-  // Null drops the second line entirely.
-  subtitle?: string | null;
-  top?: number;
-}> = ({
+export const VarsTitle: React.FC<{ frame: number; top: number }> = ({
   frame,
-  subtitle = "Ticino · Uri · Valais",
-  top = 110,
+  top,
 }) => {
   const { fps } = useVideoConfig();
 
@@ -22,14 +17,15 @@ export const TitleCard: React.FC<{
   });
   const scale = interpolate(pop, [0, 1], [0.75, 1]);
 
+  const fadeIn = interpolate(frame, INTRO_FADE_IN, [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
   const fadeOut = interpolate(frame, TITLE_FADE_OUT, [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const opacity = Math.min(interpolate(frame, INTRO_FADE_IN, [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  }), fadeOut);
+  const opacity = Math.min(fadeIn, fadeOut);
 
   const subOpacity = interpolate(
     frame,
@@ -57,31 +53,31 @@ export const TitleCard: React.FC<{
     >
       <div
         style={{
-          fontSize: 152,
-          fontWeight: 800,
-          color: "#231f16",
+          // The cream outline the map labels use: the title fades out over
+          // the map itself, and dark type alone would go muddy on pastel.
+          ...mapLabelStyle,
+          WebkitTextStroke: "14px #f7f2e6",
+          fontSize: 112,
           letterSpacing: 1,
         }}
       >
-        SVIZZERA
+        COL DE VARS
       </div>
-      {subtitle ? (
-        <div
-          style={{
-            marginTop: 18,
-            fontSize: 40,
-            fontWeight: 700,
-            color: "#c0392b",
-            letterSpacing: 1.5,
-            opacity: subOpacity,
-            textAlign: "center",
-            padding: "0 30px",
-            textTransform: "uppercase",
-          }}
-        >
-          {subtitle}
-        </div>
-      ) : null}
+      <div
+        style={{
+          ...mapLabelStyle,
+          WebkitTextStroke: "9px #f7f2e6",
+          marginTop: 18,
+          fontSize: 40,
+          fontWeight: 700,
+          color: "#c0392b",
+          letterSpacing: 1.5,
+          opacity: subOpacity,
+          textTransform: "uppercase",
+        }}
+      >
+        Alpi francesi &middot; 2.108 m
+      </div>
     </div>
   );
 };

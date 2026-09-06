@@ -1,15 +1,15 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, useVideoConfig } from "remotion";
 import { SwitzerlandMap } from "./SwitzerlandMap";
-import { RoutePath } from "./RoutePath";
-import { PinMarker } from "./PinMarker";
-import { WaypointTick } from "./WaypointTick";
-import { TravelDot } from "./TravelDot";
+import { RoutePath } from "../shared/RoutePath";
+import { PinMarker } from "../shared/PinMarker";
+import { WaypointTick } from "../shared/WaypointTick";
+import { TravelDot } from "../shared/TravelDot";
 import { TitleCard } from "./TitleCard";
 import { ArrivalPulse } from "./ArrivalPulse";
 import { useCamera } from "./useCamera";
-import { fontFamily } from "./fonts";
-import { ROUTE_BLUE, ROUTE_RED } from "./palette";
+import { fontFamily } from "../shared/fonts";
+import { ROUTE_BLUE, ROUTE_RED } from "../shared/palette";
 import { routeSegments, waypoints } from "./geoData";
 import { PIN_DROP, PIN_LABEL, ROUTE_A, ROUTE_B, ROUTE_C } from "./timeline";
 

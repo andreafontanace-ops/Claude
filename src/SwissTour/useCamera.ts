@@ -1,9 +1,11 @@
 import { Easing, interpolate } from "remotion";
-import { fitBoxToRect, lerpCamera, Camera } from "./camera";
+import { fitBoxToRect, lerpCamera, Camera, project } from "../shared/camera";
 
 export type { Camera };
-import { BBox, FULL_BBOX, REGION_BBOX } from "./geoData";
-import { FULL_RECT, Rect } from "./safeArea";
+export { project };
+import { BBox } from "../shared/types";
+import { FULL_BBOX, REGION_BBOX } from "./geoData";
+import { FULL_RECT, Rect } from "../shared/safeArea";
 import { CAMERA_ZOOM } from "./timeline";
 
 export const useCamera = (
@@ -26,8 +28,3 @@ export const useCamera = (
 
   return lerpCamera(wide, region, t);
 };
-
-export const project = (camera: Camera, x: number, y: number) => ({
-  left: camera.tx + x * camera.scale,
-  top: camera.ty + y * camera.scale,
-});

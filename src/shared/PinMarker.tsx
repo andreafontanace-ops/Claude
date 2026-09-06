@@ -1,7 +1,7 @@
 import React from "react";
 import { interpolate, spring, useVideoConfig } from "remotion";
-import { Camera, project } from "./useCamera";
-import { Waypoint } from "./geoData";
+import { Camera, project } from "./camera";
+import { Waypoint } from "./types";
 import { ROUTE_RED } from "./palette";
 import { mapLabelStyle } from "./labelStyle";
 
@@ -11,8 +11,32 @@ export const PinMarker: React.FC<{
   frame: number;
   dropRange: readonly [number, number];
   labelRange: readonly [number, number];
+  labelDx?: number;
   labelDy?: number;
-}> = ({ waypoint, camera, frame, dropRange, labelRange, labelDy = 78 }) => {
+  labelSize?: number;
+  showElevation?: boolean;
+  // it-CH prints 2'478, it-IT prints 2.478.
+  elevationLocale?: string;
+  // Size of the pin glyph itself. The label is sized separately so it can
+  // stay readable while the marker shrinks to one of many on a wide map.
+  pinScale?: number;
+  // Fades the whole marker back out, for markers that hand the frame over
+  // to another one.
+  fadeRange?: readonly [number, number];
+}> = ({
+  waypoint,
+  camera,
+  frame,
+  dropRange,
+  labelRange,
+  labelDx = 0,
+  labelDy = 78,
+  labelSize = 50,
+  showElevation = false,
+  elevationLocale = "it-CH",
+  pinScale = 1,
+  fadeRange,
+}) => {
   const { fps } = useVideoConfig();
   const { left, top } = project(camera, waypoint.x, waypoint.y);
 
@@ -67,21 +91,30 @@ export const PinMarker: React.FC<{
     extrapolateRight: "clamp",
   });
 
-  if (!visible) return null;
+  const fade = fadeRange
+    ? interpolate(frame, fadeRange, [1, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 1;
+
+  if (!visible || fade <= 0) return null;
 
   // `left, top` mark the exact geo point (Nufenenpass). The pin and the
   // ground ring are positioned independently off that single anchor, so the
   // pin's tip stays glued to the real coordinate.
   return (
-    <div style={{ position: "absolute", left, top, width: 0, height: 0 }}>
+    <div
+      style={{ position: "absolute", left, top, width: 0, height: 0, opacity: fade }}
+    >
       {landed && (
         <div
           style={{
             position: "absolute",
             left: 0,
             top: 0,
-            width: 68,
-            height: 68,
+            width: 68 * pinScale,
+            height: 68 * pinScale,
             borderRadius: "50%",
             border: "4px solid #e63946",
             transform: `translate(-50%, -50%) scale(${ringScale})`,
@@ -95,7 +128,7 @@ export const PinMarker: React.FC<{
           position: "absolute",
           left: 0,
           top: 0,
-          transform: `translate(-50%, -100%) translateY(${dropY}px) scaleX(${squash}) scaleY(${squashY})`,
+          transform: `translate(-50%, -100%) translateY(${dropY * pinScale}px) scaleX(${squash}) scaleY(${squashY}) scale(${pinScale})`,
           transformOrigin: "50% 100%",
           filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
         }}
@@ -115,19 +148,24 @@ export const PinMarker: React.FC<{
         style={{
           ...mapLabelStyle,
           position: "absolute",
-          left: 0,
+          left: labelDx,
           top: labelDy,
           transform: `translate(-50%, 0) translateY(${labelRise}px)`,
           opacity: labelOpacity,
           textAlign: "center",
-          fontSize: 50,
+          fontSize: labelSize,
           lineHeight: 1.1,
         }}
       >
         <div>{waypoint.name}</div>
         {waypoint.subtitle ? (
-          <div style={{ color: ROUTE_RED, fontSize: 42 }}>
+          <div style={{ color: ROUTE_RED, fontSize: labelSize * 0.84 }}>
             ({waypoint.subtitle})
+          </div>
+        ) : null}
+        {showElevation ? (
+          <div style={{ color: "#6b5f47", fontSize: labelSize * 0.66 }}>
+            {waypoint.elevation.toLocaleString(elevationLocale)} m
           </div>
         ) : null}
       </div>

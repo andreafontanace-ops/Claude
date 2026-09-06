@@ -1,6 +1,6 @@
 import React from "react";
 import { Easing, interpolate } from "remotion";
-import { Camera, project } from "./useCamera";
+import { Camera, project } from "./camera";
 import { pointAtProgress } from "./polyline";
 import { ROUTE_RED } from "./palette";
 

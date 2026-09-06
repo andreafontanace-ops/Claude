@@ -2,7 +2,7 @@ import React from "react";
 import { interpolate } from "remotion";
 import { Camera, project } from "./useCamera";
 import { Waypoint } from "./geoData";
-import { mapLabelStyle } from "./labelStyle";
+import { mapLabelStyle } from "../shared/labelStyle";
 
 // A summit inside the highlighted massif: a small peak glyph with its
 // height under it. The name is carried by the massif caption instead, so
