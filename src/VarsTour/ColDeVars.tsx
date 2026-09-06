@@ -19,6 +19,8 @@ import {
   PASS_LABEL_DELAY,
   ROAD_DRAW,
   SAINTPAUL_LABEL,
+  VARS_PIN_DROP,
+  VARS_PIN_LABEL,
   ZOOM_VARS,
 } from "./timeline";
 
@@ -39,19 +41,6 @@ export const ColDeVars: React.FC = () => {
   const guillestre = placeById("guillestre");
   const col = placeById("vars");
   const saintpaul = placeById("saintpaul");
-
-  // The Col de Vars pin arrives as one of six, then grows into the subject
-  // of the film as the camera comes down onto it.
-  const heroT = interpolate(frame, ZOOM_VARS, [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const heroScale = PASS_PIN_SCALE + (1 - PASS_PIN_SCALE) * heroT;
-  const heroLabelSize = PASS_LABEL_SIZE + (54 - PASS_LABEL_SIZE) * heroT;
-  // Its name starts centred under the pin and slides off to the west, which
-  // is the only side of the pass the road does not run through.
-  const heroLabelDx = -245 * heroT;
-  const heroLabelDy = 20 - 100 * heroT;
 
   // The commune patchwork only exists for the two Alpine departments, so it
   // arrives with the final push-in rather than being on from the start.
@@ -95,29 +84,28 @@ export const ColDeVars: React.FC = () => {
           color={ROUTE_RED}
         />
 
-        {/* The Route des Grandes Alpes, north to south. All but the Col de
-            Vars step back out once the eye has run down the line. */}
-        {passes.map((pass, i) =>
-          pass.id === "vars" ? null : (
-            <PinMarker
-              key={pass.id}
-              waypoint={pass}
-              camera={camera}
-              frame={frame}
-              dropRange={[dropFrame(i), dropFrame(i) + 26]}
-              labelRange={[
-                dropFrame(i) + PASS_LABEL_DELAY,
-                dropFrame(i) + PASS_LABEL_DELAY + 14,
-              ]}
-              labelDy={16}
-              labelSize={PASS_LABEL_SIZE}
-              showElevation
-              elevationLocale="it-IT"
-              pinScale={PASS_PIN_SCALE}
-              fadeRange={PASS_FADE}
-            />
-          ),
-        )}
+        {/* The Route des Grandes Alpes, north to south. The Col de Vars is
+            not among them on purpose: it belongs to the gap they leave
+            between Izoard and Cayolle, and the push-in fills it. */}
+        {passes.map((pass, i) => (
+          <PinMarker
+            key={pass.id}
+            waypoint={pass}
+            camera={camera}
+            frame={frame}
+            dropRange={[dropFrame(i), dropFrame(i) + 26]}
+            labelRange={[
+              dropFrame(i) + PASS_LABEL_DELAY,
+              dropFrame(i) + PASS_LABEL_DELAY + 14,
+            ]}
+            labelDy={16}
+            labelSize={PASS_LABEL_SIZE}
+            showElevation
+            elevationLocale="it-IT"
+            pinScale={PASS_PIN_SCALE}
+            fadeRange={PASS_FADE}
+          />
+        ))}
 
         <WaypointTick
           waypoint={guillestre}
@@ -141,22 +129,20 @@ export const ColDeVars: React.FC = () => {
           labelWidth={420}
         />
 
-        {/* The subject: dropped with the others, kept when they go. */}
+        {/* The subject, dropped into the gap the others left, once the
+            camera has arrived. Its name sits to the west: the only side of
+            the pass the road does not run through. */}
         <PinMarker
           waypoint={col}
           camera={camera}
           frame={frame}
-          dropRange={[dropFrame(3), dropFrame(3) + 26]}
-          labelRange={[
-            dropFrame(3) + PASS_LABEL_DELAY,
-            dropFrame(3) + PASS_LABEL_DELAY + 14,
-          ]}
-          labelDx={heroLabelDx}
-          labelDy={heroLabelDy}
-          labelSize={heroLabelSize}
+          dropRange={VARS_PIN_DROP}
+          labelRange={VARS_PIN_LABEL}
+          labelDx={-245}
+          labelDy={-80}
+          labelSize={54}
           showElevation
           elevationLocale="it-IT"
-          pinScale={heroScale}
         />
 
         <VarsTitle frame={frame} top={SAFE_TITLE_TOP} />

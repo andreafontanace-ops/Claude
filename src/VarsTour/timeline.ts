@@ -19,11 +19,15 @@ export const PASS_DROP_STEP = 20;
 export const PASS_LABEL_DELAY = 16;
 
 // Everything except the Col de Vars steps back out of the frame.
-export const PASS_FADE = [238, 264] as const;
+export const PASS_FADE = [212, 238] as const;
 
 // Stage 2 -> 3: down onto the pass and its road.
-export const ZOOM_VARS = [250, 324] as const;
+export const ZOOM_VARS = [222, 296] as const;
 
-export const ROAD_DRAW = [318, 396] as const;
-export const GUILLESTRE_LABEL = 324;
-export const SAINTPAUL_LABEL = 386;
+// The subject arrives only once the camera is down on it.
+export const VARS_PIN_DROP = [292, 320] as const;
+export const VARS_PIN_LABEL = [312, 332] as const;
+
+export const ROAD_DRAW = [330, 404] as const;
+export const GUILLESTRE_LABEL = 336;
+export const SAINTPAUL_LABEL = 394;

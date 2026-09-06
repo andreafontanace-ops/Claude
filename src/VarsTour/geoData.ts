@@ -526,7 +526,6 @@ export const passes: Waypoint[] = [
   { id: "iseran", name: "COL DE L'ISERAN", subtitle: null, x: 1655.07, y: 1123.78, elevation: 2764 },
   { id: "galibier", name: "COL DU GALIBIER", subtitle: null, x: 1570.12, y: 1193.71, elevation: 2642 },
   { id: "izoard", name: "COL D'IZOARD", subtitle: null, x: 1614.72, y: 1242.11, elevation: 2360 },
-  { id: "vars", name: "COL DE VARS", subtitle: null, x: 1610.32, y: 1297.76, elevation: 2108 },
   { id: "cayolle", name: "COL DE LA CAYOLLE", subtitle: null, x: 1615.94, y: 1353.24, elevation: 2326 },
 ];
 

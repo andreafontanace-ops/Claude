@@ -57,11 +57,11 @@ export const VarsTitle: React.FC<{ frame: number; top: number }> = ({
           // the map itself, and dark type alone would go muddy on pastel.
           ...mapLabelStyle,
           WebkitTextStroke: "14px #f7f2e6",
-          fontSize: 112,
+          fontSize: 152,
           letterSpacing: 1,
         }}
       >
-        COL DE VARS
+        FRANCIA
       </div>
       <div
         style={{
@@ -76,7 +76,7 @@ export const VarsTitle: React.FC<{ frame: number; top: number }> = ({
           textTransform: "uppercase",
         }}
       >
-        Alpi francesi &middot; 2.108 m
+        Route des Grandes Alpes
       </div>
     </div>
   );

@@ -12,7 +12,9 @@ export const TravelDot: React.FC<{
   color?: string;
   reverse?: boolean;
 }> = ({ points, camera, frame, range, color = ROUTE_RED, reverse = false }) => {
-  const active = frame >= range[0] && frame <= range[1];
+  // Strictly after the start: at progress 0 the line itself has not been
+  // painted yet, so a dot sitting there would arrive before the road does.
+  const active = frame > range[0] && frame <= range[1];
   if (!active) return null;
 
   const progress = interpolate(frame, range, [0, 1], {

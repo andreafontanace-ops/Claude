@@ -119,9 +119,10 @@ PASSES = [
     ("iseran",   "COL DE L'ISERAN",  7.03083, 45.41694, 2764),
     ("galibier", "COL DU GALIBIER",  6.40800, 45.06400, 2642),
     ("izoard",   "COL D'IZOARD",     6.73500, 44.81972, 2360),
-    ("vars",     "COL DE VARS",      6.70275, 44.53890, 2108),
     ("cayolle",  "COL DE LA CAYOLLE",6.74389, 44.25889, 2326),
 ]
+# The Col de Vars is deliberately absent: it sits in the gap these four leave
+# between Izoard and Cayolle, and the second push-in drops it in there.
 # Turini, the route's last pass, is left off on purpose: it sits so far south
 # that including it stretches this frame into a thin ribbon and shrinks the
 # five passes that lead to the Col de Vars.
