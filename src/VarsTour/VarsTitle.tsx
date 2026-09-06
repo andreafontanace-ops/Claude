@@ -2,7 +2,7 @@ import React from "react";
 import { interpolate, spring, useVideoConfig } from "remotion";
 import { fontFamily } from "../shared/fonts";
 import { mapLabelStyle } from "../shared/labelStyle";
-import { INTRO_FADE_IN, TITLE_FADE_OUT, TITLE_HOLD } from "./timeline";
+import { INTRO_FADE_IN, TITLE_FADE_OUT } from "./timeline";
 
 export const VarsTitle: React.FC<{ frame: number; top: number }> = ({
   frame,
@@ -26,13 +26,6 @@ export const VarsTitle: React.FC<{ frame: number; top: number }> = ({
     extrapolateRight: "clamp",
   });
   const opacity = Math.min(fadeIn, fadeOut);
-
-  const subOpacity = interpolate(
-    frame,
-    [TITLE_HOLD[0], TITLE_HOLD[0] + 8],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
 
   if (opacity <= 0) return null;
 
@@ -62,21 +55,6 @@ export const VarsTitle: React.FC<{ frame: number; top: number }> = ({
         }}
       >
         FRANCIA
-      </div>
-      <div
-        style={{
-          ...mapLabelStyle,
-          WebkitTextStroke: "9px #f7f2e6",
-          marginTop: 18,
-          fontSize: 40,
-          fontWeight: 700,
-          color: "#c0392b",
-          letterSpacing: 1.5,
-          opacity: subOpacity,
-          textTransform: "uppercase",
-        }}
-      >
-        Route des Grandes Alpes
       </div>
     </div>
   );
