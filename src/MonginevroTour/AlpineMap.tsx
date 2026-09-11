@@ -1,9 +1,9 @@
 import React from "react";
-import { communes, neighbours, regions } from "./geoData";
+import { beyond, communesFr, communesIt, departments } from "./geoData";
 
-// The same pastel patchwork as the other tours, here covering two countries
-// at once: Italian provinces and French departments are close enough in size
-// to read as one map rather than two stitched together.
+// France carries the patchwork. Everything past the frontier is the same map
+// drained of colour, so the border reads as the line where the colour stops
+// rather than as a stroke someone drew on top.
 const PALETTE = [
   "#cdbfe0", // lavender
   "#a9c9a3", // sage
@@ -14,6 +14,30 @@ const PALETTE = [
   "#d8b98f", // clay
   "#b9c7a0", // olive
 ];
+
+// The same eight tiles with the colour taken out of them: enough variation to
+// keep Cesana and Claviere legible as places, not enough to compete.
+const GREY = [
+  "#d0cbc2",
+  "#c8c4bb",
+  "#d7d2c9",
+  "#c2beb5",
+  "#ccc7be",
+  "#d4cfc6",
+  "#c5c1b8",
+  "#cec9c0",
+];
+
+// The French and Italian boundary files come from different surveys and do
+// not meet exactly, which leaves a hairline of bare paper along the frontier.
+// A plain backing layer, drawn with a fat stroke of its own colour so it
+// swells past its own edges, fills that gap; France is drawn over the top, so
+// the overspill never shows.
+const GREY_PLUG = "#ccc7be";
+
+// The opening: France in one flat tone, before the map has been broken into
+// its pieces.
+const FLAT = "#a9c9a3";
 
 const hashIndex = (name: string, mod: number) => {
   let h = 0;
@@ -28,43 +52,100 @@ const hashIndex = (name: string, mod: number) => {
 // to slabs as the camera pushes in.
 export const AlpineMap: React.FC<{
   scale: number;
+  // 0 while France is one flat shape, 1 once it has opened into departments.
+  patchworkOpacity: number;
+  // 0 until the camera has left the country behind and Italy enters frame.
+  beyondOpacity: number;
   communeOpacity: number;
-}> = ({ scale, communeOpacity }) => {
+}> = ({ scale, patchworkOpacity, beyondOpacity, communeOpacity }) => {
   const border = 3 / scale;
 
   return (
     <g>
-      <g>
-        {neighbours.map((n, i) => (
-          <path
-            key={`${n.name}-${i}`}
-            d={n.d}
-            fillRule="evenodd"
-            fill="#e6ddc8"
-            stroke="#dcd2bb"
-            strokeWidth={border}
-            strokeLinejoin="round"
-          />
-        ))}
-      </g>
+      {beyondOpacity > 0 && (
+        <g opacity={beyondOpacity}>
+          {beyond.map((c, i) => (
+            <path
+              key={`plug-${c.name}-${i}`}
+              d={c.d}
+              fillRule="evenodd"
+              fill={GREY_PLUG}
+              stroke={GREY_PLUG}
+              strokeWidth={border * 4}
+              strokeLinejoin="round"
+            />
+          ))}
+          {beyond.map((c, i) => (
+            <path
+              key={`${c.name}-${i}`}
+              d={c.d}
+              fillRule="evenodd"
+              fill={GREY[hashIndex(c.name, GREY.length)]}
+              stroke="#efeae0"
+              strokeWidth={border}
+              strokeLinejoin="round"
+            />
+          ))}
+        </g>
+      )}
 
-      {regions.map((c, i) => (
+      {/* France as one shape: same stroke as fill, so the departments it is
+          made of leave no seams. */}
+      {departments.map((c, i) => (
         <path
-          key={`${c.name}-${i}`}
+          key={`flat-${c.name}-${i}`}
           d={c.d}
           fillRule="evenodd"
-          fill={PALETTE[hashIndex(c.name, PALETTE.length)]}
-          stroke="#faf6ec"
+          fill={FLAT}
+          stroke={FLAT}
           strokeWidth={border}
           strokeLinejoin="round"
         />
       ))}
 
-      {communeOpacity > 0 && (
-        <g opacity={communeOpacity}>
-          {communes.map((c, i) => (
+      {patchworkOpacity > 0 && (
+        <g opacity={patchworkOpacity}>
+          {departments.map((c, i) => (
             <path
               key={`${c.name}-${i}`}
+              d={c.d}
+              fillRule="evenodd"
+              fill={PALETTE[hashIndex(c.name, PALETTE.length)]}
+              stroke="#faf6ec"
+              strokeWidth={border}
+              strokeLinejoin="round"
+            />
+          ))}
+        </g>
+      )}
+
+      {communeOpacity > 0 && (
+        <g opacity={communeOpacity}>
+          {communesIt.map((c, i) => (
+            <path
+              key={`it-plug-${c.name}-${i}`}
+              d={c.d}
+              fillRule="evenodd"
+              fill={GREY_PLUG}
+              stroke={GREY_PLUG}
+              strokeWidth={border * 3}
+              strokeLinejoin="round"
+            />
+          ))}
+          {communesIt.map((c, i) => (
+            <path
+              key={`it-${c.name}-${i}`}
+              d={c.d}
+              fillRule="evenodd"
+              fill={GREY[hashIndex(c.name, GREY.length)]}
+              stroke="#efeae0"
+              strokeWidth={border * 0.6}
+              strokeLinejoin="round"
+            />
+          ))}
+          {communesFr.map((c, i) => (
+            <path
+              key={`fr-${c.name}-${i}`}
               d={c.d}
               fillRule="evenodd"
               fill={PALETTE[hashIndex(c.name, PALETTE.length)]}
@@ -76,11 +157,10 @@ export const AlpineMap: React.FC<{
         </g>
       )}
 
-      {/* Province and department edges again on top, so the national border
-          still reads once the communes have filled in underneath. */}
+      {/* The frontier itself, last, so the communes cannot bury it. */}
       {communeOpacity > 0 && (
         <g opacity={communeOpacity}>
-          {regions.map((c, i) => (
+          {departments.map((c, i) => (
             <path
               key={`edge-${c.name}-${i}`}
               d={c.d}

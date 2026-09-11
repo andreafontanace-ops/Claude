@@ -1,19 +1,19 @@
 import { Easing, interpolate } from "remotion";
 import { Camera, fitBoxToRect, lerpCameraZoom } from "../shared/camera";
 import { Rect } from "../shared/safeArea";
-import { PASSES_BBOX, ROUTE_BBOX, WIDE_BBOX } from "./geoData";
-import { ZOOM_PASSES, ZOOM_ROUTE } from "./timeline";
+import { REGION_BBOX, ROUTE_BBOX, WIDE_BBOX } from "./geoData";
+import { ZOOM_REGION, ZOOM_ROUTE } from "./timeline";
 
 const ease = Easing.bezier(0.45, 0, 0.15, 1);
 
-// Two pushes: the two countries down onto the passes along their border, then
-// the border down onto the Monginevro and its road.
+// Two pushes: France down onto the Alpine region on its eastern edge, then
+// that region down onto the frontier and the road across it.
 export const useMonginevroCamera = (frame: number, rect: Rect): Camera => {
   const wide = fitBoxToRect(WIDE_BBOX, rect, 1.0);
-  const passes = fitBoxToRect(PASSES_BBOX, rect, 1);
+  const region = fitBoxToRect(REGION_BBOX, rect, 1);
   const route = fitBoxToRect(ROUTE_BBOX, rect, 1);
 
-  const t1 = interpolate(frame, ZOOM_PASSES, [0, 1], {
+  const t1 = interpolate(frame, ZOOM_REGION, [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: ease,
@@ -24,5 +24,5 @@ export const useMonginevroCamera = (frame: number, rect: Rect): Camera => {
     easing: ease,
   });
 
-  return lerpCameraZoom(lerpCameraZoom(wide, passes, t1, rect), route, t2, rect);
+  return lerpCameraZoom(lerpCameraZoom(wide, region, t1, rect), route, t2, rect);
 };

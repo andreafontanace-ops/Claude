@@ -34,10 +34,10 @@ def load(path):
 france = load("france_departements.geojson")
 italy = load("italy_provinces.geojson")
 
-# The frame is anchored on both countries at once, so neither is cropped in
-# the opening shot.
+# The frame is anchored on France alone: the opening shot is France and
+# nothing else, and Italy is drawn into the same projection behind it.
 lons, lats = [], []
-for src in (france, italy):
+for src in (france,):
     for feat in src["features"]:
         for ring in rings(feat["geometry"]):
             for lon, lat in ring:
@@ -93,20 +93,20 @@ def shapes(geojson, name_key, min_step, window=None):
     return out
 
 
-# French departments and Italian provinces are close enough in size to read as
-# one patchwork rather than two different maps stitched together.
-regions = shapes(france, "nom", 0.4) + shapes(italy, "prov_name", 0.4)
-
-swiss = load("switzerland_cantons.geojson")
-neighbours = shapes(swiss, "name", 1.6)
+# France carries the patchwork; everything beyond it is drawn flat and grey,
+# so the border reads as the line where the colour stops.
+departments = shapes(france, "nom", 0.4)
+beyond = shapes(italy, "prov_name", 0.4)
+beyond += shapes(load("switzerland_cantons.geojson"), "name", 1.6)
 
 # Communes, for the final push-in. Only the ones around the road: the whole of
 # Italy at this resolution would be tens of megabytes.
 WINDOW = (6.45, 44.72, 7.15, 45.20)
-communes = shapes(load("limits_IT_municipalities.geojson"), "name", 0.12, WINDOW)
-communes += shapes(load("communes-05-hautes-alpes.geojson"), "nom", 0.12, WINDOW)
+communes_it = shapes(load("limits_IT_municipalities.geojson"), "name", 0.12, WINDOW)
+communes_fr = shapes(load("communes-05-hautes-alpes.geojson"), "nom", 0.12, WINDOW)
 
-print("regions", len(regions), "neighbours", len(neighbours), "communes", len(communes))
+print("departments", len(departments), "beyond", len(beyond),
+      "communes", len(communes_fr), "+", len(communes_it))
 
 
 # --- places -----------------------------------------------------------------
@@ -242,7 +242,7 @@ def border_near(col_xy, radius):
     return best
 
 
-border_pts = border_near(col, 26)
+border_pts = border_near(col, 42)
 border_d = "M" + "L".join(f"{x:.2f},{y:.2f}" for x, y in border_pts)
 print("border points", len(border_pts))
 
@@ -261,7 +261,9 @@ def bbox(points, pad, pad_top=None, pad_bottom=None):
 # headroom than floor: that visual weight is what gets centred, not the
 # line on its own.
 route_box = bbox(road, 3.0, 13.5, 8.3)
-passes_box = bbox([P(lon, lat) for _, _, lon, lat, _ in PASSES], 22)
+# The middle stage reads as a region rather than three dots, so it is
+# framed wider than the passes strictly need.
+passes_box = bbox([P(lon, lat) for _, _, lon, lat, _ in PASSES], 34)
 
 
 def bbox_literal(name, b):
@@ -282,9 +284,10 @@ out.append(f"export const MAP_WIDTH = {MAP_WIDTH:.2f};")
 out.append(f"export const MAP_HEIGHT = {MAP_HEIGHT:.2f};")
 out.append("")
 for var, rows, note in [
-    ("regions", regions, "Italian provinces and French departments, one pastel tile each."),
-    ("neighbours", neighbours, "Switzerland, flat and unlabelled, so the north edge is not bare paper."),
-    ("communes", communes, "Only around the road: what the final push-in needs."),
+    ("departments", departments, "France: one pastel tile each, revealed as the camera descends."),
+    ("beyond", beyond, "Italy and Switzerland: grey, and only in frame once the camera has dropped."),
+    ("communesFr", communes_fr, "The French communes around the road."),
+    ("communesIt", communes_it, "The Italian ones, which take the grey."),
 ]:
     out.append(f"// {note}")
     out.append(f"export const {var}: RegionShape[] = [")
@@ -322,7 +325,7 @@ out.append(f'export const BORDER_D = "{border_d}";')
 out.append(f"export const BORDER_POINT = {{ x: {border_pt[0]:.2f}, y: {border_pt[1]:.2f} }};")
 out.append("")
 out.append(bbox_literal("WIDE_BBOX", (0, 0, MAP_WIDTH, MAP_HEIGHT)))
-out.append(bbox_literal("PASSES_BBOX", passes_box))
+out.append(bbox_literal("REGION_BBOX", passes_box))
 out.append(bbox_literal("ROUTE_BBOX", route_box))
 out.append("")
 

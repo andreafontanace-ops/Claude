@@ -15,6 +15,7 @@ import { ROUTE_RED } from "../shared/palette";
 import { SAFE_RECT, SAFE_TITLE_TOP } from "../shared/safeArea";
 import { BORDER_POINT, passes, places, roadLegs } from "./geoData";
 import {
+  BEYOND,
   BORDER,
   BRIANCON_LABEL,
   CESANA_LABEL,
@@ -25,6 +26,7 @@ import {
   PASS_DROP_STEP,
   PASS_FADE,
   PASS_LABEL_DELAY,
+  PATCHWORK,
   ROAD_FRANCIA,
   ROAD_ITALIA,
   ZOOM_ROUTE,
@@ -49,12 +51,17 @@ export const Monginevro: React.FC = () => {
   const legItalia = legById("italia");
   const legFrancia = legById("francia");
 
-  const communeOpacity = interpolate(
-    frame,
-    [ZOOM_ROUTE[0] + 12, ZOOM_ROUTE[0] + 36],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
+  const ramp = (range: readonly [number, number]) =>
+    interpolate(frame, range, [0, 1], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    });
+
+  // The map gains a level of detail at each step down: France opens into its
+  // departments on the first push, into communes on the second.
+  const patchworkOpacity = ramp(PATCHWORK);
+  const beyondOpacity = ramp(BEYOND);
+  const communeOpacity = ramp([ZOOM_ROUTE[0] + 12, ZOOM_ROUTE[0] + 36]);
 
   // The two country names sit either side of the frontier, in screen space so
   // they keep their size: Italy is the east side of this border, France the
@@ -87,7 +94,12 @@ export const Monginevro: React.FC = () => {
         style={{ position: "absolute", top: 0, left: 0 }}
       >
         <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
-          <AlpineMap scale={camera.scale} communeOpacity={communeOpacity} />
+          <AlpineMap
+            scale={camera.scale}
+            patchworkOpacity={patchworkOpacity}
+            beyondOpacity={beyondOpacity}
+            communeOpacity={communeOpacity}
+          />
           <BorderLine frame={frame} range={BORDER} scale={camera.scale} />
           <RoutePath
             d={legItalia.d}
