@@ -1,54 +1,51 @@
 import React from "react";
-import { Easing, interpolate } from "remotion";
-import { BORDER_D } from "./geoData";
+import { interpolate } from "remotion";
+import { FRONTIER_D } from "./geoData";
 
-// The Italy-France border where the road crosses it, lifted straight out of
-// the department outline. It draws itself outward from the crossing point
-// rather than fading in as a whole, so the eye is taken to the spot the road
-// is about to pass through.
+// The Italy-France frontier, Mont Blanc down to the sea, lifted straight out
+// of the boundary data. It is the film's subject, so it is on screen from the
+// first frame; the crossing simply makes it louder for a moment.
 export const BorderLine: React.FC<{
   frame: number;
-  range: readonly [number, number];
+  introRange: readonly [number, number];
+  emphasisRange: readonly [number, number];
   scale: number;
-}> = ({ frame, range, scale }) => {
-  const draw = interpolate(frame, [range[0], range[0] + 18], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-    easing: Easing.out(Easing.cubic),
-  });
-  // It settles back to a quieter line once it has been noticed, so it does
-  // not compete with the road for the rest of the shot.
-  const glow = interpolate(frame, [range[0] + 10, range[1]], [1, 0.45], {
+}> = ({ frame, introRange, emphasisRange, scale }) => {
+  const opacity = interpolate(frame, introRange, [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const emphasis = interpolate(
+    frame,
+    [emphasisRange[0], emphasisRange[0] + 14, emphasisRange[1]],
+    [0, 1, 0.5],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
 
-  if (draw <= 0) return null;
+  if (opacity <= 0) return null;
 
   const width = 5 / scale;
 
   return (
-    <g>
+    <g opacity={opacity}>
+      {emphasis > 0 && (
+        <path
+          d={FRONTIER_D}
+          fill="none"
+          stroke="#3d3527"
+          strokeOpacity={0.18 * emphasis}
+          strokeWidth={width * 4}
+          strokeLinecap="round"
+        />
+      )}
       <path
-        d={BORDER_D}
+        d={FRONTIER_D}
         fill="none"
         stroke="#3d3527"
-        strokeOpacity={0.16 * glow}
-        strokeWidth={width * 4}
-        strokeLinecap="round"
-        pathLength={1}
-        strokeDasharray={1}
-        strokeDashoffset={1 - draw}
-      />
-      <path
-        d={BORDER_D}
-        fill="none"
-        stroke="#3d3527"
-        strokeOpacity={0.85}
+        strokeOpacity={0.8}
         strokeWidth={width}
         strokeLinecap="round"
         strokeDasharray={`${10 / scale} ${7 / scale}`}
-        pathLength={1}
       />
     </g>
   );

@@ -242,9 +242,51 @@ def border_near(col_xy, radius):
     return best
 
 
-border_pts = border_near(col, 42)
-border_d = "M" + "L".join(f"{x:.2f},{y:.2f}" for x, y in border_pts)
-print("border points", len(border_pts))
+# The whole frontier, not just the stretch by the pass: it is what the film
+# opens on. France and Italy come from different surveys, so the shared
+# boundary is found by proximity rather than by matching coordinates - every
+# point of a French department outline that has an Italian province outline
+# within a few km of it.
+def full_frontier(eps=0.05, cell=0.05):
+    index = {}
+    for feat in italy["features"]:
+        for ring in rings(feat["geometry"]):
+            for lon, lat in ring:
+                index.setdefault((int(lon / cell), int(lat / cell)), []).append((lon, lat))
+
+    def near(lon, lat):
+        cx, cy = int(lon / cell), int(lat / cell)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for a, b in index.get((cx + dx, cy + dy), ()):
+                    if abs(a - lon) < eps and abs(b - lat) < eps:
+                        return True
+        return False
+
+    runs = []
+    for feat in france["features"]:
+        for ring in rings(feat["geometry"]):
+            if max(p[0] for p in ring) < 5.5:
+                continue  # nowhere near Italy
+            run = []
+            for lon, lat in ring:
+                if near(lon, lat):
+                    run.append(project(lon, lat))
+                else:
+                    if len(run) >= 3:
+                        runs.append(run)
+                    run = []
+            if len(run) >= 3:
+                runs.append(run)
+    return runs
+
+
+frontier_runs = full_frontier()
+frontier_d = "".join(
+    "M" + "L".join(f"{x:.2f},{y:.2f}" for x, y in r) for r in frontier_runs
+)
+frontier_pts = [p for r in frontier_runs for p in r]
+print("frontier runs", len(frontier_runs), "points", len(frontier_pts))
 
 
 def bbox(points, pad, pad_top=None, pad_bottom=None):
@@ -320,11 +362,12 @@ out.append("// How far along the road the border and the pass sit, by arc length
 out.append(f"export const BORDER_FRACTION = {border_fraction:.3f};")
 out.append(f"export const COL_FRACTION = {col_fraction:.3f};")
 out.append("")
-out.append("// The Italy-France border where the road crosses it.")
-out.append(f'export const BORDER_D = "{border_d}";')
+out.append("// The whole Italy-France frontier, Mont Blanc down to the sea.")
+out.append(f'export const FRONTIER_D = "{frontier_d}";')
 out.append(f"export const BORDER_POINT = {{ x: {border_pt[0]:.2f}, y: {border_pt[1]:.2f} }};")
 out.append("")
-out.append(bbox_literal("WIDE_BBOX", (0, 0, MAP_WIDTH, MAP_HEIGHT)))
+# The opening frames the frontier itself rather than a country.
+out.append(bbox_literal("WIDE_BBOX", bbox(frontier_pts, 114, 70, 70)))
 out.append(bbox_literal("REGION_BBOX", passes_box))
 out.append(bbox_literal("ROUTE_BBOX", route_box))
 out.append("")

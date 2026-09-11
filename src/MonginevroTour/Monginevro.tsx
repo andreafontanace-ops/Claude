@@ -17,6 +17,7 @@ import { BORDER_POINT, passes, places, roadLegs } from "./geoData";
 import {
   BEYOND,
   BORDER,
+  INTRO_FADE_IN,
   BRIANCON_LABEL,
   CESANA_LABEL,
   CLAVIERE_LABEL,
@@ -100,7 +101,12 @@ export const Monginevro: React.FC = () => {
             beyondOpacity={beyondOpacity}
             communeOpacity={communeOpacity}
           />
-          <BorderLine frame={frame} range={BORDER} scale={camera.scale} />
+          <BorderLine
+            frame={frame}
+            introRange={INTRO_FADE_IN}
+            emphasisRange={BORDER}
+            scale={camera.scale}
+          />
           <RoutePath
             d={legItalia.d}
             frame={frame}

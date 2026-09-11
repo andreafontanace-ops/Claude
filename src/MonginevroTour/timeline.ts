@@ -11,10 +11,10 @@ export const TITLE_FADE_OUT = [40, 56] as const;
 
 export const ZOOM_REGION = [48, 118] as const;
 
-// France breaks into its departments on the way down, and Italy fades up
-// alongside: neither is in the opening shot.
+// The opening shot is the frontier, so both sides are in it from the start;
+// what the first push-in adds is France breaking into its departments.
 export const PATCHWORK = [66, 110] as const;
-export const BEYOND = [58, 104] as const;
+export const BEYOND = [0, 14] as const;
 
 // The great crossings, north to south. The Monginevro is not among them: it
 // belongs in the gap they leave, and the next push-in fills it.

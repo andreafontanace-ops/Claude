@@ -27,14 +27,6 @@ export const MonginevroTitle: React.FC<{ frame: number; top: number }> = ({
   });
   const opacity = Math.min(fadeIn, fadeOut);
 
-  // The arrow lands a beat after the two names, which is the whole subject of
-  // the film in one gesture.
-  const arrow = spring({
-    frame: frame - 12,
-    fps,
-    config: { damping: 11, mass: 0.5, stiffness: 190 },
-  });
-
   if (opacity <= 0) return null;
 
   return (
@@ -45,31 +37,29 @@ export const MonginevroTitle: React.FC<{ frame: number; top: number }> = ({
         left: 0,
         right: 0,
         display: "flex",
-        justifyContent: "center",
+        flexDirection: "column",
         alignItems: "center",
-        gap: 26,
+        gap: 10,
         opacity,
         transform: `scale(${scale})`,
         fontFamily,
       }}
     >
-      <div style={{ ...mapLabelStyle, WebkitTextStroke: "14px #f7f2e6", fontSize: 108 }}>
-        ITALIA
-      </div>
       <div
         style={{
           ...mapLabelStyle,
-          WebkitTextStroke: "14px #f7f2e6",
-          fontSize: 96,
-          color: "#c0392b",
-          transform: `translateX(${interpolate(arrow, [0, 1], [-34, 0])}px)`,
-          opacity: arrow,
+          WebkitTextStroke: "10px #f7f2e6",
+          fontSize: 58,
+          letterSpacing: 10,
+          color: "#6b5f47",
         }}
       >
-        &rarr;
+        CONFINE
       </div>
-      <div style={{ ...mapLabelStyle, WebkitTextStroke: "14px #f7f2e6", fontSize: 108 }}>
-        FRANCIA
+      <div
+        style={{ ...mapLabelStyle, WebkitTextStroke: "14px #f7f2e6", fontSize: 92 }}
+      >
+        ITALIA / FRANCIA
       </div>
     </div>
   );
