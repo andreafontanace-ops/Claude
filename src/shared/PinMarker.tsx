@@ -14,6 +14,9 @@ export const PinMarker: React.FC<{
   labelDx?: number;
   labelDy?: number;
   labelSize?: number;
+  // Set to let a long name wrap onto two lines instead of running wider
+  // than the frame.
+  labelWidth?: number;
   showElevation?: boolean;
   // it-CH prints 2'478, it-IT prints 2.478.
   elevationLocale?: string;
@@ -32,6 +35,7 @@ export const PinMarker: React.FC<{
   labelDx = 0,
   labelDy = 78,
   labelSize = 50,
+  labelWidth,
   showElevation = false,
   elevationLocale = "it-CH",
   pinScale = 1,
@@ -155,6 +159,7 @@ export const PinMarker: React.FC<{
           textAlign: "center",
           fontSize: labelSize,
           lineHeight: 1.1,
+          ...(labelWidth ? { width: labelWidth, whiteSpace: "normal" } : null),
         }}
       >
         <div>{waypoint.name}</div>
