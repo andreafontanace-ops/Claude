@@ -10,6 +10,7 @@ import { ColDeVars } from "./VarsTour/ColDeVars";
 import { VARS_DURATION } from "./VarsTour/timeline";
 import { Monginevro } from "./MonginevroTour/Monginevro";
 import { MONGINEVRO_DURATION } from "./MonginevroTour/timeline";
+import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
 // Each <Composition> is an entry in the sidebar!
 
@@ -47,6 +48,15 @@ export const RemotionRoot: React.FC = () => {
         id="Monginevro"
         component={Monginevro}
         durationInFrames={MONGINEVRO_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      <Composition
+        id="VaubanOverlay"
+        component={VaubanOverlay}
+        durationInFrames={OVERLAY_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
