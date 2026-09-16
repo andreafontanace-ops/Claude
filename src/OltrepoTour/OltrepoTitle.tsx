@@ -59,7 +59,7 @@ export const OltrepoTitle: React.FC<{ frame: number; top: number }> = ({
       <div
         style={{ ...mapLabelStyle, WebkitTextStroke: "14px #f7f2e6", fontSize: 84 }}
       >
-        DA VARZI AL BRALLO
+        DA VARZI AL GIOVÀ
       </div>
     </div>
   );

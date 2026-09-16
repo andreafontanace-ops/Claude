@@ -1,11 +1,11 @@
-// Timeline for the Oltrepo composition, in frames @30fps. 19s, in three
-// steps: the four provinces whose boundaries meet on this ridge, the Oltrepo
-// between them, then the road itself - up the Val Staffora to the Passo del
-// Giova, and back north along the crinale to the Brallo.
+// Timeline for the Oltrepo composition, in frames @30fps. 16.7s, in three
+// steps: the four provinces whose boundaries meet at the head of this valley,
+// the Oltrepo between them, then the road itself - Varzi up the Val Staffora
+// to the Passo del Giovà.
 import { marks } from "./geoData";
 
 export const FPS = 30;
-export const OLTREPO_DURATION = 580; // 19.3s
+export const OLTREPO_DURATION = 500; // 16.7s
 
 export const INTRO_FADE_IN = [0, 12] as const;
 export const TITLE_HOLD = [12, 40] as const;
@@ -31,11 +31,12 @@ export const CHIAPPO_DROP = [136, 164] as const;
 export const CHIAPPO_LABEL = [150, 168] as const;
 export const CHIAPPO_FADE = [186, 212] as const;
 
-// The two legs. The valley leg is drawn at a steady 0.49 map units a frame;
-// the crinale is given a third more time than its length asks for, because
-// the ridge is what the film is about and it is over in a moment otherwise.
-export const ROAD_VALLE = [272, 400] as const;
-export const ROAD_CRINALE = [396, 506] as const;
+// The two legs, split at Casale Staffora where the road leaves the river and
+// starts climbing. The valley is drawn at a steady 0.40 map units a frame;
+// the climb runs at about 60% of that, because 3 km of hairpins to the pass
+// is the point of the ride and at valley speed it is over in a second.
+export const ROAD_VALLE = [272, 390] as const;
+export const ROAD_SALITA = [386, 442] as const;
 
 export const PROFILE_IN = [244, 272] as const;
 
@@ -46,7 +47,7 @@ const easeInOutCubicInverse = (e: number) =>
   e < 0.5 ? Math.cbrt(e / 4) : 1 - Math.cbrt(2 - 2 * e) / 2;
 
 const legRange = (leg: string) =>
-  leg === "valle" ? ROAD_VALLE : ROAD_CRINALE;
+  leg === "valle" ? ROAD_VALLE : ROAD_SALITA;
 
 // The frame at which the drawn line reaches a place, so its name lands with
 // the road rather than ahead of it or behind it.
@@ -56,9 +57,11 @@ export const arrivalFrame = (id: string): number => {
   return Math.round(from + (to - from) * easeInOutCubicInverse(mark.t));
 };
 
-// The Giova closes one leg and opens the next, and `marks` keeps the second
-// of the two: as a place on the road it is reached when the valley leg ends.
-export const GIOVA_ARRIVAL = ROAD_VALLE[1];
+// Casale Staffora closes one leg and opens the next, and `marks` keeps the
+// second of the two: as a place on the road it is reached when the valley
+// leg ends. The Giovà is simply where the road stops.
+export const CASALE_ARRIVAL = ROAD_VALLE[1];
+export const GIOVA_ARRIVAL = ROAD_SALITA[1];
 
 export const pinCue = (arrival: number) =>
   ({

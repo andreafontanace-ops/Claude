@@ -14,6 +14,7 @@ import { ROUTE_BLUE, ROUTE_RED } from "../shared/palette";
 import { SAFE_RECT, SAFE_TITLE_TOP } from "../shared/safeArea";
 import { landmarks, places, provinceLabels, roadLegs } from "./geoData";
 import {
+  CASALE_ARRIVAL,
   CHIAPPO_DROP,
   CHIAPPO_FADE,
   CHIAPPO_LABEL,
@@ -24,7 +25,7 @@ import {
   PROV_DROP_STEP,
   PROV_FADE,
   PROV_LABEL_DELAY,
-  ROAD_CRINALE,
+  ROAD_SALITA,
   ROAD_VALLE,
   ZOOM_ROUTE,
   arrivalFrame,
@@ -35,10 +36,9 @@ const placeById = (id: string) => places.find((p) => p.id === id)!;
 const legById = (id: string) => roadLegs.find((l) => l.id === id)!;
 
 const PASS_PIN_SCALE = 0.62;
-const PASS_LABEL_SIZE = 42;
 
-// A name for something that is not a place: the valley the first leg climbs,
-// the road the second one rides. Parked in screen space, clear of the line.
+// A name for something that is not a place: the valley the road climbs.
+// Parked in screen space, clear of the line.
 const MapNote: React.FC<{
   frame: number;
   revealFrame: number;
@@ -89,12 +89,9 @@ export const ValStaffora: React.FC = () => {
   const casale = placeById("casale");
   const poggio = placeById("poggio");
   const giova = placeById("giova");
-  const colletta = placeById("colletta");
-  const brallopass = placeById("brallopass");
-  const brallo = placeById("brallo");
 
   const legValle = legById("valle");
-  const legCrinale = legById("crinale");
+  const legSalita = legById("salita");
 
   const ramp = (range: readonly [number, number]) =>
     interpolate(frame, range, [0, 1], {
@@ -102,19 +99,16 @@ export const ValStaffora: React.FC = () => {
       extrapolateRight: "clamp",
     });
 
-  // The map gains a level at each step down: the four regions open into the
-  // four provinces, the provinces into the comuni the road runs through.
+  // The map gains a level at each step down: the four provinces take their
+  // colour, then the comuni the road runs through come up inside them.
   const patchworkOpacity = ramp(PATCHWORK);
   // Held short of opaque on purpose: the comuni are pale tiles, and letting
-  // the province colour under them show through keeps the road inside Pavia
-  // and the far side of the ridge inside Piacenza, which a full-strength
-  // patchwork of 171 comuni loses completely.
+  // the province colour under them show through keeps the valley inside
+  // Pavia and the far side of the ridge inside Piacenza, which a
+  // full-strength patchwork of 171 comuni loses completely.
   const comuneOpacity = ramp(COMUNI) * 0.62;
 
   const dropFrame = (index: number) => PROV_DROP_START + index * PROV_DROP_STEP;
-
-  const collettaArrival = arrivalFrame("colletta");
-  const brallopassArrival = arrivalFrame("brallopass");
 
   return (
     <AbsoluteFill
@@ -132,8 +126,9 @@ export const ValStaffora: React.FC = () => {
             patchworkOpacity={patchworkOpacity}
             comuneOpacity={comuneOpacity}
           />
-          {/* Blue up the valley, red along the ridge: the two halves of the
-              ride read apart at a glance, and the pass is where it changes. */}
+          {/* Blue along the river, red up the climb: the two halves of the
+              ride read apart at a glance, and Casale Staffora is where the
+              gradient changes from 4.5% to 12%. */}
           <RoutePath
             d={legValle.d}
             frame={frame}
@@ -142,9 +137,9 @@ export const ValStaffora: React.FC = () => {
             width={14 / camera.scale}
           />
           <RoutePath
-            d={legCrinale.d}
+            d={legSalita.d}
             frame={frame}
-            range={ROAD_CRINALE}
+            range={ROAD_SALITA}
             color={ROUTE_RED}
             width={14 / camera.scale}
           />
@@ -160,16 +155,17 @@ export const ValStaffora: React.FC = () => {
           color={ROUTE_BLUE}
         />
         <TravelDot
-          points={legCrinale.points}
+          points={legSalita.points}
           camera={camera}
           frame={frame}
-          range={ROAD_CRINALE}
+          range={ROAD_SALITA}
           color={ROUTE_RED}
         />
 
-        {/* Le Quattro Province: Pavia, Alessandria, Piacenza and Genova, whose
-            four boundaries meet on the Monte Chiappo at the head of this
-            valley. The road is the ridge between them. */}
+        {/* Le Quattro Province: Pavia, Alessandria, Piacenza and Genova. The
+            first three meet on the Monte Chiappo at the head of this valley;
+            Genova stops 8 km short of it, so the four are a region with a
+            name rather than a point on a map. */}
         {provinceLabels.map((prov, i) => (
           <PinMarker
             key={prov.id}
@@ -188,8 +184,8 @@ export const ValStaffora: React.FC = () => {
           />
         ))}
 
-        {/* The head of the valley, and the point the whole ride is organised
-            around: Pavia, Alessandria and Piacenza meet on this summit. */}
+        {/* The head of the valley: where the Staffora starts and where three
+            of the four provinces meet. */}
         <PinMarker
           waypoint={landmarks[0]}
           camera={camera}
@@ -209,23 +205,15 @@ export const ValStaffora: React.FC = () => {
         <MapNote
           frame={frame}
           revealFrame={ZOOM_ROUTE[1] + 10}
-          left={245}
-          top={560}
+          left={230}
+          top={520}
           width={280}
           lines={["VAL", "STAFFORA"]}
         />
-        <MapNote
-          frame={frame}
-          revealFrame={collettaArrival}
-          left={775}
-          top={762}
-          width={250}
-          lines={["SP88", "CRINALE"]}
-        />
 
-        {/* Up the Staffora. Only the places the road actually passes through
-            get a name; the rest are ticks, so the valley reads as a sequence
-            without the names fighting each other. */}
+        {/* Up the Staffora, every place on the road named. The valley is 3 km
+            wide and 14 km long, so the names take turns either side of the
+            line rather than stacking on one flank. */}
         <WaypointTick
           waypoint={varzi}
           camera={camera}
@@ -233,8 +221,8 @@ export const ValStaffora: React.FC = () => {
           revealFrame={ROAD_VALLE[0]}
           showLabel
           color={ROUTE_BLUE}
-          labelDx={160}
-          labelDy={-30}
+          labelDx={-165}
+          labelDy={14}
           showElevation
           elevationLocale="it-IT"
         />
@@ -243,7 +231,13 @@ export const ValStaffora: React.FC = () => {
           camera={camera}
           frame={frame}
           revealFrame={arrivalFrame("casanova")}
+          showLabel
           color={ROUTE_BLUE}
+          labelDx={205}
+          labelDy={0}
+          labelWidth={300}
+          showElevation
+          elevationLocale="it-IT"
         />
         <WaypointTick
           waypoint={smargh}
@@ -252,78 +246,52 @@ export const ValStaffora: React.FC = () => {
           revealFrame={arrivalFrame("smargh")}
           showLabel
           color={ROUTE_BLUE}
-          labelDx={-195}
-          labelDy={14}
-          labelWidth={320}
+          labelDx={-225}
+          labelDy={10}
+          labelWidth={340}
+          showElevation
+          elevationLocale="it-IT"
         />
         <WaypointTick
           waypoint={casale}
           camera={camera}
           frame={frame}
-          revealFrame={arrivalFrame("casale")}
-          color={ROUTE_BLUE}
+          revealFrame={CASALE_ARRIVAL}
+          showLabel
+          color={ROUTE_RED}
+          labelDx={205}
+          labelDy={-10}
+          labelWidth={290}
+          showElevation
+          elevationLocale="it-IT"
         />
-        {/* Pian del Poggio is a tick without a name: the Giova, the Colletta
-            and the Brallo all land within 400px of it, and a fourth name in
-            that corner is the one that makes the other three unreadable. */}
         <WaypointTick
           waypoint={poggio}
           camera={camera}
           frame={frame}
           revealFrame={arrivalFrame("poggio")}
-          color={ROUTE_BLUE}
+          showLabel
+          color={ROUTE_RED}
+          labelDx={-195}
+          labelDy={6}
+          labelWidth={290}
+          showElevation
+          elevationLocale="it-IT"
         />
 
-        {/* The three high points, in the order the road takes them. */}
+        {/* Where the road is going. */}
         <PinMarker
           waypoint={giova}
           camera={camera}
           frame={frame}
           {...pinCue(GIOVA_ARRIVAL)}
-          labelDx={-185}
-          labelDy={-55}
-          labelSize={PASS_LABEL_SIZE}
+          labelDx={175}
+          labelDy={-105}
+          labelSize={42}
           labelWidth={280}
           showElevation
           elevationLocale="it-IT"
           pinScale={PASS_PIN_SCALE}
-        />
-        <PinMarker
-          waypoint={colletta}
-          camera={camera}
-          frame={frame}
-          {...pinCue(collettaArrival)}
-          labelDx={195}
-          labelDy={-60}
-          labelSize={PASS_LABEL_SIZE}
-          labelWidth={280}
-          showElevation
-          elevationLocale="it-IT"
-          pinScale={PASS_PIN_SCALE}
-        />
-        <PinMarker
-          waypoint={brallopass}
-          camera={camera}
-          frame={frame}
-          {...pinCue(brallopassArrival)}
-          labelDx={-10}
-          labelDy={-190}
-          labelSize={PASS_LABEL_SIZE}
-          labelWidth={300}
-          showElevation
-          elevationLocale="it-IT"
-          pinScale={PASS_PIN_SCALE}
-        />
-        <WaypointTick
-          waypoint={brallo}
-          camera={camera}
-          frame={frame}
-          revealFrame={ROAD_CRINALE[1]}
-          showLabel
-          color={ROUTE_RED}
-          labelDx={80}
-          labelDy={62}
-          labelWidth={250}
         />
 
         <ElevationProfile frame={frame} />

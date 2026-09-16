@@ -1,15 +1,15 @@
-"""Builds src/OltrepoTour/geoData.ts: the Oltrepo Pavese and the ride from
-Varzi up the Val Staffora to the Passo del Giovà, then the ridge road over
-the Cima Colletta to the Passo del Brallo and Brallo di Pregola.
+"""Builds src/OltrepoTour/geoData.ts: the Oltrepo Pavese and the road from
+Varzi up the Val Staffora to the Passo del Giovà.
 
 Same pipeline as build_monginevro.py. One thing is specific to this route:
 there is no routing service reachable from the render environment, so the
-road is laid out over anchors, and the anchors that matter - the two passes
-and the ridge between them - are lifted straight out of the ISTAT municipal
-boundaries. In this part of the Apennines those boundaries follow the
-watershed, so the crinale from the Giovà to the Brallo is real survey data
-rather than a line drawn by eye; the valley floor is the medial line of the
-Santa Margherita di Staffora comune, which is the upper Staffora basin.
+road is laid out over anchors rather than traced. The anchors are checked
+against the ISTAT municipal boundaries rather than eyeballed - every place
+on the road falls inside the comune it belongs to, the valley floor follows
+the medial line of the Santa Margherita di Staffora comune (which is the
+upper Staffora basin), and the Passo del Giovà and the Monte Chiappo sit on
+exact boundary vertices, because in this part of the Apennines the comune
+line is the watershed.
 
 Regenerate with:  python3 scripts/geo/build_oltrepo.py
 """
@@ -173,6 +173,9 @@ def wp_literal(rows):
 # following the river to the head of the valley and over the Giovà. The
 # crinale: the SP88 along the watershed, which is where the municipal
 # boundaries run, over the Cima Colletta and down to the Brallo.
+# Split at Casale Staffora, where the road stops following the river and
+# starts climbing: 4.5% average below it, 12% above. The two legs are the two
+# halves of the ride, not an arbitrary cut for the animation.
 VALLEY = [
     ("varzi",    9.1994, 44.8222),
     (None,       9.2043, 44.8140),
@@ -184,15 +187,22 @@ VALLEY = [
     (None,       9.2258, 44.7470),
     (None,       9.2235, 44.7390),
     ("casale",   9.2205, 44.7235),
+]
+
+SALITA = [
+    ("casale",   9.2205, 44.7235),
     (None,       9.2218, 44.7150),
     ("poggio",   9.2245, 44.7070),
     (None,       9.2290, 44.7020),
     ("giova",    9.2347, 44.6983),
 ]
 
-# Straight off the Brallo / Santa Margherita / Zerba boundaries: in the
-# Apennines the comune line is the watershed, and the watershed is what this
-# road rides.
+# The continuation past the Giovà: the SP88 along the crinale over the Cima
+# Colletta to the Passo del Brallo and Brallo di Pregola. Not in the current
+# film, which stops at the pass, but kept here because it is not guesswork -
+# these are the Brallo / Santa Margherita / Zerba comune boundaries, and in
+# the Apennines the comune line is the watershed the ridge road rides. Put
+# ("crinale", crinale) back into LEGS to bring the leg back.
 CRINALE = [
     ("giova",     9.2347, 44.6983),
     (None,        9.2323, 44.7033),
@@ -213,9 +223,10 @@ CRINALE = [
 ]
 
 
-pts = {name: P(lon, lat) for name, lon, lat in VALLEY + CRINALE if name}
+ANCHORS = {"valle": VALLEY, "salita": SALITA}
+pts = {name: P(lon, lat) for rows in ANCHORS.values() for name, lon, lat in rows if name}
 valley = [P(lon, lat) for _, lon, lat in VALLEY]
-crinale = [P(lon, lat) for _, lon, lat in CRINALE]
+salita = [P(lon, lat) for _, lon, lat in SALITA]
 
 # No hairpins drawn in. The other tours in this repo sit close enough to the
 # road to need them; this one holds 13 km across the frame, where a real
@@ -239,7 +250,7 @@ def path_length(points):
                for i in range(1, len(points)))
 
 
-legs = [("valle", valley), ("crinale", crinale)]
+legs = [("valle", valley), ("salita", salita)]
 lengths = {lid: path_length(p) for lid, p in legs}
 print("leg lengths", {k: round(v, 1) for k, v in lengths.items()})
 
@@ -247,7 +258,7 @@ print("leg lengths", {k: round(v, 1) for k, v in lengths.items()})
 # off these so a name lands as the line reaches it, not before or after.
 marks = {}
 for lid, line in legs:
-    for name in (n for n, _, _ in (VALLEY if lid == "valle" else CRINALE) if n):
+    for name in (n for n, _, _ in ANCHORS[lid] if n):
         i = line.index(pts[name])
         marks[name] = (lid, path_length(line[: i + 1]) / lengths[lid])
 print("marks", {k: (v[0], round(v[1], 3)) for k, v in marks.items()})
@@ -263,10 +274,10 @@ elevations = {i: e for i, _, _, _, e in PLACES}
 profile = []
 travelled = 0.0
 for lid, line in legs:
-    names = [n for n, _, _ in (VALLEY if lid == "valle" else CRINALE) if n]
+    names = [n for n, _, _ in ANCHORS[lid] if n]
     for name in names:
         if profile and profile[-1][0] == name:
-            continue  # the Giovà closes one leg and opens the next
+            continue  # Casale Staffora closes one leg and opens the next
         i = line.index(pts[name])
         km = travelled + path_length(line[: i + 1]) * KM_PER_UNIT
         profile.append((name, km, elevations[name]))
@@ -281,15 +292,15 @@ def bbox(points, pad, pad_top=None, pad_bottom=None):
     return (min(xs) - pad, min(ys) - pad_top, max(xs) + pad, max(ys) + pad_bottom)
 
 
-# The route runs north-south down the long axis of a 9:16 frame, so it needs
-# padding on the sides rather than above and below: that is where the names
-# go, and where the valley would otherwise be a bare strip. The floor is
-# padded far deeper than the ceiling, which lifts the whole route up the
+# 14 km of valley down the long axis of a 9:16 frame: 3 km wide, 14 km tall.
+# The side padding is what makes the shot - it buys 290px of clear paper
+# either side of the line, which is where every name in the film goes. The
+# floor is padded far deeper than the ceiling, which lifts the road up the
 # frame and leaves the bottom band clear for the elevation profile.
-route_box = bbox(valley + crinale, 15.5, 6.0, 19.5)
+route_box = bbox(valley + salita, 18.6, 2.1, 17.0)
 # The middle shot is the Oltrepo around the road; the opening one has to hold
 # the four province names as well as the road, so it is built from both.
-region_box = bbox(valley + crinale, 62)
+region_box = bbox(valley + salita, 62)
 # The opening shot is the four provinces themselves, whole: they are the
 # thing with a name, and the ridge this road rides is where they meet.
 prov_pts = [

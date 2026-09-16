@@ -3,7 +3,7 @@ import { Easing, interpolate } from "remotion";
 import { fontFamily } from "../shared/fonts";
 import { ROUTE_RED } from "../shared/palette";
 import { profile, TOTAL_KM } from "./geoData";
-import { PROFILE_IN, ROAD_CRINALE, ROAD_VALLE } from "./timeline";
+import { PROFILE_IN, ROAD_SALITA, ROAD_VALLE } from "./timeline";
 
 // The card, in frame pixels. It sits in the band the route framing was lifted
 // out of, under the names and clear of the caption strip below.
@@ -13,9 +13,9 @@ const CARD = { left: 60, top: 1290, width: 840, height: 200 };
 const PLOT = { x: 34, y: 58, w: 772, h: 92 };
 
 const MIN_M = 380;
-const MAX_M = 1560;
+const MAX_M = 1400;
 
-const VALLEY_KM = profile.find((p) => p.id === "giova")!.km;
+const VALLEY_KM = profile.find((p) => p.id === "casale")!.km;
 
 const ASCENT = profile.reduce(
   (sum, p, i) =>
@@ -55,9 +55,14 @@ const elevationAt = (km: number) => {
 
 const AXIS: { id: string; label: string; anchor: "start" | "middle" | "end" }[] = [
   { id: "varzi", label: "VARZI", anchor: "start" },
-  { id: "giova", label: "GIOVÀ", anchor: "middle" },
-  { id: "brallo", label: "BRALLO", anchor: "end" },
+  { id: "smargh", label: "S. MARGHERITA", anchor: "middle" },
+  { id: "giova", label: "GIOVÀ", anchor: "end" },
 ];
+
+// The high point of the ride. It is the last point on this route, so its
+// callout has to hang to the left of the dot or it runs off the card.
+const PEAK = profile.reduce((a, b) => (b.elevation > a.elevation ? b : a));
+const PEAK_AT_END = PEAK.km > TOTAL_KM * 0.75;
 
 export const ElevationProfile: React.FC<{ frame: number }> = ({ frame }) => {
   const opacity = interpolate(frame, PROFILE_IN, [0, 1], {
@@ -73,11 +78,9 @@ export const ElevationProfile: React.FC<{ frame: number }> = ({ frame }) => {
 
   const km =
     legProgress(frame, ROAD_VALLE) * VALLEY_KM +
-    legProgress(frame, ROAD_CRINALE) * (TOTAL_KM - VALLEY_KM);
+    legProgress(frame, ROAD_SALITA) * (TOTAL_KM - VALLEY_KM);
   const tipX = px(km);
   const tipY = py(elevationAt(km));
-
-  const peak = profile.find((p) => p.id === "colletta")!;
 
   return (
     <div
@@ -167,15 +170,16 @@ export const ElevationProfile: React.FC<{ frame: number }> = ({ frame }) => {
         )}
 
         {/* The high point of the ride, called out where it happens. */}
-        <circle cx={px(peak.km)} cy={py(peak.elevation)} r={5} fill="#6b5f47" />
+        <circle cx={px(PEAK.km)} cy={py(PEAK.elevation)} r={5} fill="#6b5f47" />
         <text
-          x={px(peak.km) + 14}
-          y={py(peak.elevation) + 7}
+          x={px(PEAK.km) + (PEAK_AT_END ? -14 : 14)}
+          y={py(PEAK.elevation) + 7}
           fontSize={22}
           fontWeight={800}
           fill="#6b5f47"
+          textAnchor={PEAK_AT_END ? "end" : "start"}
         >
-          {peak.elevation.toLocaleString("it-IT")} m
+          {PEAK.elevation.toLocaleString("it-IT")} m
         </text>
 
         <line
