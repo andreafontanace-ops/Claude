@@ -1,6 +1,11 @@
 """Builds src/OltrepoTour/geoData.ts: the Oltrepo Pavese and the road from
 Varzi up the Val Staffora to the Passo del Giovà.
 
+The film opens on the Oltrepo itself - no country-wide establishing shot -
+so the four regions that meet here carry the colour and their shared
+boundaries are drawn as lines: the road runs down the Lombardia side of a
+watershed that Piemonte and Emilia-Romagna share with it.
+
 Same pipeline as build_monginevro.py. One thing is specific to this route:
 there is no routing service reachable from the render environment, so the
 road is laid out over anchors rather than traced. The anchors are checked
@@ -106,44 +111,32 @@ def shapes(geojson, name_key, min_step, keep=None, window=None):
     return out
 
 
-# Italy under everything, in greys. At the widest the film ever goes the
-# regions are flat fields of colour rather than shapes you could name, so the
-# colour is spent on the four provinces instead and the regions only carry
-# the coastline that says where this is.
-italy = shapes(regions, "reg_name", 0.6)
-
-# The Quattro Province: Pavia, Alessandria, Piacenza and Genova, whose
-# boundaries all meet on the Monte Chiappo at the head of this valley. The
-# name is what the whole area between them is called.
-QUATTRO = {"Pavia", "Alessandria", "Piacenza", "Genova"}
-quattro = shapes(provinces, "prov_name", 0.25,
-                 keep=lambda p: p["prov_name"] in QUATTRO)
+# The four regions that meet over this valley carry the colour; the rest of
+# the country is the same map with the colour taken out. The boundary between
+# them is then simply where the colour changes, and the film draws it as a
+# line on top rather than asserting it.
+home = shapes(regions, "reg_name", 0.35,
+              keep=lambda p: p["reg_name"] in HOME_REGIONS)
+beyond = shapes(regions, "reg_name", 0.9,
+                keep=lambda p: p["reg_name"] not in HOME_REGIONS)
 
 # Comuni, for the final push-in: only the ones around the road.
 WINDOW = (8.93, 44.47, 9.62, 45.08)
 comuni = shapes(municipalities, "name", 0.06, window=WINDOW)
 
-print("italy", len(italy), "province", len(quattro), "comuni", len(comuni))
+print("home", len(home), "beyond", len(beyond), "comuni", len(comuni))
 
 
 # --- places -----------------------------------------------------------------
 
-# The four provinces, labelled where their names fit rather than at their
-# centroids: Genova runs along the coast, Pavia up towards the Po.
-PROVINCE_LABELS = [
-    ("pavia",       "PAVIA",       9.0600, 45.0200, 0),
-    ("alessandria", "ALESSANDRIA", 8.7400, 44.8200, 0),
-    ("piacenza",    "PIACENZA",    9.7000, 44.9000, 0),
-    ("genova",      "GENOVA",      9.0000, 44.4400, 0),
-]
-
-# The route, in order. Elevations are the published ones for each place.
-# Not on the road, but the reason the road is where it is: the Pavia,
-# Alessandria and Piacenza boundaries meet on this summit, at the head of the
-# Val Staffora. Genova, the fourth of the Quattro Province, stops 8 km short
-# of it - the four are a cultural region, not a survey point.
-LANDMARKS = [
-    ("chiappo", "MONTE CHIAPPO", 9.2003, 44.6864, 1699),
+# The four regions, labelled inside their own territory near the road rather
+# than at their centroids: every one of these points has been checked against
+# the region polygon it claims.
+REGION_LABELS = [
+    ("lombardia", "LOMBARDIA",      9.2850, 44.8850, 0),
+    ("piemonte",  "PIEMONTE",       9.1150, 44.6350, 0),
+    ("emilia",    "EMILIA-ROMAGNA", 9.3350, 44.6450, 0),
+    ("liguria",   "LIGURIA",        9.2150, 44.5850, 0),
 ]
 
 PLACES = [
@@ -293,24 +286,13 @@ def bbox(points, pad, pad_top=None, pad_bottom=None):
 
 
 # 14 km of valley down the long axis of a 9:16 frame: 3 km wide, 14 km tall.
-# The side padding is what makes the shot - it buys 290px of clear paper
-# either side of the line, which is where every name in the film goes. The
-# floor is padded far deeper than the ceiling, which lifts the road up the
-# frame and leaves the bottom band clear for the elevation profile.
-route_box = bbox(valley + salita, 18.6, 2.1, 17.0)
-# The middle shot is the Oltrepo around the road; the opening one has to hold
-# the four province names as well as the road, so it is built from both.
+# The side padding is what makes the shot - it buys clear paper either side of
+# the line, which is where every name in the film goes. With nothing else in
+# the frame the road takes the whole height.
+route_box = bbox(valley + salita, 16.0, 3.0, 5.0)
+# The opening shot: the Oltrepo around the road, wide enough to hold the
+# three region boundaries that pass through it.
 region_box = bbox(valley + salita, 62)
-# The opening shot is the four provinces themselves, whole: they are the
-# thing with a name, and the ridge this road rides is where they meet.
-prov_pts = [
-    project(lon, lat)
-    for feat in provinces["features"]
-    if feat["properties"]["prov_name"] in QUATTRO
-    for ring in rings(feat["geometry"])
-    for lon, lat in ring
-]
-wide_box = bbox(prov_pts, 18, 30, 30)
 
 
 def bbox_literal(name, b):
@@ -330,8 +312,8 @@ out.append(f"export const MAP_WIDTH = {MAP_WIDTH:.2f};")
 out.append(f"export const MAP_HEIGHT = {MAP_HEIGHT:.2f};")
 out.append("")
 for var, rows, note in [
-    ("italy", italy, "The country in greys: context, not subject."),
-    ("province", quattro, "Pavia, Alessandria, Piacenza, Genova - le Quattro Province."),
+    ("home", home, "Lombardia, Piemonte, Emilia-Romagna, Liguria: the four that meet here."),
+    ("beyond", beyond, "The rest of the country, in greys: context, not subject."),
     ("comuni", comuni, "The comuni the road runs through, for the closest shot."),
 ]:
     out.append(f"// {note}")
@@ -340,12 +322,8 @@ for var, rows, note in [
         out.append(f'  {{ name: {json.dumps(name)}, d: "{d}" }},')
     out.append("];")
     out.append("")
-out.append("export const provinceLabels: Waypoint[] = [")
-out += wp_literal(PROVINCE_LABELS)
-out.append("];")
-out.append("")
-out.append("export const landmarks: Waypoint[] = [")
-out += wp_literal(LANDMARKS)
+out.append("export const regionLabels: Waypoint[] = [")
+out += wp_literal(REGION_LABELS)
 out.append("];")
 out.append("")
 out.append("export const places: Waypoint[] = [")
@@ -368,14 +346,6 @@ for name, (lid, t) in marks.items():
     out.append(f'  {name}: {{ leg: "{lid}", t: {t:.3f} }},')
 out.append("};")
 out.append("")
-out.append("export type ProfilePoint = { id: string; km: number; elevation: number };")
-out.append("export const profile: ProfilePoint[] = [")
-for name, km, e in profile:
-    out.append(f'  {{ id: "{name}", km: {km:.2f}, elevation: {e} }},')
-out.append("];")
-out.append(f"export const TOTAL_KM = {profile[-1][1]:.2f};")
-out.append("")
-out.append(bbox_literal("WIDE_BBOX", wide_box))
 out.append(bbox_literal("REGION_BBOX", region_box))
 out.append(bbox_literal("ROUTE_BBOX", route_box))
 out.append("")
@@ -385,7 +355,7 @@ with open(OUT_TS, "w") as f:
     f.write("\n".join(out))
 
 print("map", round(MAP_WIDTH), "x", round(MAP_HEIGHT, 1))
-for nm, b in [("wide", wide_box), ("region", region_box), ("route", route_box)]:
+for nm, b in [("region", region_box), ("route", route_box)]:
     w, h = b[2] - b[0], b[3] - b[1]
     sc = min(840 / w, 1250 / h)
     print(f"{nm:7s} {w:7.1f} x {h:7.1f} units  ({w*KM_PER_UNIT:5.1f} x {h*KM_PER_UNIT:5.1f} km)"

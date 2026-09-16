@@ -30,7 +30,12 @@ should not be. They get built here, rendered with alpha, and composited by
 Remotion — which keeps the timeline: when the card cuts away is a number in
 `src/OltrepoTour/timeline.ts`, not something baked into the video.
 
-`ink-bleed-reveal` came across this way, as the title card of `ValStafforaInk`.
+`ink-bleed-reveal` came across this way as a title card. The card was then
+cut from the film — the ink blob reads as an unexplained black ball over a
+map, which is a fair verdict on it — so `public/overlays/` is empty and
+`index.html` here is kept as the worked example of the bridge rather than as
+something the Remotion side still pulls in. The plumbing is what matters:
+any registry item can go down this path.
 
 ### Rebuilding the overlay
 

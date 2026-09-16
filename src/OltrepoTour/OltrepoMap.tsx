@@ -1,23 +1,19 @@
 import React from "react";
-import { comuni, italy, province } from "./geoData";
+import { beyond, comuni, home } from "./geoData";
 
-// The colour is spent on the four provinces and on the comuni inside them.
-// Italy underneath is the same map drained of it: at the widest the film goes,
-// the regions are flat fields rather than shapes you could name, so they are
-// there for the coastline and nothing else.
-const PALETTE = [
-  "#cdbfe0", // lavender
-  "#a9c9a3", // sage
-  "#e0c9a0", // sand
-  "#e3cf7a", // mustard
-  "#e3b8c0", // rose
-  "#a7c3cf", // powder blue
-  "#d8b98f", // clay
-  "#b9c7a0", // olive
-];
+// The colour is spent on the four regions that meet over this valley and on
+// the comuni inside them. The rest of the country is the same map drained of
+// it. The boundary between two regions is then simply where the colour
+// changes - the stroke on top only makes it unmissable.
+const REGION_FILL: Record<string, string> = {
+  Lombardia: "#e3cf7a",
+  Piemonte: "#a7c3cf",
+  "Emilia-Romagna": "#e3b8c0",
+  Liguria: "#a9c9a3",
+};
 
-// The comuni get the same eight hues washed out. At the closest framing they
-// fill the whole frame, and at full strength the road has to fight them.
+// The comuni get the same hues washed out. At the closest framing they fill
+// the whole frame, and at full strength the road has to fight them.
 const PALE = [
   "#e5ddf0",
   "#d6e5d2",
@@ -40,16 +36,6 @@ const GREY = [
   "#cec9c0",
 ];
 
-// The four are picked by hand rather than by hash: they sit side by side for
-// the whole opening, and two neighbouring tiles landing on near-identical
-// pastels is exactly what that shot cannot afford.
-const PROVINCE_FILL: Record<string, string> = {
-  Pavia: "#e3cf7a",
-  Alessandria: "#a7c3cf",
-  Piacenza: "#e3b8c0",
-  Genova: "#a9c9a3",
-};
-
 const hashIndex = (name: string, mod: number) => {
   let h = 0;
   for (let i = 0; i < name.length; i++) {
@@ -63,18 +49,18 @@ const hashIndex = (name: string, mod: number) => {
 // to slabs as the camera pushes in.
 export const OltrepoMap: React.FC<{
   scale: number;
-  // 0 while the north-west is one grey sheet, 1 once the four provinces have
-  // taken their colour inside it.
-  patchworkOpacity: number;
   comuneOpacity: number;
-}> = ({ scale, patchworkOpacity, comuneOpacity }) => {
+  // The region boundaries, drawn over everything so the comuni cannot bury
+  // them. 0 until they are the thing being looked at.
+  borderOpacity: number;
+}> = ({ scale, comuneOpacity, borderOpacity }) => {
   const border = 3 / scale;
 
   return (
     <g>
-      {italy.map((r, i) => (
+      {beyond.map((r, i) => (
         <path
-          key={`italy-${r.name}-${i}`}
+          key={`beyond-${r.name}-${i}`}
           d={r.d}
           fillRule="evenodd"
           fill={GREY[hashIndex(r.name, GREY.length)]}
@@ -84,21 +70,17 @@ export const OltrepoMap: React.FC<{
         />
       ))}
 
-      {patchworkOpacity > 0 && (
-        <g opacity={patchworkOpacity}>
-          {province.map((p, i) => (
-            <path
-              key={`prov-${p.name}-${i}`}
-              d={p.d}
-              fillRule="evenodd"
-              fill={PROVINCE_FILL[p.name] ?? PALETTE[hashIndex(p.name, PALETTE.length)]}
-              stroke="#faf6ec"
-              strokeWidth={border * 1.4}
-              strokeLinejoin="round"
-            />
-          ))}
-        </g>
-      )}
+      {home.map((r, i) => (
+        <path
+          key={`home-${r.name}-${i}`}
+          d={r.d}
+          fillRule="evenodd"
+          fill={REGION_FILL[r.name] ?? "#e0d9c8"}
+          stroke="#faf6ec"
+          strokeWidth={border}
+          strokeLinejoin="round"
+        />
+      ))}
 
       {comuneOpacity > 0 && (
         <g opacity={comuneOpacity}>
@@ -116,20 +98,30 @@ export const OltrepoMap: React.FC<{
         </g>
       )}
 
-      {/* The province lines again on top, so the comuni cannot bury the one
-          edge that matters here: Pavia, Alessandria and Piacenza meet on the
-          Monte Chiappo at the head of this valley, and the ridge the road
-          rides runs out of that point. */}
-      {comuneOpacity > 0 && (
-        <g opacity={comuneOpacity}>
-          {province.map((p, i) => (
+      {/* The region lines last. Two strokes: a cream casing so the line reads
+          over any tile, and the line itself. */}
+      {borderOpacity > 0 && (
+        <g opacity={borderOpacity}>
+          {home.map((r, i) => (
             <path
-              key={`prov-edge-${p.name}-${i}`}
-              d={p.d}
+              key={`edge-casing-${r.name}-${i}`}
+              d={r.d}
               fill="none"
               stroke="#faf6ec"
-              strokeWidth={border * 2.2}
+              strokeWidth={border * 3.4}
               strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ))}
+          {home.map((r, i) => (
+            <path
+              key={`edge-${r.name}-${i}`}
+              d={r.d}
+              fill="none"
+              stroke="#8a7d63"
+              strokeWidth={border * 1.5}
+              strokeLinejoin="round"
+              strokeLinecap="round"
             />
           ))}
         </g>

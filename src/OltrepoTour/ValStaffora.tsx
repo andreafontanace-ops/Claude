@@ -1,32 +1,28 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { OltrepoMap } from "./OltrepoMap";
-import { OltrepoTitle } from "./OltrepoTitle";
-import { ElevationProfile } from "./ElevationProfile";
 import { useOltrepoCamera } from "./useOltrepoCamera";
 import { RoutePath } from "../shared/RoutePath";
 import { PinMarker } from "../shared/PinMarker";
 import { WaypointTick } from "../shared/WaypointTick";
 import { TravelDot } from "../shared/TravelDot";
 import { GrainOverlay } from "../shared/GrainOverlay";
-import { InkTitle } from "./InkTitle";
+import { Camera, project } from "../shared/camera";
 import { fontFamily } from "../shared/fonts";
 import { mapLabelStyle } from "../shared/labelStyle";
+import { Waypoint } from "../shared/types";
 import { ROUTE_BLUE, ROUTE_RED } from "../shared/palette";
-import { SAFE_RECT, SAFE_TITLE_TOP } from "../shared/safeArea";
-import { landmarks, places, provinceLabels, roadLegs } from "./geoData";
+import { SAFE_RECT } from "../shared/safeArea";
+import { places, regionLabels, roadLegs } from "./geoData";
 import {
+  BORDERS,
   CASALE_ARRIVAL,
-  CHIAPPO_DROP,
-  CHIAPPO_FADE,
-  CHIAPPO_LABEL,
   COMUNI,
   GIOVA_ARRIVAL,
-  PATCHWORK,
-  PROV_DROP_START,
-  PROV_DROP_STEP,
-  PROV_FADE,
-  PROV_LABEL_DELAY,
+  INTRO_FADE_IN,
+  REGION_FADE,
+  REGION_LABEL_START,
+  REGION_LABEL_STEP,
   ROAD_SALITA,
   ROAD_VALLE,
   ZOOM_ROUTE,
@@ -37,22 +33,33 @@ import {
 const placeById = (id: string) => places.find((p) => p.id === id)!;
 const legById = (id: string) => roadLegs.find((l) => l.id === id)!;
 
-const PASS_PIN_SCALE = 0.62;
-
-// A name for something that is not a place: the valley the road climbs.
-// Parked in screen space, clear of the line.
-const MapNote: React.FC<{
+// A name with no marker under it: a region, or the valley itself. Anchored in
+// map units so it travels with the camera, but set in screen pixels so it
+// keeps its size while the camera drops.
+const MapName: React.FC<{
+  camera: Camera;
   frame: number;
-  revealFrame: number;
-  left: number;
-  top: number;
-  width: number;
+  x: number;
+  y: number;
   lines: string[];
-}> = ({ frame, revealFrame, left, top, width, lines }) => {
-  const opacity = interpolate(frame, [revealFrame, revealFrame + 18], [0, 1], {
+  revealFrame: number;
+  fadeRange?: readonly [number, number];
+  width?: number;
+  size?: number;
+}> = ({ camera, frame, x, y, lines, revealFrame, fadeRange, width = 300, size = 40 }) => {
+  const { left, top } = project(camera, x, y);
+
+  const reveal = interpolate(frame, [revealFrame, revealFrame + 18], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const fade = fadeRange
+    ? interpolate(frame, fadeRange, [1, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : 1;
+  const opacity = Math.min(reveal, fade);
   if (opacity <= 0) return null;
 
   return (
@@ -68,9 +75,9 @@ const MapNote: React.FC<{
         textAlign: "center",
         whiteSpace: "normal",
         lineHeight: 1.15,
-        color: "#6b5f47",
-        fontSize: 34,
-        letterSpacing: 4,
+        color: "#4a4033",
+        fontSize: size,
+        letterSpacing: 3,
       }}
     >
       {lines.map((line) => (
@@ -80,11 +87,7 @@ const MapNote: React.FC<{
   );
 };
 
-export const ValStaffora: React.FC<{
-  // "text" draws the title here; "ink" plays the HyperFrames ink-bleed card
-  // over the opening instead. Same film either way - only the title changes.
-  titleStyle?: "text" | "ink";
-}> = ({ titleStyle = "text" }) => {
+export const ValStaffora: React.FC = () => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const camera = useOltrepoCamera(frame, SAFE_RECT);
@@ -105,208 +108,179 @@ export const ValStaffora: React.FC<{
       extrapolateRight: "clamp",
     });
 
-  // The map gains a level at each step down: the four provinces take their
-  // colour, then the comuni the road runs through come up inside them.
-  const patchworkOpacity = ramp(PATCHWORK);
+  const introOpacity = ramp(INTRO_FADE_IN);
+  const borderOpacity = ramp(BORDERS);
   // Held short of opaque on purpose: the comuni are pale tiles, and letting
-  // the province colour under them show through keeps the valley inside
-  // Pavia and the far side of the ridge inside Piacenza, which a
-  // full-strength patchwork of 171 comuni loses completely.
+  // the region colour under them show through keeps the valley on the
+  // Lombardia side of the watershed and the far slope on the other.
   const comuneOpacity = ramp(COMUNI) * 0.62;
-
-  const dropFrame = (index: number) => PROV_DROP_START + index * PROV_DROP_STEP;
 
   return (
     <AbsoluteFill
       style={{ background: "linear-gradient(180deg, #f7f2e6 0%, #f2ebd9 100%)" }}
     >
-      <svg
-        width={width}
-        height={height}
-        viewBox={`0 0 ${width} ${height}`}
-        style={{ position: "absolute", top: 0, left: 0 }}
-      >
-        <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
-          <OltrepoMap
-            scale={camera.scale}
-            patchworkOpacity={patchworkOpacity}
-            comuneOpacity={comuneOpacity}
-          />
-          {/* Blue along the river, red up the climb: the two halves of the
-              ride read apart at a glance, and Casale Staffora is where the
-              gradient changes from 4.5% to 12%. */}
-          <RoutePath
-            d={legValle.d}
+      <AbsoluteFill style={{ opacity: introOpacity }}>
+        <svg
+          width={width}
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          style={{ position: "absolute", top: 0, left: 0 }}
+        >
+          <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
+            <OltrepoMap
+              scale={camera.scale}
+              comuneOpacity={comuneOpacity}
+              borderOpacity={borderOpacity}
+            />
+            {/* Blue along the river, red up the climb: Casale Staffora is
+                where the gradient goes from 4.5% to 12%. */}
+            <RoutePath
+              d={legValle.d}
+              frame={frame}
+              range={ROAD_VALLE}
+              color={ROUTE_BLUE}
+              width={14 / camera.scale}
+            />
+            <RoutePath
+              d={legSalita.d}
+              frame={frame}
+              range={ROAD_SALITA}
+              color={ROUTE_RED}
+              width={14 / camera.scale}
+            />
+          </g>
+        </svg>
+
+        <AbsoluteFill style={{ fontFamily }}>
+          <TravelDot
+            points={legValle.points}
+            camera={camera}
             frame={frame}
             range={ROAD_VALLE}
             color={ROUTE_BLUE}
-            width={14 / camera.scale}
           />
-          <RoutePath
-            d={legSalita.d}
+          <TravelDot
+            points={legSalita.points}
+            camera={camera}
             frame={frame}
             range={ROAD_SALITA}
             color={ROUTE_RED}
-            width={14 / camera.scale}
           />
-        </g>
-      </svg>
 
-      <AbsoluteFill style={{ fontFamily }}>
-        <TravelDot
-          points={legValle.points}
-          camera={camera}
-          frame={frame}
-          range={ROAD_VALLE}
-          color={ROUTE_BLUE}
-        />
-        <TravelDot
-          points={legSalita.points}
-          camera={camera}
-          frame={frame}
-          range={ROAD_SALITA}
-          color={ROUTE_RED}
-        />
+          {/* The four regions that meet over this valley, named one after
+              another while the lines between them are still in frame. */}
+          {regionLabels.map((region: Waypoint, i) => (
+            <MapName
+              key={region.id}
+              camera={camera}
+              frame={frame}
+              x={region.x}
+              y={region.y}
+              lines={[region.name]}
+              revealFrame={REGION_LABEL_START + i * REGION_LABEL_STEP}
+              fadeRange={REGION_FADE}
+              width={420}
+              size={38}
+            />
+          ))}
 
-        {/* Le Quattro Province: Pavia, Alessandria, Piacenza and Genova. The
-            first three meet on the Monte Chiappo at the head of this valley;
-            Genova stops 8 km short of it, so the four are a region with a
-            name rather than a point on a map. */}
-        {provinceLabels.map((prov, i) => (
-          <PinMarker
-            key={prov.id}
-            waypoint={prov}
+          {/* Up the Staffora, every place on the road named. The valley is
+              3 km wide and 14 km long, so the names take turns either side of
+              the line rather than stacking on one flank. */}
+          <WaypointTick
+            waypoint={varzi}
             camera={camera}
             frame={frame}
-            dropRange={[dropFrame(i), dropFrame(i) + 24]}
-            labelRange={[
-              dropFrame(i) + PROV_LABEL_DELAY,
-              dropFrame(i) + PROV_LABEL_DELAY + 14,
-            ]}
-            labelDy={14}
-            labelSize={38}
-            pinScale={0.55}
-            fadeRange={PROV_FADE}
+            revealFrame={ROAD_VALLE[0]}
+            showLabel
+            color={ROUTE_BLUE}
+            labelDx={-150}
+            labelDy={18}
+            showElevation
+            elevationLocale="it-IT"
           />
-        ))}
+          <WaypointTick
+            waypoint={casanova}
+            camera={camera}
+            frame={frame}
+            revealFrame={arrivalFrame("casanova")}
+            showLabel
+            color={ROUTE_BLUE}
+            labelDx={200}
+            labelDy={0}
+            labelWidth={300}
+            showElevation
+            elevationLocale="it-IT"
+          />
+          <WaypointTick
+            waypoint={smargh}
+            camera={camera}
+            frame={frame}
+            revealFrame={arrivalFrame("smargh")}
+            showLabel
+            color={ROUTE_BLUE}
+            labelDx={-240}
+            labelDy={16}
+            labelWidth={340}
+            showElevation
+            elevationLocale="it-IT"
+          />
+          <WaypointTick
+            waypoint={casale}
+            camera={camera}
+            frame={frame}
+            revealFrame={CASALE_ARRIVAL}
+            showLabel
+            color={ROUTE_RED}
+            labelDx={210}
+            labelDy={-8}
+            labelWidth={290}
+            showElevation
+            elevationLocale="it-IT"
+          />
+          <WaypointTick
+            waypoint={poggio}
+            camera={camera}
+            frame={frame}
+            revealFrame={arrivalFrame("poggio")}
+            showLabel
+            color={ROUTE_RED}
+            labelDx={-190}
+            labelDy={4}
+            labelWidth={290}
+            showElevation
+            elevationLocale="it-IT"
+          />
 
-        {/* The head of the valley: where the Staffora starts and where three
-            of the four provinces meet. */}
-        <PinMarker
-          waypoint={landmarks[0]}
-          camera={camera}
-          frame={frame}
-          dropRange={CHIAPPO_DROP}
-          labelRange={CHIAPPO_LABEL}
-          labelDx={190}
-          labelDy={-50}
-          labelSize={40}
-          labelWidth={280}
-          showElevation
-          elevationLocale="it-IT"
-          pinScale={0.62}
-          fadeRange={CHIAPPO_FADE}
-        />
+          {/* Where the road is going. */}
+          <PinMarker
+            waypoint={giova}
+            camera={camera}
+            frame={frame}
+            {...pinCue(GIOVA_ARRIVAL)}
+            labelDx={165}
+            labelDy={-95}
+            labelSize={42}
+            labelWidth={260}
+            showElevation
+            elevationLocale="it-IT"
+            pinScale={0.62}
+          />
 
-        <MapNote
-          frame={frame}
-          revealFrame={ZOOM_ROUTE[1] + 10}
-          left={230}
-          top={520}
-          width={280}
-          lines={["VAL", "STAFFORA"]}
-        />
-
-        {/* Up the Staffora, every place on the road named. The valley is 3 km
-            wide and 14 km long, so the names take turns either side of the
-            line rather than stacking on one flank. */}
-        <WaypointTick
-          waypoint={varzi}
-          camera={camera}
-          frame={frame}
-          revealFrame={ROAD_VALLE[0]}
-          showLabel
-          color={ROUTE_BLUE}
-          labelDx={-165}
-          labelDy={14}
-          showElevation
-          elevationLocale="it-IT"
-        />
-        <WaypointTick
-          waypoint={casanova}
-          camera={camera}
-          frame={frame}
-          revealFrame={arrivalFrame("casanova")}
-          showLabel
-          color={ROUTE_BLUE}
-          labelDx={205}
-          labelDy={0}
-          labelWidth={300}
-          showElevation
-          elevationLocale="it-IT"
-        />
-        <WaypointTick
-          waypoint={smargh}
-          camera={camera}
-          frame={frame}
-          revealFrame={arrivalFrame("smargh")}
-          showLabel
-          color={ROUTE_BLUE}
-          labelDx={-225}
-          labelDy={10}
-          labelWidth={340}
-          showElevation
-          elevationLocale="it-IT"
-        />
-        <WaypointTick
-          waypoint={casale}
-          camera={camera}
-          frame={frame}
-          revealFrame={CASALE_ARRIVAL}
-          showLabel
-          color={ROUTE_RED}
-          labelDx={205}
-          labelDy={-10}
-          labelWidth={290}
-          showElevation
-          elevationLocale="it-IT"
-        />
-        <WaypointTick
-          waypoint={poggio}
-          camera={camera}
-          frame={frame}
-          revealFrame={arrivalFrame("poggio")}
-          showLabel
-          color={ROUTE_RED}
-          labelDx={-195}
-          labelDy={6}
-          labelWidth={290}
-          showElevation
-          elevationLocale="it-IT"
-        />
-
-        {/* Where the road is going. */}
-        <PinMarker
-          waypoint={giova}
-          camera={camera}
-          frame={frame}
-          {...pinCue(GIOVA_ARRIVAL)}
-          labelDx={175}
-          labelDy={-105}
-          labelSize={42}
-          labelWidth={280}
-          showElevation
-          elevationLocale="it-IT"
-          pinScale={PASS_PIN_SCALE}
-        />
-
-        <ElevationProfile frame={frame} />
-
-        {titleStyle === "ink" ? (
-          <InkTitle frame={frame} />
-        ) : (
-          <OltrepoTitle frame={frame} top={SAFE_TITLE_TOP} />
-        )}
+          {/* The valley the road climbs, named once the camera is down on
+              it. East of the line, not west: the far side of the frame is
+              already Piemonte, and the Staffora is not in it. */}
+          <MapName
+            camera={camera}
+            frame={frame}
+            x={varzi.x + 19}
+            y={varzi.y + 10}
+            lines={["VAL", "STAFFORA"]}
+            revealFrame={ZOOM_ROUTE[1] + 6}
+            width={280}
+            size={34}
+          />
+        </AbsoluteFill>
       </AbsoluteFill>
 
       {/* Last, over everything: the paper the map is printed on. */}
