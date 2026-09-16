@@ -8,6 +8,8 @@ import { RoutePath } from "../shared/RoutePath";
 import { PinMarker } from "../shared/PinMarker";
 import { WaypointTick } from "../shared/WaypointTick";
 import { TravelDot } from "../shared/TravelDot";
+import { GrainOverlay } from "../shared/GrainOverlay";
+import { InkTitle } from "./InkTitle";
 import { fontFamily } from "../shared/fonts";
 import { mapLabelStyle } from "../shared/labelStyle";
 import { ROUTE_BLUE, ROUTE_RED } from "../shared/palette";
@@ -78,7 +80,11 @@ const MapNote: React.FC<{
   );
 };
 
-export const ValStaffora: React.FC = () => {
+export const ValStaffora: React.FC<{
+  // "text" draws the title here; "ink" plays the HyperFrames ink-bleed card
+  // over the opening instead. Same film either way - only the title changes.
+  titleStyle?: "text" | "ink";
+}> = ({ titleStyle = "text" }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const camera = useOltrepoCamera(frame, SAFE_RECT);
@@ -296,8 +302,15 @@ export const ValStaffora: React.FC = () => {
 
         <ElevationProfile frame={frame} />
 
-        <OltrepoTitle frame={frame} top={SAFE_TITLE_TOP} />
+        {titleStyle === "ink" ? (
+          <InkTitle frame={frame} />
+        ) : (
+          <OltrepoTitle frame={frame} top={SAFE_TITLE_TOP} />
+        )}
       </AbsoluteFill>
+
+      {/* Last, over everything: the paper the map is printed on. */}
+      <GrainOverlay />
     </AbsoluteFill>
   );
 };

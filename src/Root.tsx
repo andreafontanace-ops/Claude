@@ -64,6 +64,18 @@ export const RemotionRoot: React.FC = () => {
         height={1920}
       />
 
+      {/* The same film with the HyperFrames title card in place of the
+          drawn one, so the two can be compared frame for frame. */}
+      <Composition
+        id="ValStafforaInk"
+        component={ValStaffora}
+        durationInFrames={OLTREPO_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ titleStyle: "ink" as const }}
+      />
+
       <Composition
         id="VaubanOverlay"
         component={VaubanOverlay}

@@ -40,6 +40,12 @@ export const ROAD_SALITA = [386, 442] as const;
 
 export const PROFILE_IN = [244, 272] as const;
 
+// The HyperFrames title card: 4s of ink bleeding through paper, laid over the
+// opening shot. Its own bloom finishes at 2.8s; the rest is hold, so the cut
+// away from it is set here rather than in the WebM.
+export const INK_TITLE_LENGTH = 120;
+export const INK_TITLE_FADE = [88, 112] as const;
+
 // RoutePath advances with Easing.inOut(cubic), so a place sitting at arc
 // fraction t is reached later or sooner than the linear reading of the leg's
 // frame range - this is the inverse of that curve.

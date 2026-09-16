@@ -5,3 +5,7 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# HyperFrames: static ffmpeg/ffprobe, recreated by two lines in
+# hyperframes/README.md. 138MB of binaries have no business in git.
+hyperframes/bin
