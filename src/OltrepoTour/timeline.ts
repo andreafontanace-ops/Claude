@@ -1,10 +1,10 @@
-// Timeline for the Oltrepo composition, in frames @30fps. 12.3s, and only two
+// Timeline for the Oltrepo composition, in frames @30fps. 13s, and only two
 // things happen: the four regions that meet over this valley name themselves,
 // then the camera drops onto the road and draws it.
 import { marks } from "./geoData";
 
 export const FPS = 30;
-export const OLTREPO_DURATION = 370; // 12.3s
+export const OLTREPO_DURATION = 390; // 13s
 
 export const INTRO_FADE_IN = [0, 16] as const;
 
@@ -19,10 +19,11 @@ export const ZOOM_ROUTE = [74, 146] as const;
 export const COMUNI = [84, 124] as const;
 
 // The two legs, split at Casale Staffora where the road leaves the river and
-// starts climbing. The climb runs at about 60% of the valley's speed, because
-// 3 km of hairpins to the pass is the point of the ride.
+// starts climbing. One colour either side of that split - the split only sets
+// the speed now: 0.44 map units a frame along the valley, 0.26 up the climb,
+// because the switchbacks to the pass are the point of the ride.
 export const ROAD_VALLE = [152, 272] as const;
-export const ROAD_SALITA = [268, 322] as const;
+export const ROAD_SALITA = [268, 340] as const;
 
 // RoutePath advances with Easing.inOut(cubic), so a place sitting at arc
 // fraction t is reached later or sooner than the linear reading of the leg's

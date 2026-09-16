@@ -11,7 +11,7 @@ import { Camera, project } from "../shared/camera";
 import { fontFamily } from "../shared/fonts";
 import { mapLabelStyle } from "../shared/labelStyle";
 import { Waypoint } from "../shared/types";
-import { ROUTE_BLUE, ROUTE_RED } from "../shared/palette";
+import { ROUTE_RED } from "../shared/palette";
 import { SAFE_RECT } from "../shared/safeArea";
 import { places, regionLabels, roadLegs } from "./geoData";
 import {
@@ -132,13 +132,15 @@ export const ValStaffora: React.FC = () => {
               comuneOpacity={comuneOpacity}
               borderOpacity={borderOpacity}
             />
-            {/* Blue along the river, red up the climb: Casale Staffora is
-                where the gradient goes from 4.5% to 12%. */}
+            {/* One colour the whole way. The split at Casale Staffora is
+                still there, but it only buys pacing now: above it the road
+                goes from 4.5% to 12%, and it is drawn at 60% of the valley's
+                speed so the climb gets the time it deserves. */}
             <RoutePath
               d={legValle.d}
               frame={frame}
               range={ROAD_VALLE}
-              color={ROUTE_BLUE}
+              color={ROUTE_RED}
               width={14 / camera.scale}
             />
             <RoutePath
@@ -157,7 +159,7 @@ export const ValStaffora: React.FC = () => {
             camera={camera}
             frame={frame}
             range={ROAD_VALLE}
-            color={ROUTE_BLUE}
+            color={ROUTE_RED}
           />
           <TravelDot
             points={legSalita.points}
@@ -193,7 +195,7 @@ export const ValStaffora: React.FC = () => {
             frame={frame}
             revealFrame={ROAD_VALLE[0]}
             showLabel
-            color={ROUTE_BLUE}
+            color={ROUTE_RED}
             labelDx={-150}
             labelDy={18}
             showElevation
@@ -205,7 +207,7 @@ export const ValStaffora: React.FC = () => {
             frame={frame}
             revealFrame={arrivalFrame("casanova")}
             showLabel
-            color={ROUTE_BLUE}
+            color={ROUTE_RED}
             labelDx={200}
             labelDy={0}
             labelWidth={300}
@@ -218,7 +220,7 @@ export const ValStaffora: React.FC = () => {
             frame={frame}
             revealFrame={arrivalFrame("smargh")}
             showLabel
-            color={ROUTE_BLUE}
+            color={ROUTE_RED}
             labelDx={-240}
             labelDy={16}
             labelWidth={340}

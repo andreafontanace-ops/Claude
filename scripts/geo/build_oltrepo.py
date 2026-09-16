@@ -63,6 +63,7 @@ LON0, LON1 = min(lons), max(lons)
 LATMIN, LATMAX = min(lats), max(lats)
 SCALE = MAP_WIDTH / ((LON1 - LON0) * K)
 MAP_HEIGHT = (LATMAX - LATMIN) * SCALE
+KM_PER_UNIT = (LON1 - LON0) * K * 111.32 / MAP_WIDTH
 
 
 def project(lon, lat):
@@ -216,15 +217,108 @@ CRINALE = [
 ]
 
 
+# --- bends -------------------------------------------------------------------
+# A line straight from village to village is not what this road does, and with
+# no routing service reachable the bends have to be built rather than traced.
+# They are built to vanish at every named place, so each town still sits
+# exactly on its own coordinate and only the stretches between them wander:
+# offset(t) = amp * sin(2*pi*cycles*t) across the local normal, with `cycles`
+# a whole number so the offset is zero at both ends of every span.
+#
+# The amplitudes are what the ground is: a couple of hundred metres of meander
+# along the Staffora, twice that on the last 3 km, which climbs 380 m at 12%
+# and does it in switchbacks. The count and the width of those switchbacks are
+# drawn, not surveyed - a GPX of the ride would replace this whole function.
+
+# A single sine reads as a sine: evenly spaced, every bend the same size, which
+# no road is. Two more harmonics on top break that up, and because sin(2*pi*n*t)
+# is zero at t=0 and t=1 for every whole n, they wander without moving either
+# end of the span. The weights are per span so no two stretches bend alike.
+HARMONICS = {
+    "casanova": (0.38, -0.20),
+    "smargh": (-0.30, 0.16),
+    "casale": (0.26, 0.22),
+    "poggio": (-0.34, 0.14),
+    "giova": (0.30, -0.18),
+}
+
+# span end -> (cycles, amplitude in km)
+# A sine of amplitude A and wavelength L is 2*pi*A/L times as long as the
+# straight line under it, so amplitude and cycle count are not free: the pair
+# below keep each span between 1.2x and 1.9x, which lands the whole road near
+# the ~19 km the drive actually is rather than the 14.6 km a ruler gives.
+BENDS = {
+    "casanova": (3, 0.17),
+    "smargh": (2, 0.11),
+    "casale": (2, 0.17),
+    "poggio": (2, 0.20),
+    "giova": (2, 0.13),
+}
+
+
+def resample(points, step):
+    out = [points[0]]
+    for i in range(1, len(points)):
+        ax, ay = points[i - 1]
+        bx, by = points[i]
+        seg = math.hypot(bx - ax, by - ay)
+        n = max(1, int(seg / step))
+        for k in range(1, n + 1):
+            t = k / n
+            out.append((ax + (bx - ax) * t, ay + (by - ay) * t))
+    return out
+
+
+def add_bends(points, named, step=0.35):
+    """points: the polyline through every anchor of a leg.
+    named: [(name, index into points)], in order, first and last included."""
+    dense = resample(points, step)
+
+    # Where each named anchor lands on the dense line, by nearest point.
+    def nearest(p):
+        return min(range(len(dense)),
+                   key=lambda i: math.hypot(dense[i][0] - p[0], dense[i][1] - p[1]))
+
+    marks_i = [(name, nearest(points[i])) for name, i in named]
+
+    out = list(dense)
+    for (name_a, ia), (name_b, ib) in zip(marks_i, marks_i[1:]):
+        cycles, amp_km = BENDS.get(name_b, (0, 0.0))
+        if not cycles or ib - ia < 4:
+            continue
+        amp = amp_km / KM_PER_UNIT
+        for i in range(ia + 1, ib):
+            t = (i - ia) / (ib - ia)
+            # Local tangent from the neighbours, so the offset is across the
+            # road rather than across the frame.
+            ax, ay = dense[max(ia, i - 1)]
+            bx, by = dense[min(ib, i + 1)]
+            dx, dy = bx - ax, by - ay
+            length = math.hypot(dx, dy) or 1.0
+            nx, ny = -dy / length, dx / length
+            w2, w3 = HARMONICS.get(name_b, (0.0, 0.0))
+            k = amp * (
+                math.sin(2 * math.pi * cycles * t)
+                + w2 * math.sin(2 * math.pi * 2 * cycles * t)
+                + w3 * math.sin(2 * math.pi * 3 * cycles * t)
+            )
+            out[i] = (dense[i][0] + nx * k, dense[i][1] + ny * k)
+    return out
+
+
+
 ANCHORS = {"valle": VALLEY, "salita": SALITA}
 pts = {name: P(lon, lat) for rows in ANCHORS.values() for name, lon, lat in rows if name}
-valley = [P(lon, lat) for _, lon, lat in VALLEY]
-salita = [P(lon, lat) for _, lon, lat in SALITA]
 
-# No hairpins drawn in. The other tours in this repo sit close enough to the
-# road to need them; this one holds 13 km across the frame, where a real
-# hairpin is a couple of pixels wide and a drawn one reads as a knot. The
-# curve through the anchors carries the shape of the road on its own.
+
+def build_leg(rows):
+    line = [P(lon, lat) for _, lon, lat in rows]
+    named = [(name, i) for i, (name, _, _) in enumerate(rows) if name]
+    return add_bends(line, named)
+
+
+valley = build_leg(VALLEY)
+salita = build_leg(SALITA)
 
 
 def catmull_rom_to_bezier(points):
@@ -236,6 +330,11 @@ def catmull_rom_to_bezier(points):
               f"{p2[0] - (p3[0]-p1[0])/6:.2f},{p2[1] - (p3[1]-p1[1])/6:.2f} "
               f"{p2[0]:.2f},{p2[1]:.2f}")
     return d
+
+
+def nearest_index(line, p):
+    return min(range(len(line)),
+               key=lambda i: math.hypot(line[i][0] - p[0], line[i][1] - p[1]))
 
 
 def path_length(points):
@@ -252,7 +351,7 @@ print("leg lengths", {k: round(v, 1) for k, v in lengths.items()})
 marks = {}
 for lid, line in legs:
     for name in (n for n, _, _ in ANCHORS[lid] if n):
-        i = line.index(pts[name])
+        i = nearest_index(line, pts[name])
         marks[name] = (lid, path_length(line[: i + 1]) / lengths[lid])
 print("marks", {k: (v[0], round(v[1], 3)) for k, v in marks.items()})
 
@@ -262,7 +361,6 @@ print("marks", {k: (v[0], round(v[1], 3)) for k, v in marks.items()})
 # drag up the valley, the ridge, the drop into the Brallo - is readable at a
 # glance. Distances come from the projected line, heights from PLACES.
 
-KM_PER_UNIT = (LON1 - LON0) * K * 111.32 / MAP_WIDTH
 elevations = {i: e for i, _, _, _, e in PLACES}
 profile = []
 travelled = 0.0
@@ -271,7 +369,7 @@ for lid, line in legs:
     for name in names:
         if profile and profile[-1][0] == name:
             continue  # Casale Staffora closes one leg and opens the next
-        i = line.index(pts[name])
+        i = nearest_index(line, pts[name])
         km = travelled + path_length(line[: i + 1]) * KM_PER_UNIT
         profile.append((name, km, elevations[name]))
     travelled += lengths[lid] * KM_PER_UNIT
