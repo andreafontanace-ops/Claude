@@ -21,6 +21,7 @@ import {
   GIOVA_ARRIVAL,
   INTRO_FADE_IN,
   REGION_FADE,
+  REGION_LABEL_REVEAL,
   REGION_LABEL_START,
   REGION_LABEL_STEP,
   ROAD_SALITA,
@@ -43,13 +44,25 @@ const MapName: React.FC<{
   y: number;
   lines: string[];
   revealFrame: number;
+  revealFrames?: number;
   fadeRange?: readonly [number, number];
   width?: number;
   size?: number;
-}> = ({ camera, frame, x, y, lines, revealFrame, fadeRange, width = 300, size = 40 }) => {
+}> = ({
+  camera,
+  frame,
+  x,
+  y,
+  lines,
+  revealFrame,
+  revealFrames = 18,
+  fadeRange,
+  width = 300,
+  size = 40,
+}) => {
   const { left, top } = project(camera, x, y);
 
-  const reveal = interpolate(frame, [revealFrame, revealFrame + 18], [0, 1], {
+  const reveal = interpolate(frame, [revealFrame, revealFrame + revealFrames], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -180,15 +193,18 @@ export const ValStaffora: React.FC = () => {
               y={region.y}
               lines={[region.name]}
               revealFrame={REGION_LABEL_START + i * REGION_LABEL_STEP}
+              revealFrames={REGION_LABEL_REVEAL}
               fadeRange={REGION_FADE}
               width={420}
               size={38}
             />
           ))}
 
-          {/* Up the Staffora, every place on the road named. The valley is
-              3 km wide and 14 km long, so the names take turns either side of
-              the line rather than stacking on one flank. */}
+          {/* Three names on the road: where it starts, the middle of the
+              valley, and where it is going. At 3.4s of drawing, a name per
+              village arrives faster than it can be read - Casanova, Casale and
+              Pian del Poggio keep their dots, which mark the same real
+              coordinates without asking to be read. */}
           <WaypointTick
             waypoint={varzi}
             camera={camera}
@@ -206,13 +222,7 @@ export const ValStaffora: React.FC = () => {
             camera={camera}
             frame={frame}
             revealFrame={arrivalFrame("casanova")}
-            showLabel
             color={ROUTE_RED}
-            labelDx={200}
-            labelDy={0}
-            labelWidth={300}
-            showElevation
-            elevationLocale="it-IT"
           />
           <WaypointTick
             waypoint={smargh}
@@ -232,26 +242,14 @@ export const ValStaffora: React.FC = () => {
             camera={camera}
             frame={frame}
             revealFrame={CASALE_ARRIVAL}
-            showLabel
             color={ROUTE_RED}
-            labelDx={210}
-            labelDy={-8}
-            labelWidth={290}
-            showElevation
-            elevationLocale="it-IT"
           />
           <WaypointTick
             waypoint={poggio}
             camera={camera}
             frame={frame}
             revealFrame={arrivalFrame("poggio")}
-            showLabel
             color={ROUTE_RED}
-            labelDx={-190}
-            labelDy={4}
-            labelWidth={290}
-            showElevation
-            elevationLocale="it-IT"
           />
 
           {/* Where the road is going. */}
