@@ -13,24 +13,19 @@ Tutti salgono al Penice. Tutti.
 E intanto, due valli più in là, questa strada è vuota.
 
 
-Val Stàffora. Il ponte è di legno: il rumore cambia sotto le ruote, la luce si
-spegne per un secondo.
-
-Sotto scorre il torrente che ha scavato tutto questo.
+Val Stàffora. Sul telefono la rotta è già tutta lì: risaliamo la valle fino in
+fondo, poi su al Passo del Giovà.
 
 
 Alle spalle, Varzi. I portici, la torre, e per secoli una dogana: di qui passava
 la Via del Sale.
 
+
 Genova era di là. Il sale saliva a dorso di mulo, fin quassù.
 
 
-La rotta è quella sul telefono. Su per la Stàffora, fino in fondo. Poi si molla
-il fondovalle e si sale al Giovà.
-
-
-La strada ricalca le mulattiere. Per questo non va mai dritta: segue l'acqua
-finché può, poi si arrampica.
+La strada di oggi ricalca quelle mulattiere. Per questo non va mai dritta: segue
+l'acqua finché può, poi si arrampica.
 
 
 Non è una strada da record. Asfalto stretto, curve che si chiudono, niente
@@ -96,6 +91,20 @@ E sembra di stare a quattrocento chilometri da tutto.
 ## Appendice per il montaggio
 
 Non serve in fase di lettura. I blocchi, nell'ordine, si appoggiano a questi
-punti del video: 0:00 valle aperta · 0:10 ponte · 0:23 uscita dal ponte ·
-0:33 mappa in quadro · 0:45 curve tra i prati · 0:59 tornante · 1:14 bosco ·
-1:29 borgo · 1:43 roccia tagliata · 1:56 bosco fitto · 2:14 prati · 2:24 chiusura.
+punti del video:
+
+    0:00  hook, valle aperta
+    0:09  LA ROTTA — mappa in quadro, attraversamento del ponte
+    0:21  Varzi e la Via del Sale
+    0:33  Genova e le mulattiere (mappa ancora leggibile)
+    0:45  la strada ricalca i tracciati
+    0:59  "non è una strada da record"
+    1:14  il bosco
+    1:29  il borgo
+    1:43  roccia tagliata e Lesima
+    1:56  il Giovà
+    2:14  chiusura
+    2:24  firma
+
+Finestre in cui il telefono con la mappa e' leggibile: 0:12-0:14 (la migliore),
+0:33-0:38, 0:58-1:02.
