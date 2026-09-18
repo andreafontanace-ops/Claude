@@ -8,13 +8,12 @@ finale · **Lèsima** accento sulla "e".
 
 ---
 
-Tutti salgono al Penice. Tutti.
+Questa strada è a poco più di un'ora da Milano. Ed è praticamente deserta.
 
-E intanto, due valli più in là, questa strada è vuota.
+Perché tutti, la domenica, salgono al Penice.
 
 
-Val Stàffora. Sul telefono la rotta è già tutta lì: risaliamo la valle fino in
-fondo, poi su al Passo del Giovà.
+Val Stàffora. Risaliamo la valle fino in fondo, poi su al Passo del Giovà.
 
 
 Alle spalle, Varzi. I portici, la torre, e per secoli una dogana: di qui passava
@@ -31,8 +30,7 @@ l'acqua finché può, poi si arrampica.
 Non è una strada da record. Asfalto stretto, curve che si chiudono, niente
 tornanti da cartolina.
 
-Però è tua. Di domenica, qui, incroci tre macchine. Al Penice sei in fila dietro
-un camper.
+Però è tua. Qui incroci tre macchine. Al Penice sei in fila dietro un camper.
 
 
 Il bosco si chiude sopra la testa. L'aria cala di colpo. Sa di terra bagnata.
@@ -55,7 +53,7 @@ Niente bar. Niente adesivi. Niente file di moto parcheggiate.
 Solo il punto dove la Lombardia finisce e comincia l'Appennino.
 
 
-Novanta minuti da Milano. Il tempo di andare all'IKEA e tornare.
+Poco più di un'ora da casa. Il tempo di andare all'IKEA e tornare.
 
 E sembra di stare a quattrocento chilometri da tutto.
 
@@ -71,7 +69,8 @@ E sembra di stare a quattrocento chilometri da tutto.
 
 ## Dati da verificare prima di registrare
 
-- "due valli più in là" e la strada vuota: regge come descrizione del tratto?
+- "praticamente deserta": regge come descrizione del tratto?
+- "poco più di un'ora da Milano": tempo reale di percorrenza fino a Varzi
 - la palla del Lesima e' davvero visibile da quel punto del crinale
 - quota del passo, se vuoi citarla
 - nome del ponte coperto, se vuoi citarlo
@@ -84,7 +83,7 @@ E sembra di stare a quattrocento chilometri da tutto.
 - formato 784x1248: esportare a 1080x1920 per Reel e TikTok
 - nessuna traccia audio: serve sonoro motore o base musicale sotto la voce
 - musica: tappeto atmosferico sotto tutta la narrazione, innesto piu' ampio
-  negli ultimi venti secondi, da "Novanta minuti da Milano"
+  negli ultimi venti secondi, da "Poco più di un'ora da casa"
 
 ---
 
@@ -94,7 +93,7 @@ Non serve in fase di lettura. I blocchi, nell'ordine, si appoggiano a questi
 punti del video:
 
     0:00  hook, valle aperta
-    0:09  LA ROTTA — mappa in quadro, attraversamento del ponte
+    0:09  LA ROTTA — la mappa e' in quadro, la voce non la nomina
     0:21  Varzi e la Via del Sale
     0:33  Genova e le mulattiere (mappa ancora leggibile)
     0:45  la strada ricalca i tracciati
