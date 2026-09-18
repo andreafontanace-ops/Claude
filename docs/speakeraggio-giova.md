@@ -27,13 +27,15 @@ La strada di oggi ricalca quelle mulattiere. Per questo non va mai dritta: segue
 l'acqua finché può, poi si arrampica.
 
 
-Non è una strada da record. Asfalto stretto, curve che si chiudono, niente
-tornanti da cartolina.
+E l'asfalto racconta il resto. Rappezzi di catrame a serpentina, nero sopra
+grigio. Niente banchina: l'asfalto finisce e comincia l'erba.
 
 Però è tua. Qui incroci tre macchine. Al Penice sei in fila dietro un camper.
 
 
-Il bosco si chiude sopra la testa. L'aria cala di colpo. Sa di terra bagnata.
+Poi il bosco si chiude sopra la testa. L'aria cala di colpo, sa di terra bagnata.
+
+E la luce va a chiazze: sul fondo non distingui più niente. Si molla il gas.
 
 
 Un borgo di pietra. Quattro case, un muro a secco, le persiane chiuse. Quassù ci
@@ -42,8 +44,9 @@ vive qualche decina di persone. D'inverno, meno.
 Si passa piano. Quasi per rispetto.
 
 
-Si sale ancora. Roccia tagliata, guardrail che sparisce. E quando il verde si
-apre, sul crinale c'è la palla bianca del Lesima.
+Si sale ancora. Roccia tagliata, ghiaia sul filo della strada, il guardrail che
+ogni tanto sparisce. E quando il verde si apre, sul crinale c'è la palla bianca
+del Lesima.
 
 
 Il Giovà è questo.
@@ -75,6 +78,17 @@ E sembra di stare a quattrocento chilometri da tutto.
 - quota del passo, se vuoi citarla
 - nome del ponte coperto, se vuoi citarlo
 
+## Fondo stradale osservato nel video
+
+Riscontri fotogramma per fotogramma, utili se vuoi aggiungere altri dettagli:
+
+- rappezzi di catrame a serpentina, nero sopra grigio: 1:36, 1:58, 2:12
+- bordi sbriciolati, senza banchina: per quasi tutto il percorso
+- ghiaia e terra sul filo della strada: 1:36, 1:44, 2:12
+- riga bianca consumata o assente: 0:48, 1:44
+- luce a chiazze sotto gli alberi, che nasconde il fondo: 0:30, 1:58
+- fondo chiaro, quasi sbiancato, nei tratti esposti: 1:44, 2:12
+
 ## Note tecniche sul file video
 
 - watermark `clideo.com` in basso a destra per tutta la durata: rifare
@@ -97,10 +111,10 @@ punti del video:
     0:21  Varzi e la Via del Sale
     0:33  Genova e le mulattiere (mappa ancora leggibile)
     0:45  la strada ricalca i tracciati
-    0:59  "non è una strada da record"
-    1:14  il bosco
+    0:59  l'asfalto: rappezzi, bordi, niente banchina
+    1:14  il bosco e la luce a chiazze sul fondo
     1:29  il borgo
-    1:43  roccia tagliata e Lesima
+    1:43  roccia tagliata, ghiaia sui bordi, Lesima
     1:56  il Giovà
     2:14  chiusura
     2:24  firma
