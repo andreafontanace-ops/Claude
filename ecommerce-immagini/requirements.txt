@@ -1,0 +1,7 @@
+pillow>=11.0
+numpy>=1.26
+pymupdf>=1.24
+opencv-python-headless>=4.9
+requests>=2.31
+# facoltativo, scontorno senza ComfyUI (BiRefNet sulla GPU):
+# rembg[gpu]>=2.0.60

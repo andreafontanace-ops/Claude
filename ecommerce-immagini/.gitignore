@@ -1,0 +1,14 @@
+# Le immagini di lavoro non vanno mai nel repository.
+lavoro/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.tif
+*.tiff
+*.pdf
+*.ttf
+*.otf
+__pycache__/
+.venv/
+.pytest_cache/
