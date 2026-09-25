@@ -2,7 +2,7 @@ import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { useBralloCamera } from "./useBralloCamera";
 import { CrossOut } from "./CrossOut";
-import { RoadShield } from "./RoadShield";
+import { RoadShield } from "../shared/RoadShield";
 import { RoutePath } from "../shared/RoutePath";
 import { PinMarker } from "../shared/PinMarker";
 import { WaypointTick } from "../shared/WaypointTick";

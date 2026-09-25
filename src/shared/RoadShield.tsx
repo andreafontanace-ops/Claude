@@ -1,8 +1,8 @@
 import React from "react";
 import { interpolate } from "remotion";
-import { Camera, project } from "../shared/camera";
-import { pointAtProgress } from "../shared/polyline";
-import { fontFamily } from "../shared/fonts";
+import { Camera, project } from "./camera";
+import { pointAtProgress } from "./polyline";
+import { fontFamily } from "./fonts";
 
 // A road number set beside its road, on a plate in the road's own
 // colour, so which label belongs to which line needs no reading.

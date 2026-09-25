@@ -1,7 +1,8 @@
 """Turn a Google Maps route screenshot into a lon/lat track.
 
     python3 scripts/geo/screenshot_track.py SHOT.png OUT.json \
-        --apex X,Y --start X,Y --end X,Y [--via X,Y ...] [--poi NAME=X,Y ...]
+        (--apex X,Y | --seed LON,LAT=X,Y) --start X,Y --end X,Y
+        [--via X,Y ...] [--poi NAME=X,Y ...]
         [--check CHECK.png]
 
 No routing service is reachable from the render environment, so the real
@@ -11,9 +12,11 @@ roads come in as screenshots of a Google Maps route. Two steps:
    those are the same boundaries as openpolis/ISTAT italy_regions.geojson. The
    screenshot is fitted to them: Web Mercator, north up, so three parameters
    (scale and two offsets), found by chamfer matching the official boundary
-   lines against the detected dashes. --apex is a rough pixel for the Santa
-   Margherita / Brallo / Zerba tripoint - the tip of the Emilia-Romagna wedge
-   that pokes north between the two - which seeds the search.
+   lines against the detected dashes. The search is seeded from one point
+   whose coordinates are known: --apex, a rough pixel for the Santa Margherita
+   / Brallo / Zerba tripoint (the tip of the Emilia-Romagna wedge that pokes
+   north between the two), or --seed LON,LAT=X,Y for any other. The fit does
+   not depend on which: the two seeds give the same answer.
 
 2. Extract. The route is the saturated blue-violet line. It is broken wherever
    a label, the time callout or a marker sits on it, so the pieces are
@@ -22,7 +25,16 @@ roads come in as screenshots of a Google Maps route. Two steps:
    to end through --via: the white-ring markers of the stops the route was
    built through, which are on the road by construction.
 
-Known limit: at ~8 m/px, with Google's line about 8 px wide, switchbacks whose
+Known limit, position: about +-100 m. The fit is repeatable from either seed
+for a screenshot with plenty of boundary in frame, but the score surface is
+shallow, and for one with less (the ridge screenshot) two fits ~3.5% apart in
+scale score within 1% of each other - the image does not contain enough
+boundary to choose. Two screenshots of routes that share a start and an end
+agree on those points to 80-150 m, which is the same figure measured another
+way. At the films' ~9 m/px that is ~10 px, and build_brallo.py reconciles the
+shared points anyway.
+
+Known limit, detail: at ~8 m/px, with Google's line about 8 px wide, switchbacks whose
 legs are closer than ~65 m merge into one blob and their tips come out
 shortened. The track is shorter than Google's distance for that reason; use
 Google's figure for distances. The film draws at about the same scale, so it
@@ -48,7 +60,12 @@ def xy(s):
 
 ap = argparse.ArgumentParser()
 ap.add_argument("shot"); ap.add_argument("out")
-ap.add_argument("--apex", type=xy, required=True)
+seed = ap.add_mutually_exclusive_group(required=True)
+seed.add_argument("--apex", type=xy)
+# Any point whose coordinates are already known, and its rough pixel: for a
+# frame that does not reach the Zerba wedge, the end of an earlier track does
+# the same job - Brallo, say, for a route that starts there.
+seed.add_argument("--seed")
 ap.add_argument("--start", type=xy, required=True)
 ap.add_argument("--end", type=xy, required=True)
 ap.add_argument("--via", type=xy, nargs="*", default=[])
@@ -146,22 +163,46 @@ def score(p):
     return hits * px_per_sample
 
 
+if args.seed:
+    _ll, _px = args.seed.split("=")
+    SEED_LL, SEED_PX = xy(_ll), xy(_px)
+else:
+    SEED_LL, SEED_PX = TRIPOINT, args.apex
+
+
 def seeded(s, ax, ay):
-    return (s, TRIPOINT[0] - ax / s, float(merc(TRIPOINT[1])) + ay / s)
+    return (s, SEED_LL[0] - ax / s, float(merc(SEED_LL[1])) + ay / s)
 
 
 # Wide enough for anything from a whole-province view to a close-up: Google's
 # fractional zooms put these screenshots anywhere from ~5 to ~15 m/px.
-best = (-1.0, None)
-for s in np.arange(4000, 18000, 150):
-    for dx in range(-40, 41, 5):
-        for dy in range(-40, 41, 5):
-            p = seeded(s, args.apex[0] + dx, args.apex[1] + dy)
-            sc = score(p)
-            if sc > best[0]:
-                best = (sc, p)
-geo = optimize.minimize(lambda p: -score(p), best[1], method="Nelder-Mead",
-                        options=dict(xatol=1e-8, fatol=1e-3, maxiter=4000)).x
+#
+# The score is shallow and bumpy, so the single best grid point is not
+# necessarily next to the best fit: refining only that one made the answer
+# depend on the seed (~2% in scale, ~100 m in position). Instead the best
+# few, well apart, are each refined and the highest-scoring fit wins.
+cands = []
+# The seed pixel only has to be roughly right: +-80 px of slack, because at
+# the far side of the frame a 3% scale error alone moves things ~25 px.
+for s in np.arange(4000, 18000, 75):
+    for dx in range(-80, 81, 8):
+        for dy in range(-80, 81, 8):
+            p = seeded(s, SEED_PX[0] + dx, SEED_PX[1] + dy)
+            cands.append((score(p), p))
+cands.sort(key=lambda c: -c[0])
+starts = []
+for sc, p in cands:
+    # keep starts at least 3% apart in scale or 12 px apart in position
+    if all(abs(p[0] / q[0] - 1) > 0.03
+           or math.hypot((p[1] - q[1]) * p[0], (p[2] - q[2]) * p[0]) > 12
+           for q in starts):
+        starts.append(p)
+    if len(starts) == 8:
+        break
+fits = [optimize.minimize(lambda p: -score(p), p0, method="Nelder-Mead",
+                          options=dict(xatol=1e-8, fatol=1e-3, maxiter=4000))
+        for p0 in starts]
+geo = max(fits, key=lambda r: -r.fun).x
 m_per_px = 111320 * math.cos(math.radians(44.72)) / geo[0]
 
 # Quality: how far the dashes that belong to a boundary sit from it. Measured
