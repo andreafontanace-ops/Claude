@@ -40,6 +40,16 @@ export const arrivalFrame = (road: "facile" | "crinale", id: string): number => 
   return Math.round(from + (to - from) * easeInOutCubicInverse(marks[road][id]));
 };
 
+// The frame at which the drawn line passes a given fraction of its road.
+export const roadFrameAt = (road: "facile" | "crinale", t: number): number => {
+  const [from, to] = road === "facile" ? ROAD_FACILE : ROAD_CRINALE;
+  return Math.round(from + (to - from) * easeInOutCubicInverse(t));
+};
+
+// Where along each road its SP88 plate sits: on stretches with clear paper
+// beside them, away from the other road and from the names.
+export const SHIELD_AT = { facile: 0.42, crinale: 0.4 } as const;
+
 // A pin that lands with the line rather than after it.
 export const pinCue = (arrival: number) =>
   ({

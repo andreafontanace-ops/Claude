@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { useBralloCamera } from "./useBralloCamera";
 import { CrossOut } from "./CrossOut";
+import { RoadShield } from "./RoadShield";
 import { RoutePath } from "../shared/RoutePath";
 import { PinMarker } from "../shared/PinMarker";
 import { WaypointTick } from "../shared/WaypointTick";
@@ -19,8 +20,10 @@ import {
   INTRO_FADE_IN,
   ROAD_CRINALE,
   ROAD_FACILE,
+  SHIELD_AT,
   arrivalFrame,
   pinCue,
+  roadFrameAt,
 } from "./timeline";
 
 const placeById = (id: string) => places.find((p) => p.id === id)!;
@@ -146,6 +149,31 @@ export const GiovaBrallo: React.FC = () => {
             showElevation
             elevationLocale="it-IT"
             pinScale={0.62}
+          />
+
+          {/* Both roads are the SP88: it forks up here, one branch down the
+              Staffora flank towards the Penice, the other over the Colletta.
+              The easy road is west of the ridge, so its plate goes west; the
+              ridge road's goes east. */}
+          <RoadShield
+            camera={camera}
+            frame={frame}
+            points={facile.points}
+            at={SHIELD_AT.facile}
+            dx={-92}
+            revealFrame={roadFrameAt("facile", SHIELD_AT.facile)}
+            label="SP88"
+            color={ROUTE_BLUE}
+          />
+          <RoadShield
+            camera={camera}
+            frame={frame}
+            points={crinale.points}
+            at={SHIELD_AT.crinale}
+            dx={88}
+            revealFrame={roadFrameAt("crinale", SHIELD_AT.crinale)}
+            label="SP88"
+            color={ROUTE_RED}
           />
 
           <CrossOut
