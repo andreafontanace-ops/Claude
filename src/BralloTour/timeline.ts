@@ -46,9 +46,9 @@ export const roadFrameAt = (road: "facile" | "crinale", t: number): number => {
   return Math.round(from + (to - from) * easeInOutCubicInverse(t));
 };
 
-// Where along each road its SP88 plate sits: on stretches with clear paper
-// beside them, away from the other road and from the names.
-export const SHIELD_AT = { facile: 0.42, crinale: 0.4 } as const;
+// Where along each road its number plate sits: on stretches running north,
+// so a sideways offset puts the plate beside the line rather than on it.
+export const SHIELD_AT = { facile: 0.65, crinale: 0.4 } as const;
 
 // A pin that lands with the line rather than after it.
 export const pinCue = (arrival: number) =>

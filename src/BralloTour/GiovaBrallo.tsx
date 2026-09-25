@@ -37,7 +37,6 @@ export const GiovaBrallo: React.FC = () => {
   const giova = placeById("giova");
   const poggio = placeById("poggio");
   const colletta = placeById("colletta");
-  const brallopass = placeById("brallopass");
   const brallo = placeById("brallo");
 
   const facile = roadById("facile");
@@ -131,9 +130,9 @@ export const GiovaBrallo: React.FC = () => {
             revealFrame={arrivalFrame("facile", "poggio")}
             showLabel
             color={ROUTE_BLUE}
-            labelDx={-100}
-            labelDy={-70}
-            labelWidth={200}
+            labelDx={-74}
+            labelDy={-60}
+            labelWidth={190}
           />
 
           {/* Where both roads end, named as soon as the first one gets there. */}
@@ -142,8 +141,8 @@ export const GiovaBrallo: React.FC = () => {
             camera={camera}
             frame={frame}
             {...BRALLO_PIN}
-            labelDx={40}
-            labelDy={20}
+            labelDx={-60}
+            labelDy={-200}
             labelSize={42}
             labelWidth={260}
             showElevation
@@ -151,18 +150,18 @@ export const GiovaBrallo: React.FC = () => {
             pinScale={0.62}
           />
 
-          {/* Both roads are the SP88: it forks up here, one branch down the
-              Staffora flank towards the Penice, the other over the Colletta.
-              The easy road is west of the ridge, so its plate goes west; the
-              ridge road's goes east. */}
+          {/* Road numbers as the route screenshots label them: the easy road
+              is the SP131 for most of its length (the SP48 before Pian del
+              Poggio), the hard one the SP88. The easy road is the western of
+              the two, so its plate goes west; the hard road's goes east. */}
           <RoadShield
             camera={camera}
             frame={frame}
             points={facile.points}
             at={SHIELD_AT.facile}
-            dx={-92}
+            dx={-100}
             revealFrame={roadFrameAt("facile", SHIELD_AT.facile)}
-            label="SP88"
+            label="SP131"
             color={ROUTE_BLUE}
           />
           <RoadShield
@@ -184,7 +183,7 @@ export const GiovaBrallo: React.FC = () => {
             range={CROSS_OUT}
           />
 
-          {/* The ridge road's two landmarks, cued off the red line. */}
+          {/* The hard road's landmark, cued off the red line as it passes. */}
           <PinMarker
             waypoint={colletta}
             camera={camera}
@@ -198,19 +197,7 @@ export const GiovaBrallo: React.FC = () => {
             elevationLocale="it-IT"
             pinScale={0.62}
           />
-          <WaypointTick
-            waypoint={brallopass}
-            camera={camera}
-            frame={frame}
-            revealFrame={arrivalFrame("crinale", "brallopass")}
-            showLabel
-            color={ROUTE_RED}
-            labelDx={-60}
-            labelDy={-110}
-            labelWidth={300}
-            showElevation
-            elevationLocale="it-IT"
-          />
+
         </AbsoluteFill>
       </AbsoluteFill>
 

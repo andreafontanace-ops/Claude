@@ -1,23 +1,20 @@
-"""Builds src/BralloTour/geoData.ts: two roads from the Passo del Giovà to
-Brallo di Pregola, and the ridge between them.
+"""Builds src/BralloTour/geoData.ts: two real roads from the Passo del Giovà to
+Brallo di Pregola.
 
-The easy one drops back to Pian del Poggio and contours north-east along the
-Staffora flank, heading down towards the Penice, before crossing to the Brallo.
-The hard one is the SP88 over the Cima Colletta and along the crinale. The film
-draws the easy one, crosses it out, then draws the ridge.
+The easy one, 19.2 km by Google: north from the Giovà on the SP48 to Pian del
+Poggio, on through Casale Staffora and Pianostano, then the SP131 north and
+east into Brallo. The hard one, 13.1 km: east from the Giovà on the SP88 along
+the Lombardia / Emilia-Romagna boundary, north up the east flank of the Zerba
+wedge past the Cima Colletta, and through the hairpins into Brallo. The film
+draws the easy one, crosses it out, then draws the hard one.
 
-Same pipeline as build_oltrepo.py, and the same caveat: no routing service is
-reachable from the render environment, so the roads are laid out over anchors.
-What keeps that honest here is the watershed. The Santa Margherita / Brallo di
-Pregola comune boundary IS the ridge:
-
-  - the crinale road is that boundary, lifted straight out of the ISTAT data;
-  - the easy road has to stay on the Staffora side of it until the pass, and the
-    build fails if a single point of it - bends included - strays into Brallo
-    di Pregola before then. Its anchors are checked the same way.
-
-The easy road's bends are built, not traced (see add_bends). It passes several
-villages on the way; they are deliberately not named in the film.
+Both come from Google Maps route screenshots, turned into lon/lat tracks by
+screenshot_track.py (tracks/facile.json, tracks/crinale.json). Each screenshot
+is georeferenced on its own, against the official region boundaries, so the
+two are an independent check on each other: they must agree on where the
+Giovà and the arrival are. They do to within ~150 m, and that remaining gap is
+split evenly between them here (see reconcile) so both roads leave from one
+point and arrive at one point.
 
 Regenerate with:  python3 scripts/geo/build_brallo.py
 """
@@ -26,6 +23,7 @@ import json, math, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
 OUT_TS = os.path.join(REPO_ROOT, "src", "BralloTour", "geoData.ts")
+TRACKS = os.path.join(HERE, "tracks")
 
 MAP_WIDTH = 2000.0
 LAT0 = 44.75
@@ -49,7 +47,7 @@ regions = load("italy_regions.geojson")
 municipalities = load("limits_IT_municipalities.geojson")
 
 # Same projection as build_oltrepo.py, anchored on the same four regions, so a
-# map unit means the same thing in both films.
+# map unit means the same thing in every Oltrepò film.
 HOME_REGIONS = {"Lombardia", "Piemonte", "Emilia-Romagna", "Liguria"}
 
 lons, lats = [], []
@@ -69,13 +67,6 @@ KM_PER_UNIT = (LON1 - LON0) * K * 111.32 / MAP_WIDTH
 
 def project(lon, lat):
     return ((lon - LON0) * K * SCALE, (LATMAX - lat) * SCALE)
-
-
-P = lambda lon, lat: project(lon, lat)
-
-
-def unproject(x, y):
-    return (x / (K * SCALE) + LON0, LATMAX - y / SCALE)
 
 
 def ring_to_points(ring, min_step):
@@ -118,240 +109,135 @@ def shapes(geojson, name_key, min_step, keep=None, window=None):
 
 home = shapes(regions, "reg_name", 0.35, keep=lambda p: p["reg_name"] in HOME_REGIONS)
 beyond = shapes(regions, "reg_name", 0.9, keep=lambda p: p["reg_name"] not in HOME_REGIONS)
-
-# Only the comuni around the two roads: the whole film stays inside 12 km.
-WINDOW = (9.10, 44.62, 9.40, 44.84)
+WINDOW = (9.10, 44.60, 9.40, 44.82)
 comuni = shapes(municipalities, "name", 0.05, window=WINDOW)
 print("home", len(home), "beyond", len(beyond), "comuni", len(comuni))
 
 
-# --- the watershed ---------------------------------------------------------
+# --- the two roads -----------------------------------------------------------
+
+def metres(p, q):
+    lon1, lat1, lon2, lat2 = map(math.radians, (*p, *q))
+    h = (math.sin((lat2 - lat1) / 2) ** 2
+         + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2)
+    return 2 * 6371000 * math.asin(math.sqrt(h))
+
+
+def read_track(name):
+    path = os.path.join(TRACKS, f"{name}.json")
+    if not os.path.exists(path):
+        sys.exit(f"missing {path}: run screenshot_track.py on the {name} screenshot")
+    return json.load(open(path))
+
+
+facile_t = read_track("facile")
+crinale_t = read_track("crinale")
+facile_ll = [tuple(p) for p in facile_t["lonlat"]]
+crinale_ll = [tuple(p) for p in crinale_t["lonlat"]]
+
+# The two screenshots were georeferenced independently, so where they agree is
+# a measure of both. Report it, refuse to go on if it is gross (a bad fit, not
+# noise), and otherwise meet in the middle.
+AGREE_M = 250
+gap_start = metres(facile_ll[0], crinale_ll[0])
+gap_end = metres(facile_ll[-1], crinale_ll[-1])
+print(f"the two screenshots agree on the Giovà to {gap_start:.0f} m "
+      f"and on the arrival to {gap_end:.0f} m")
+if max(gap_start, gap_end) > AGREE_M:
+    sys.exit(f"screenshots disagree by more than {AGREE_M} m - check the georeference")
+
+START = tuple((a + b) / 2 for a, b in zip(facile_ll[0], crinale_ll[0]))
+END = tuple((a + b) / 2 for a, b in zip(facile_ll[-1], crinale_ll[-1]))
+
+
+def reconcile(track):
+    """Move a track's ends onto the shared START and END, spreading the shift
+    along its length by arc fraction, so there is no kink - at most half the
+    gap above, ~75 m, fading to nothing towards the middle of the road."""
+    ds = [0.0]
+    for p, q in zip(track, track[1:]):
+        ds.append(ds[-1] + metres(p, q))
+    total = ds[-1]
+    s0 = (START[0] - track[0][0], START[1] - track[0][1])
+    s1 = (END[0] - track[-1][0], END[1] - track[-1][1])
+    out = []
+    for (lon, lat), d in zip(track, ds):
+        t = d / total
+        out.append((lon + s0[0] * (1 - t) + s1[0] * t, lat + s0[1] * (1 - t) + s1[1] * t))
+    return out
+
+
+facile_ll = reconcile(facile_ll)
+crinale_ll = reconcile(crinale_ll)
+km = {"facile": sum(metres(p, q) for p, q in zip(facile_ll, facile_ll[1:])) / 1000,
+      "crinale": sum(metres(p, q) for p, q in zip(crinale_ll, crinale_ll[1:])) / 1000}
+print("drawn length", {k: round(v, 1) for k, v in km.items()},
+      "km (Google: facile 19.2, crinale 13.1 - the difference is the tightest "
+      "switchbacks, which merge in the screenshots)")
+
+
+# --- which comuni each road crosses -----------------------------------------
+# Reported, not enforced. An earlier version of this script required the easy
+# road to stay out of Brallo di Pregola until the pass; the real road goes up
+# through Pianostano, at the tip of the Zerba wedge, and the assumption behind
+# that check was simply wrong.
 
 def inside(pt, ring):
     x, y = pt
-    n = len(ring)
-    hit = False
-    j = n - 1
+    n = len(ring); hit = False; j = n - 1
     for i in range(n):
-        xi, yi = ring[i]
-        xj, yj = ring[j]
+        xi, yi = ring[i]; xj, yj = ring[j]
         if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
             hit = not hit
         j = i
     return hit
 
 
-def comune_rings(name):
-    for feat in municipalities["features"]:
-        if feat["properties"].get("name") == name and feat["properties"].get("prov_acr") == "PV":
-            return list(rings(feat["geometry"]))
-    sys.exit(f"comune not found: {name}")
+near = [f for f in municipalities["features"]
+        if f["properties"].get("prov_acr") in ("PV", "PC", "AL")]
 
 
-BRALLO_RINGS = comune_rings("Brallo di Pregola")
+def comune_of(p):
+    for f in near:
+        if any(inside(p, r) for r in rings(f["geometry"])):
+            return f["properties"]["name"]
+    return "?"
 
 
-def in_brallo(lon, lat):
-    return any(inside((lon, lat), r) for r in BRALLO_RINGS)
+for name, track in (("facile", facile_ll), ("crinale", crinale_ll)):
+    seq = []
+    for p in track:
+        c = comune_of(p)
+        if not seq or seq[-1] != c:
+            seq.append(c)
+    print(f"{name} crosses: " + " > ".join(seq))
 
 
-# --- places ----------------------------------------------------------------
+# --- places ------------------------------------------------------------------
 
 PLACES = [
-    ("giova",      "PASSO DEL GIOVÀ",   9.2347, 44.6983, 1310),
-    ("poggio",     "PIAN DEL POGGIO",   9.2245, 44.7070, 1150),
-    ("colletta",   "CIMA COLLETTA",     9.2351, 44.7164, 1494),
-    ("brallopass", "PASSO DEL BRALLO",  9.2636, 44.7540, 951),
-    ("brallo",     "BRALLO DI PREGOLA", 9.2745, 44.7515, 950),
+    ("giova",    "PASSO DEL GIOVÀ",   START,                                    1310),
+    ("poggio",   "PIAN DEL POGGIO",   tuple(facile_t["stops"]["poggio"]),       1150),
+    ("colletta", "CIMA COLLETTA",     tuple(crinale_t["pois"]["colletta"]),     1494),
+    ("brallo",   "BRALLO DI PREGOLA", END,                                      950),
 ]
+for pid, _, ll, _ in PLACES:
+    print(f"  {pid:9s} {ll[0]:.5f}, {ll[1]:.5f}  ({comune_of(ll)})")
 
 
 def wp_literal(rows):
-    return [
-        f'  {{ id: "{i}", name: "{n}", subtitle: null, '
-        f"x: {project(lo, la)[0]:.2f}, y: {project(lo, la)[1]:.2f}, elevation: {e} }},"
-        for i, n, lo, la, e in rows
-    ]
-
-
-# --- the two roads ---------------------------------------------------------
-
-# The easy one. Back down from the Giovà to Pian del Poggio, then north-east
-# along the Staffora flank, a few hundred metres below the ridge the whole way,
-# and over to the Brallo at the pass. Every anchor here has been checked
-# against the comune polygons: all in Santa Margherita di Staffora until the
-# pass, which sits on the boundary vertex itself.
-FACILE = [
-    ("giova",      9.2347, 44.6983),
-    (None,         9.2290, 44.7020),
-    ("poggio",     9.2245, 44.7070),
-    (None,         9.2270, 44.7160),
-    (None,         9.2285, 44.7260),
-    (None,         9.2310, 44.7370),
-    (None,         9.2400, 44.7470),
-    (None,         9.2500, 44.7515),
-    (None,         9.2580, 44.7562),
-    ("brallopass", 9.2636, 44.7540),
-    (None,         9.2690, 44.7534),
-    ("brallo",     9.2745, 44.7515),
-]
-
-# The hard one: the SP88 over the Cima Colletta and along the crinale. The
-# Brallo / Santa Margherita / Zerba comune boundaries - in the Apennines the
-# comune line is the watershed, and the watershed is what this road rides.
-# The line between these vertices is ISTAT's simplification, not the road; see
-# BENDS for what is done about that.
-CRINALE = [
-    ("giova",      9.2347, 44.6983),
-    (None,         9.2323, 44.7033),
-    (None,         9.2330, 44.7076),
-    (None,         9.2359, 44.7128),
-    ("colletta",   9.2351, 44.7164),
-    (None,         9.2330, 44.7220),
-    (None,         9.2335, 44.7254),
-    (None,         9.2356, 44.7289),
-    (None,         9.2368, 44.7340),
-    (None,         9.2375, 44.7401),
-    (None,         9.2454, 44.7412),
-    (None,         9.2545, 44.7456),
-    (None,         9.2592, 44.7482),
-    ("brallopass", 9.2636, 44.7540),
-    (None,         9.2690, 44.7534),
-    ("brallo",     9.2745, 44.7515),
-]
-
-# Every anchor up to the pass must be on the Staffora side. Past the pass the
-# road is in Brallo di Pregola by definition, so the check stops there.
-for name, lon, lat in FACILE:
-    if name == "brallopass":
-        break
-    if in_brallo(lon, lat):
-        sys.exit(f"easy-road anchor on the wrong side of the ridge: {name} {lon},{lat}")
-
-
-# --- bends -------------------------------------------------------------------
-# Built, not traced: offset(t) = amp * (sin(2 pi c t) + w2 sin(4 pi c t) +
-# w3 sin(6 pi c t)) across the local normal, `c` a whole number, so the offset
-# is zero at both ends of every span and each named place stays exactly on its
-# own coordinate. Same generator as the Val Staffora film.
-#
-# The easy road is the one "ricca di curve": six full cycles on the long
-# traverse from Pian del Poggio to the pass. The ridge road gets bends too, but
-# a third of the size: the ISTAT boundary it comes from is a simplified
-# polyline, straight between vertices, and a crest road is not a ruler - but
-# the contrast between the two roads is the film, so the ridge stays the
-# calmer line. The last kilometre into Brallo is shared by both, so it gets no
-# bends at all - two lines on one road would split visibly.
-
-# per road: span end -> (cycles, amplitude km, w2, w3)
-BENDS = {
-    "facile": {
-        "poggio": (2, 0.10, 0.30, -0.15),
-        "brallopass": (6, 0.15, -0.32, 0.18),
-        "brallo": (0, 0.0, 0.0, 0.0),
-    },
-    "crinale": {
-        "colletta": (2, 0.04, 0.25, 0.0),
-        "brallopass": (4, 0.06, -0.28, 0.14),
-        "brallo": (0, 0.0, 0.0, 0.0),
-    },
-}
-
-
-def spline_resample(points, step):
-    """Sample a centripetal Catmull-Rom spline through `points` every ~`step`.
-
-    Straight segments between anchors leave a hard corner at every anchor,
-    and on the ridge - where the anchors are ISTAT boundary vertices - those
-    corners are the most visible thing in the frame. The spline passes through
-    every anchor exactly, so named places stay put; it only rounds the turns.
-    Centripetal (alpha 0.5) rather than uniform, because uniform overshoots
-    into loops where anchors are unevenly spaced, as these are."""
-    ext = [points[0]] + list(points) + [points[-1]]
-
-    def tj(ti, a, b):
-        return ti + max(math.hypot(b[0] - a[0], b[1] - a[1]), 1e-9) ** 0.5
-
-    out = [points[0]]
-    for i in range(1, len(ext) - 2):
-        p0, p1, p2, p3 = ext[i - 1], ext[i], ext[i + 1], ext[i + 2]
-        t0 = 0.0
-        t1 = tj(t0, p0, p1)
-        t2 = tj(t1, p1, p2)
-        t3 = tj(t2, p2, p3)
-        n = max(1, int(math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step))
-        for k in range(1, n + 1):
-            t = t1 + (t2 - t1) * k / n
-            def lerp(a, b, ta, tb):
-                if tb - ta < 1e-12:
-                    return a
-                w = (t - ta) / (tb - ta)
-                return (a[0] + (b[0] - a[0]) * w, a[1] + (b[1] - a[1]) * w)
-            a1 = lerp(p0, p1, t0, t1); a2 = lerp(p1, p2, t1, t2); a3 = lerp(p2, p3, t2, t3)
-            b1 = lerp(a1, a2, t0, t2); b2 = lerp(a2, a3, t1, t3)
-            out.append(lerp(b1, b2, t1, t2))
+    out = []
+    for i, n, (lo, la), e in rows:
+        x, y = project(lo, la)
+        out.append(f'  {{ id: "{i}", name: "{n}", subtitle: null, '
+                   f"x: {x:.2f}, y: {y:.2f}, elevation: {e} }},")
     return out
 
 
-def nearest_index(line, p):
-    return min(range(len(line)),
-               key=lambda i: math.hypot(line[i][0] - p[0], line[i][1] - p[1]))
+# --- geometry for the film ---------------------------------------------------
 
-
-def add_bends(points, named, bends, step=0.25):
-    dense = spline_resample(points, step)
-    marks_i = [(name, nearest_index(dense, points[i])) for name, i in named]
-    out = list(dense)
-    for (_, ia), (name_b, ib) in zip(marks_i, marks_i[1:]):
-        cycles, amp_km, w2, w3 = bends.get(name_b, (0, 0.0, 0.0, 0.0))
-        if not cycles or ib - ia < 4:
-            continue
-        amp = amp_km / KM_PER_UNIT
-        for i in range(ia + 1, ib):
-            t = (i - ia) / (ib - ia)
-            ax, ay = dense[max(ia, i - 1)]
-            bx, by = dense[min(ib, i + 1)]
-            dx, dy = bx - ax, by - ay
-            length = math.hypot(dx, dy) or 1.0
-            nx, ny = -dy / length, dx / length
-            k = amp * (
-                math.sin(2 * math.pi * cycles * t)
-                + w2 * math.sin(2 * math.pi * 2 * cycles * t)
-                + w3 * math.sin(2 * math.pi * 3 * cycles * t)
-            )
-            out[i] = (dense[i][0] + nx * k, dense[i][1] + ny * k)
-    return out
-
-
-def build_leg(rows, bends):
-    line = [P(lon, lat) for _, lon, lat in rows]
-    named = [(name, i) for i, (name, _, _) in enumerate(rows) if name]
-    return add_bends(line, named, bends)
-
-
-pts = {name: P(lon, lat) for rows in (FACILE, CRINALE) for name, lon, lat in rows if name}
-facile = build_leg(FACILE, BENDS["facile"])
-crinale = build_leg(CRINALE, BENDS["crinale"])
-
-# Named places must land exactly on both roads - the spline and the bends are
-# both built to guarantee it, and this makes sure they did.
-for road, line in (("facile", facile), ("crinale", crinale)):
-    for name, lon, lat in (FACILE if road == "facile" else CRINALE):
-        if not name:
-            continue
-        p = P(lon, lat)
-        gap = math.hypot(*(a - b for a, b in zip(line[nearest_index(line, p)], p)))
-        if gap > 1e-6:
-            sys.exit(f"{name} is {gap:.4f} units off the {road} road")
-
-# The guarantee: bends and all, the easy road never crosses the ridge before
-# the pass. Checked on every drawn point, not just the anchors.
-pass_i = nearest_index(facile, pts["brallopass"])
-strays = [unproject(*p) for p in facile[:pass_i - 2] if in_brallo(*unproject(*p))]
-if strays:
-    sys.exit(f"{len(strays)} easy-road points cross the ridge early, e.g. {strays[0]}")
-print("easy road stays on the Staffora side of the ridge up to the pass:",
-      pass_i, "points checked")
+facile = [project(*p) for p in facile_ll]
+crinale = [project(*p) for p in crinale_ll]
 
 
 def catmull_rom_to_bezier(points):
@@ -370,28 +256,29 @@ def path_length(points):
                for i in range(1, len(points)))
 
 
-legs = [("facile", facile, FACILE), ("crinale", crinale, CRINALE)]
-lengths = {lid: path_length(line) for lid, line, _ in legs}
-print("leg lengths (units)", {k: round(v, 1) for k, v in lengths.items()},
-      "km", {k: round(v * KM_PER_UNIT, 1) for k, v in lengths.items()})
+def nearest_index(line, p):
+    return min(range(len(line)),
+               key=lambda i: math.hypot(line[i][0] - p[0], line[i][1] - p[1]))
 
-# Where each named place falls along each leg, by arc length. Keyed by leg,
-# because the Giovà, the pass and Brallo are on both roads.
+
+legs = [("facile", facile, ["giova", "poggio", "brallo"]),
+        ("crinale", crinale, ["giova", "colletta", "brallo"])]
+place_xy = {pid: project(*ll) for pid, _, ll, _ in PLACES}
+
+# Where each place falls along each road, by arc length. Cima Colletta is a
+# summit beside the road, not on it, so it is cued off the nearest point of
+# the road - when the drawn line passes it.
 marks = {}
-for lid, line, rows in legs:
-    for name in (n for n, _, _ in rows if n):
-        i = nearest_index(line, pts[name])
-        marks.setdefault(lid, {})[name] = path_length(line[: i + 1]) / lengths[lid]
+for lid, line, ids in legs:
+    total = path_length(line)
+    for pid in ids:
+        i = nearest_index(line, place_xy[pid])
+        marks.setdefault(lid, {})[pid] = path_length(line[: i + 1]) / total
 print("marks", {lid: {k: round(v, 3) for k, v in m.items()} for lid, m in marks.items()})
 
 
-# --- where the X goes --------------------------------------------------------
-# The two roads run close for most of their length - the easy one contours a
-# few hundred metres below the ridge - so an X dropped at the easy road's
-# midpoint would half-land on the ridge road too. It goes where they are
-# furthest apart instead, searched over the middle of the easy road (the ends
-# are shared ground: the Giovà at one, the Brallo at the other).
-
+# The X goes where the two roads are furthest apart, over the middle of the
+# easy one (the ends are shared ground).
 def dist_to_polyline(p, line):
     best = float("inf")
     for (ax, ay), (bx, by) in zip(line, line[1:]):
@@ -403,11 +290,10 @@ def dist_to_polyline(p, line):
 
 
 n = len(facile)
-window_i = range(int(n * 0.25), int(n * 0.85))
-x_i = max(window_i, key=lambda i: dist_to_polyline(facile[i], crinale))
+x_i = max(range(int(n * 0.25), int(n * 0.85)), key=lambda i: dist_to_polyline(facile[i], crinale))
 x_point = facile[x_i]
-print("X at facile index", x_i, "of", n,
-      f"- {dist_to_polyline(x_point, crinale) * KM_PER_UNIT * 1000:.0f} m from the ridge road")
+print(f"X at facile point {x_i} of {n}, "
+      f"{dist_to_polyline(x_point, crinale) * KM_PER_UNIT * 1000:.0f} m from the other road")
 
 
 # --- framing -----------------------------------------------------------------
@@ -417,12 +303,7 @@ def bbox(points, pad_x, pad_top, pad_bottom):
     return (min(xs) - pad_x, min(ys) - pad_top, max(xs) + pad_x, max(ys) + pad_bottom)
 
 
-# 4 km across and 6.6 km tall. The side padding is where the names go.
-route_box = bbox(facile + crinale, 7.0, 3.0, 4.0)
-
-# The opening framing: the same box, 35% wider about its centre. The camera
-# drifts from one to the other over the whole film - a slow push rather than a
-# drop, since there is nothing to establish that the first frame does not.
+route_box = bbox(facile + crinale + [place_xy["colletta"]], 5.0, 3.0, 4.0)
 cx, cy = (route_box[0] + route_box[2]) / 2, (route_box[1] + route_box[3]) / 2
 hw, hh = (route_box[2] - route_box[0]) / 2 * 1.35, (route_box[3] - route_box[1]) / 2 * 1.35
 open_box = (cx - hw, cy - hh, cx + hw, cy + hh)
@@ -437,7 +318,8 @@ def bbox_literal(name, b):
 
 out = []
 out.append("// Auto-generated by scripts/geo/build_brallo.py - do not hand-edit.")
-out.append("// Sources: openpolis/geojson-italy (regioni, comuni).")
+out.append("// Roads: Google Maps route screenshots via scripts/geo/screenshot_track.py.")
+out.append("// Map: openpolis/geojson-italy (regioni, comuni).")
 out.append("// Equirectangular projection, longitude scaled by cos(44.75 deg).")
 out.append('import { BBox, RegionShape, RouteSegment, Waypoint } from "../shared/types";')
 out.append("")
@@ -459,7 +341,7 @@ out.append("export const places: Waypoint[] = [")
 out += wp_literal(PLACES)
 out.append("];")
 out.append("")
-out.append("// The easy road, crossed out; then the ridge.")
+out.append("// The easy road, crossed out; then the hard one.")
 out.append("export const roads: RouteSegment[] = [")
 for lid, line, _ in legs:
     out.append(
@@ -475,7 +357,7 @@ for lid, m in marks.items():
     out.append(f"  {lid}: {{ {inner} }},")
 out.append("};")
 out.append("")
-out.append("// Where the X lands: the point of the easy road furthest from the ridge.")
+out.append("// Where the X lands: the point of the easy road furthest from the other.")
 out.append(f"export const X_POINT = {{ x: {x_point[0]:.2f}, y: {x_point[1]:.2f} }};")
 out.append("")
 out.append(bbox_literal("OPEN_BBOX", open_box))

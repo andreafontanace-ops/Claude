@@ -1,7 +1,8 @@
 """Turn a Google Maps route screenshot into a lon/lat track.
 
     python3 scripts/geo/screenshot_track.py SHOT.png OUT.json \
-        --apex X,Y --start X,Y --end X,Y [--via X,Y ...] [--check CHECK.png]
+        --apex X,Y --start X,Y --end X,Y [--via X,Y ...] [--poi NAME=X,Y ...]
+        [--check CHECK.png]
 
 No routing service is reachable from the render environment, so the real
 roads come in as screenshots of a Google Maps route. Two steps:
@@ -52,6 +53,9 @@ ap.add_argument("--start", type=xy, required=True)
 ap.add_argument("--end", type=xy, required=True)
 ap.add_argument("--via", type=xy, nargs="*", default=[])
 ap.add_argument("--via-names", nargs="*", default=[])
+# Places that are not on the line - a summit icon beside it, say - converted
+# through the same georeference but not snapped to the road.
+ap.add_argument("--poi", nargs="*", default=[])
 ap.add_argument("--check")
 args = ap.parse_args()
 
@@ -70,8 +74,7 @@ sizes = np.bincount(lab.ravel())
 small = np.zeros_like(sizes, bool)
 small[1:] = sizes[1:] <= 10
 dash = small[lab]
-CAP = 12.0
-dist = np.minimum(ndimage.distance_transform_edt(~dash), CAP)
+dist = np.minimum(ndimage.distance_transform_edt(~dash), 12.0)
 
 
 def rings(g):
@@ -95,7 +98,7 @@ for a, b in [("Lombardia", "Emilia-Romagna"), ("Lombardia", "Piemonte"),
                 segs.append((p, q))
 bpts = []
 for (x1, y1), (x2, y2) in segs:
-    n = max(1, int(math.hypot(x2 - x1, y2 - y1) / 0.00025))  # ~20 m
+    n = max(1, int(math.hypot(x2 - x1, y2 - y1) / 0.00005))  # ~5 m
     bpts += [(x1 + (x2 - x1) * k / n, y1 + (y2 - y1) * k / n) for k in range(n)]
 bpts = np.array(bpts)
 
@@ -116,30 +119,49 @@ def project(p, lon, my):
     return s * (lon - lon0), s * (my0 - my)
 
 
-def cost(p):
+SAMPLE_M = 5.0  # ground spacing of the boundary samples above
+M_PER_DEG = 111320 * math.cos(math.radians(44.72))
+
+
+def score(p):
+    """Length, in screen pixels, of official boundary that lands on a dash.
+
+    Not a mean distance: that rewards zooming out, because squeezing more
+    boundary into the frame lowers the average even when none of it lines up -
+    which is how an earlier version fitted both screenshots at twice their real
+    scale. Counting coincident length cannot be gamed that way. At the right fit
+    hundreds of pixels of dashed line lie on the boundary; at a wrong one only
+    chance hits do, a few percent of whatever boundary is in frame, and the
+    frame is too small for chance to add up to a real fit.
+
+    A soft count (full credit on a dash, fading to none 3 px away) keeps it
+    smooth enough for the local refinement."""
     x, y = project(p, BLON, BMY)
     inside = (x >= 0) & (x < W - 1) & (y >= 0) & (y < H - 1)
-    if inside.sum() < 200:
-        return CAP
-    c = np.full(len(x), CAP)
-    c[inside] = dist[np.round(y[inside]).astype(int), np.round(x[inside]).astype(int)]
-    return c.mean()
+    if not inside.any():
+        return 0.0
+    d = dist[np.round(y[inside]).astype(int), np.round(x[inside]).astype(int)]
+    hits = np.clip(1.0 - d / 3.0, 0.0, 1.0).sum()
+    px_per_sample = SAMPLE_M * p[0] / M_PER_DEG
+    return hits * px_per_sample
 
 
 def seeded(s, ax, ay):
     return (s, TRIPOINT[0] - ax / s, float(merc(TRIPOINT[1])) + ay / s)
 
 
-best = (1e9, None)
-for s in np.arange(4500, 11000, 100):
-    for dx in range(-40, 41, 4):
-        for dy in range(-40, 41, 4):
+# Wide enough for anything from a whole-province view to a close-up: Google's
+# fractional zooms put these screenshots anywhere from ~5 to ~15 m/px.
+best = (-1.0, None)
+for s in np.arange(4000, 18000, 150):
+    for dx in range(-40, 41, 5):
+        for dy in range(-40, 41, 5):
             p = seeded(s, args.apex[0] + dx, args.apex[1] + dy)
-            c = cost(p)
-            if c < best[0]:
-                best = (c, p)
-geo = optimize.minimize(cost, best[1], method="Nelder-Mead",
-                        options=dict(xatol=1e-7, fatol=1e-5, maxiter=4000)).x
+            sc = score(p)
+            if sc > best[0]:
+                best = (sc, p)
+geo = optimize.minimize(lambda p: -score(p), best[1], method="Nelder-Mead",
+                        options=dict(xatol=1e-8, fatol=1e-3, maxiter=4000)).x
 m_per_px = 111320 * math.cos(math.radians(44.72)) / geo[0]
 
 # Quality: how far the dashes that belong to a boundary sit from it. Measured
@@ -151,7 +173,7 @@ dys, dxs = np.nonzero(dash)
 dd, _ = tree.query(np.column_stack([dxs, dys]))
 on_line = dd < 6
 resid_px = float(np.median(dd[on_line])) if on_line.any() else float("nan")
-print(f"georeference: {m_per_px:.2f} m/px, {int(on_line.sum())} boundary dashes, "
+print(f"georeference: {m_per_px:.2f} m/px, {score(geo):.0f} px of boundary on dashes, "
       f"median residual {resid_px:.2f} px = {resid_px * m_per_px:.0f} m")
 
 
@@ -262,9 +284,13 @@ def metres(p, q):
 km = sum(metres(p, q) for p, q in zip(track, track[1:])) / 1000
 names = ["start"] + (args.via_names or [f"via{i}" for i in range(len(args.via))]) + ["end"]
 stop_ll = {nm: to_lonlat(p[1], p[0]) for nm, p in zip(names, stops)}
+pois = {}
+for spec in args.poi:
+    name, pos = spec.split("=")
+    pois[name] = to_lonlat(*xy(pos))
 print(f"track: {len(track)} points, {km:.2f} km; {npieces} line pieces bridged")
-for nm, (lo, la) in stop_ll.items():
-    print(f"  {nm:12s} {lo:.5f}, {la:.5f}")
+for nm, (lo, la) in list(stop_ll.items()) + [(f"{k} (poi)", v) for k, v in pois.items()]:
+    print(f"  {nm:18s} {lo:.5f}, {la:.5f}")
 
 os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
 json.dump({
@@ -274,6 +300,7 @@ json.dump({
     "georef_residual_m": round(resid_px * m_per_px, 1),
     "km_extracted": round(km, 2),
     "stops": {k: [round(v[0], 6), round(v[1], 6)] for k, v in stop_ll.items()},
+    "pois": {k: [round(v[0], 6), round(v[1], 6)] for k, v in pois.items()},
     "lonlat": [[round(lo, 6), round(la, 6)] for lo, la in track],
 }, open(args.out, "w"), indent=1)
 

@@ -4,7 +4,7 @@ import { Camera, project } from "../shared/camera";
 import { pointAtProgress } from "../shared/polyline";
 import { fontFamily } from "../shared/fonts";
 
-// A road number set beside its road: "SP88" on a plate in the road's own
+// A road number set beside its road, on a plate in the road's own
 // colour, so which label belongs to which line needs no reading.
 //
 // Anchored to a point along the road (by arc fraction), then pushed off it
