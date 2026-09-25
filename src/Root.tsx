@@ -12,6 +12,8 @@ import { Monginevro } from "./MonginevroTour/Monginevro";
 import { MONGINEVRO_DURATION } from "./MonginevroTour/timeline";
 import { ValStaffora } from "./OltrepoTour/ValStaffora";
 import { OLTREPO_DURATION } from "./OltrepoTour/timeline";
+import { GiovaBrallo } from "./BralloTour/GiovaBrallo";
+import { GIOVA_BRALLO_DURATION } from "./BralloTour/timeline";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
 // Each <Composition> is an entry in the sidebar!
@@ -59,6 +61,15 @@ export const RemotionRoot: React.FC = () => {
         id="ValStaffora"
         component={ValStaffora}
         durationInFrames={OLTREPO_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      <Composition
+        id="GiovaBrallo"
+        component={GiovaBrallo}
+        durationInFrames={GIOVA_BRALLO_DURATION}
         fps={FPS}
         width={1080}
         height={1920}

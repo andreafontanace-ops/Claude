@@ -1,6 +1,10 @@
 import React from "react";
-import { beyond, comuni, home } from "./geoData";
+import { RegionShape } from "./types";
 
+// The map under the Oltrepo films. Each tour's geoData.ts supplies its own
+// shapes - which comuni, how much of the country - and this draws them the
+// same way, so the films read as one series.
+//
 // The colour is spent on the four regions that meet over this valley and on
 // the comuni inside them. The rest of the country is the same map drained of
 // it. The boundary between two regions is then simply where the colour
@@ -47,13 +51,18 @@ const hashIndex = (name: string, mod: number) => {
 // Line weights are in screen pixels divided by the camera scale: the map sits
 // inside a scaled <g>, and without this the borders would go from hairlines
 // to slabs as the camera pushes in.
-export const OltrepoMap: React.FC<{
+export const RegionMap: React.FC<{
+  // Lombardia, Piemonte, Emilia-Romagna, Liguria - coloured by REGION_FILL.
+  home: RegionShape[];
+  // The rest of the country, in greys.
+  beyond: RegionShape[];
+  comuni: RegionShape[];
   scale: number;
   comuneOpacity: number;
   // The region boundaries, drawn over everything so the comuni cannot bury
   // them. 0 until they are the thing being looked at.
   borderOpacity: number;
-}> = ({ scale, comuneOpacity, borderOpacity }) => {
+}> = ({ home, beyond, comuni, scale, comuneOpacity, borderOpacity }) => {
   const border = 3 / scale;
 
   return (

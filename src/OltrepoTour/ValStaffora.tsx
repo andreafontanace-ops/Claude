@@ -1,19 +1,19 @@
 import React from "react";
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
-import { OltrepoMap } from "./OltrepoMap";
 import { useOltrepoCamera } from "./useOltrepoCamera";
 import { RoutePath } from "../shared/RoutePath";
 import { PinMarker } from "../shared/PinMarker";
 import { WaypointTick } from "../shared/WaypointTick";
 import { TravelDot } from "../shared/TravelDot";
 import { GrainOverlay } from "../shared/GrainOverlay";
+import { RegionMap } from "../shared/RegionMap";
 import { Camera, project } from "../shared/camera";
 import { fontFamily } from "../shared/fonts";
 import { mapLabelStyle } from "../shared/labelStyle";
 import { Waypoint } from "../shared/types";
 import { ROUTE_RED } from "../shared/palette";
 import { SAFE_RECT } from "../shared/safeArea";
-import { places, regionLabels, roadLegs } from "./geoData";
+import { beyond, comuni, home, places, regionLabels, roadLegs } from "./geoData";
 import {
   BORDERS,
   CASALE_ARRIVAL,
@@ -140,7 +140,10 @@ export const ValStaffora: React.FC = () => {
           style={{ position: "absolute", top: 0, left: 0 }}
         >
           <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
-            <OltrepoMap
+            <RegionMap
+              home={home}
+              beyond={beyond}
+              comuni={comuni}
               scale={camera.scale}
               comuneOpacity={comuneOpacity}
               borderOpacity={borderOpacity}
