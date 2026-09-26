@@ -16,6 +16,7 @@ import { GiovaBrallo } from "./BralloTour/GiovaBrallo";
 import { GIOVA_BRALLO_DURATION } from "./BralloTour/timeline";
 import { BralloBobbio } from "./BobbioTour/BralloBobbio";
 import { BRALLO_BOBBIO_DURATION } from "./BobbioTour/timeline";
+import { HookStradaIsolata, HOOK_DURATION } from "./Hook/HookStradaIsolata";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
 // Each <Composition> is an entry in the sidebar!
@@ -81,6 +82,17 @@ export const RemotionRoot: React.FC = () => {
         id="BralloBobbio"
         component={BralloBobbio}
         durationInFrames={BRALLO_BOBBIO_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* Transparent overlay: render to ProRes 4444 or a PNG sequence, and
+          to GIF with scripts/export_gif.py. */}
+      <Composition
+        id="HookStradaIsolata"
+        component={HookStradaIsolata}
+        durationInFrames={HOOK_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
