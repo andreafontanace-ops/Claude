@@ -16,6 +16,8 @@ import { GiovaBrallo } from "./BralloTour/GiovaBrallo";
 import { GIOVA_BRALLO_DURATION } from "./BralloTour/timeline";
 import { BralloBobbio } from "./BobbioTour/BralloBobbio";
 import { BRALLO_BOBBIO_DURATION } from "./BobbioTour/timeline";
+import { BobbioVarzi } from "./PeniceTour/BobbioVarzi";
+import { PENICE_DURATION } from "./PeniceTour/timeline";
 import { HookStradaIsolata, HOOK_DURATION } from "./Hook/HookStradaIsolata";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
@@ -82,6 +84,15 @@ export const RemotionRoot: React.FC = () => {
         id="BralloBobbio"
         component={BralloBobbio}
         durationInFrames={BRALLO_BOBBIO_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      <Composition
+        id="BobbioVarzi"
+        component={BobbioVarzi}
+        durationInFrames={PENICE_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
