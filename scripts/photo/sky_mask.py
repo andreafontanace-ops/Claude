@@ -7,8 +7,9 @@ connected to the top edge. Writes a black/white mask and a magenta preview.
 
 --min-bright separates clouds from hazy distant mountains (on the Ponte Gobbo
 photo the far mountains top out near 170, the clouds start above 180).
---protect keeps thin things - a cross, an aerial, wires - out of the sky, which
-the morphological cleanup would otherwise swallow.
+--protect marks a box round thin things - a cross, an aerial, wires - which
+the morphological cleanup would otherwise swallow into the sky; within it only
+the thin thing itself is kept out.
 """
 import argparse, os
 
@@ -38,9 +39,15 @@ def main():
     sky = np.isin(lab, list(set(np.unique(lab[0])) - {0}))
     sky = ndi.binary_closing(sky, iterations=3)
     sky = ndi.binary_fill_holes(sky)
+    # Inside each protected box only the thin thing itself leaves the sky:
+    # pixels clearly darker than the box's own sky, plus a pixel round them.
+    # Keeping the whole box would leave a still rectangle of sky behind it.
     for p in args.protect:
         x0, y0, x1, y1 = (int(v) for v in p.split(","))
-        sky[y0:y1, x0:x1] = False
+        box = mx[y0:y1, x0:x1]
+        thin = box < np.percentile(box, 90) - 12
+        thin = ndi.binary_dilation(thin, iterations=1)
+        sky[y0:y1, x0:x1] &= ~thin
 
     Image.fromarray((sky * 255).astype(np.uint8)).save(args.out)
     prev = im.copy()
