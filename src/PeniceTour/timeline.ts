@@ -1,40 +1,35 @@
 // Timeline for the Bobbio - Passo del Penice - Varzi composition, in frames
-// @30fps. 9s. The pass is the subject, so the film is built around it: the
-// whole road is shown, the camera goes in close and rides the climb, stops on
-// the pass while it is named, rides the descent, and pulls back out to the
-// whole road as Varzi lands.
+// @30fps. 9s. The pass is the subject, so the film is built around it: it
+// opens in close on Bobbio, rides the climb, stops on the pass while it is
+// named, rides the descent, and pulls back out to the whole road as Varzi
+// lands.
 export const FPS = 30;
 export const PENICE_DURATION = 270; // 9s
 
-export const INTRO_FADE_IN = [0, 10] as const;
-
-// The opening push from the wider map onto the whole road.
-export const OPEN_PUSH = [0, 26] as const;
-
-export const BOBBIO_PIN = { dropRange: [4, 28], labelRange: [18, 34] } as const;
+export const BOBBIO_PIN = { dropRange: [2, 24], labelRange: [14, 30] } as const;
 
 // Up from Bobbio to the pass: 12.6 km.
-export const CLIMB = [30, 116] as const;
+export const CLIMB = [22, 112] as const;
 // Held on the pass while it is named.
-export const PASS_HOLD = [116, 146] as const;
+export const PASS_HOLD = [112, 142] as const;
 // Down to Varzi: 15.3 km.
-export const DESCENT = [146, 226] as const;
+export const DESCENT = [142, 224] as const;
 
-// The camera: in close behind the dot for the climb, a small push onto the
-// pass, and back out to the whole road for the arrival.
-export const FOLLOW_IN = [20, 50] as const;
-export const PASS_PUSH_IN = [108, 128] as const;
-export const PASS_PUSH_OUT = [138, 160] as const;
+// The camera: in close behind the dot from the first frame, a small push
+// onto the pass, and back out to the whole road for the arrival.
+export const PASS_PUSH_IN = [104, 124] as const;
+export const PASS_PUSH_OUT = [134, 156] as const;
 export const FOLLOW_OUT = [206, 244] as const;
 
 // The whole road, faint, from the start: where the red line is headed.
-export const GHOST_IN = [6, 24] as const;
+export const GHOST_IN = [4, 20] as const;
 
-export const MONTE_PENICE_IN = [96, 112] as const;
-export const REGION_TAGS_IN = [124, 140] as const;
-// The close-up furniture clears as the camera pulls back, leaving the three
-// names, the road and the closing card.
+export const MONTE_PENICE_IN = [92, 108] as const;
+// The close-up furniture - the peak, the plates, the region names set for
+// the close framing - clears as the camera pulls back; the region names set
+// for the whole-road framing take over.
 export const DETAIL_OUT = [206, 222] as const;
+export const WIDE_TAGS_IN = [230, 246] as const;
 export const SUMMARY_IN = [238, 254] as const;
 
 // RoutePath advances with Easing.inOut(cubic), so the drawn line passes arc

@@ -2,13 +2,11 @@ import { Easing, interpolate } from "remotion";
 import { Camera, fitBoxToRect, lerpCameraZoom } from "../shared/camera";
 import { pointAtProgress } from "../shared/polyline";
 import { Rect } from "../shared/safeArea";
-import { climb, descent, OPEN_BBOX, ROUTE_BBOX } from "./geoData";
+import { climb, descent, ROUTE_BBOX } from "./geoData";
 import {
   CLIMB,
   DESCENT,
-  FOLLOW_IN,
   FOLLOW_OUT,
-  OPEN_PUSH,
   PASS_PUSH_IN,
   PASS_PUSH_OUT,
 } from "./timeline";
@@ -26,10 +24,16 @@ const PASS_ZOOM = 1.22;
 // progress RoutePath and TravelDot use, so the camera is on the dot.
 export const headAt = (frame: number): { x: number; y: number } => {
   if (frame < DESCENT[0]) {
-    const t = interpolate(frame, CLIMB, [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+    const t = interpolate(frame, CLIMB, [0, 1], {
+      ...clamp,
+      easing: Easing.inOut(Easing.cubic),
+    });
     return pointAtProgress(climb.points, t);
   }
-  const t = interpolate(frame, DESCENT, [0, 1], { ...clamp, easing: Easing.inOut(Easing.cubic) });
+  const t = interpolate(frame, DESCENT, [0, 1], {
+    ...clamp,
+    easing: Easing.inOut(Easing.cubic),
+  });
   return pointAtProgress(descent.points, t);
 };
 
@@ -49,9 +53,7 @@ const aimAt = (frame: number) => {
 };
 
 export const usePeniceCamera = (frame: number, rect: Rect): Camera => {
-  const open = fitBoxToRect(OPEN_BBOX, rect, 1);
   const whole = fitBoxToRect(ROUTE_BBOX, rect, 1);
-  const wide = lerpCameraZoom(open, whole, interpolate(frame, OPEN_PUSH, [0, 1], { ...clamp, easing: ease }), rect);
 
   const push =
     interpolate(frame, PASS_PUSH_IN, [0, 1], { ...clamp, easing: ease }) -
@@ -64,8 +66,9 @@ export const usePeniceCamera = (frame: number, rect: Rect): Camera => {
     ty: rect.y + rect.h / 2 - scale * aim.y,
   };
 
-  const closeness =
-    interpolate(frame, FOLLOW_IN, [0, 1], { ...clamp, easing: ease }) -
-    interpolate(frame, FOLLOW_OUT, [0, 1], { ...clamp, easing: ease });
-  return lerpCameraZoom(wide, follow, closeness, rect);
+  const out = interpolate(frame, FOLLOW_OUT, [0, 1], {
+    ...clamp,
+    easing: ease,
+  });
+  return lerpCameraZoom(follow, whole, out, rect);
 };

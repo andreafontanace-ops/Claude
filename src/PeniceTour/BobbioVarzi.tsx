@@ -34,9 +34,8 @@ import {
   DESCENT,
   DETAIL_OUT,
   GHOST_IN,
-  INTRO_FADE_IN,
   MONTE_PENICE_IN,
-  REGION_TAGS_IN,
+  WIDE_TAGS_IN,
   SUMMARY_IN,
   frameAt,
   pinCue,
@@ -45,7 +44,7 @@ import {
 const placeById = (id: string) => places.find((p) => p.id === id)!;
 
 // Under the road in the closing whole-road framing, inside the safe area.
-const SUMMARY_TOP = 1180;
+const SUMMARY_TOP = 1210;
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
 // The SS461 is the road the whole way; its plate once on each side of the
@@ -64,12 +63,13 @@ export const BobbioVarzi: React.FC = () => {
   const penice = placeById("penice");
   const varzi = placeById("varzi");
 
-  const introOpacity = interpolate(frame, INTRO_FADE_IN, [0, 1], clamp);
   const detail = interpolate(frame, DETAIL_OUT, [1, 0], clamp);
   const ghostOpacity = interpolate(frame, GHOST_IN, [0, 0.32], clamp);
-  const peakOpacity =
-    interpolate(frame, MONTE_PENICE_IN, [0, 1], clamp) * detail;
-  const tagOpacity = interpolate(frame, REGION_TAGS_IN, [0, 1], clamp) * detail;
+  // The peak and the region names around the pass arrive together, as the
+  // climb nears the top.
+  const peakIn = interpolate(frame, MONTE_PENICE_IN, [0, 1], clamp);
+  const peakOpacity = peakIn * detail;
+  const wideTagOpacity = interpolate(frame, WIDE_TAGS_IN, [0, 1], clamp);
   const summaryOpacity = interpolate(frame, SUMMARY_IN, [0, 1], clamp);
   const summaryRise = interpolate(frame, SUMMARY_IN, [16, 0], clamp);
   const peak = project(camera, MONTE_PENICE.x, MONTE_PENICE.y);
@@ -80,7 +80,7 @@ export const BobbioVarzi: React.FC = () => {
         background: "linear-gradient(180deg, #f7f2e6 0%, #f2ebd9 100%)",
       }}
     >
-      <AbsoluteFill style={{ opacity: introOpacity }}>
+      <AbsoluteFill>
         <svg
           width={width}
           height={height}
@@ -129,29 +129,33 @@ export const BobbioVarzi: React.FC = () => {
         </svg>
 
         <AbsoluteFill style={{ fontFamily }}>
-          {/* Which side of the border is which, once the pass is reached. */}
-          {tagOpacity > 0 &&
-            regionTags.map((t) => {
-              const p = project(camera, t.x, t.y);
-              return (
-                <div
-                  key={t.name}
-                  style={{
-                    ...mapLabelStyle,
-                    position: "absolute",
-                    left: p.left,
-                    top: p.top,
-                    transform: "translate(-50%, -50%)",
-                    opacity: tagOpacity * 0.8,
-                    color: "#6b5f47",
-                    fontSize: 28,
-                    letterSpacing: 5,
-                  }}
-                >
-                  {t.name}
-                </div>
-              );
-            })}
+          {/* The regions named on their own ground: one set for the close
+              framing, handing over to one for the whole road at the end. */}
+          {regionTags.map((t, i) => {
+            const opacity = t.wide
+              ? wideTagOpacity
+              : detail * (t.atPass ? peakIn : 1);
+            if (opacity <= 0) return null;
+            const p = project(camera, t.x, t.y);
+            return (
+              <div
+                key={i}
+                style={{
+                  ...mapLabelStyle,
+                  position: "absolute",
+                  left: p.left,
+                  top: p.top,
+                  transform: "translate(-50%, -50%)",
+                  opacity: opacity * 0.85,
+                  color: "#6b5f47",
+                  fontSize: 30,
+                  letterSpacing: 5,
+                }}
+              >
+                {t.name}
+              </div>
+            );
+          })}
 
           {/* The summit above the pass: a landmark, not a stop. */}
           {peakOpacity > 0 && (

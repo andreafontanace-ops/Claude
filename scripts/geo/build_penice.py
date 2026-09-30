@@ -190,14 +190,20 @@ for i in crossings:
     print(f"  border crossed at {track[i][0]:.5f}, {track[i][1]:.5f}, "
           f"{metres(track[i], PENICE):.0f} m from the pass")
 
-# The two regions' names, one either side of that border near the pass.
-REGION_TAGS = [
-    ("EMILIA-ROMAGNA", (9.3380, 44.7720), "Emilia-Romagna"),
-    ("LOMBARDIA", (9.3060, 44.8215), "Lombardia"),
+# The regions' names on their own ground, for the close framing the camera
+# rides in: Emilia-Romagna around Bobbio and up to the pass, Lombardia from
+# the border down to Varzi. Each one has to fall inside its region.
+# Those by the pass only arrive as the climb nears it: from Bobbio they would
+# sit half off the left edge of the frame.
+CLOSE_TAGS = [
+    ("EMILIA-ROMAGNA", (9.3620, 44.7520), "Emilia-Romagna", False),
+    ("EMILIA-ROMAGNA", (9.3380, 44.7720), "Emilia-Romagna", True),
+    ("LOMBARDIA", (9.3060, 44.8215), "Lombardia", True),
+    ("LOMBARDIA", (9.2350, 44.8000), "Lombardia", True),
 ]
-for name, ll, want in REGION_TAGS:
+for name, ll, want, _ in CLOSE_TAGS:
     if region_of(ll) != want:
-        sys.exit(f"the {name} tag is not in {want}")
+        sys.exit(f"the {name} tag at {ll} is not in {want}")
 
 climb_xy = [project(*p) for p in climb]
 descent_xy = [project(*p) for p in descent]
@@ -226,9 +232,31 @@ xs = [p[0] for p in xy]; ys = [p[1] for p in xy]
 # Width-limited, like the Bobbio film: a little slack either side for the end
 # names, more above and below for the pass label and the plates.
 route_box = (min(xs) - 3.0, min(ys) - 6.0, max(xs) + 3.0, max(ys) + 6.0)
-cx, cy = (route_box[0] + route_box[2]) / 2, (route_box[1] + route_box[3]) / 2
-hw, hh = (route_box[2] - route_box[0]) / 2 * 1.25, (route_box[3] - route_box[1]) / 2 * 1.25
-open_box = (cx - hw, cy - hh, cx + hw, cy + hh)
+
+# The closing framing is route_box fitted to the safe area (x 60-900,
+# y 250-1500). Its region names are placed where they read on screen - clear
+# of the names, the road and the closing card - and then checked to be on
+# the right side of the border.
+SAFE = (60, 250, 840, 1250)
+fit = min(SAFE[2] / (route_box[2] - route_box[0]), SAFE[3] / (route_box[3] - route_box[1]))
+fit_tx = SAFE[0] + SAFE[2] / 2 - fit * (route_box[0] + route_box[2]) / 2
+fit_ty = SAFE[1] + SAFE[3] / 2 - fit * (route_box[1] + route_box[3]) / 2
+
+
+def unproject(x, y):
+    return (x / (K * SCALE) + LON0, LATMAX - y / SCALE)
+
+
+WIDE_TAGS = [
+    ("LOMBARDIA", (280, 620), "Lombardia"),
+    ("EMILIA-ROMAGNA", (690, 1150), "Emilia-Romagna"),
+]
+wide_tags = []
+for name, (sx, sy), want in WIDE_TAGS:
+    x, y = (sx - fit_tx) / fit, (sy - fit_ty) / fit
+    if region_of(unproject(x, y)) != want:
+        sys.exit(f"the closing {name} tag is not in {want}")
+    wide_tags.append((name, x, y))
 
 
 def bbox_literal(name, b):
@@ -270,11 +298,15 @@ mx, my = project(*MONTE_PENICE)
 out.append("// Monte Penice, 1460 m, the summit above the pass.")
 out.append(f"export const MONTE_PENICE = {{ x: {mx:.2f}, y: {my:.2f}, elevation: 1460 }};")
 out.append("")
-out.append("// Region names, either side of the border the road crosses after the pass.")
+out.append("// Region names on their own ground: `wide` ones for the closing whole-road")
+out.append("// framing, the rest for the close framing the camera rides in.")
 out.append("export const regionTags = [")
-for name, ll, _ in REGION_TAGS:
+for name, ll, _, at_pass in CLOSE_TAGS:
     x, y = project(*ll)
-    out.append(f'  {{ name: "{name}", x: {x:.2f}, y: {y:.2f} }},')
+    out.append(f'  {{ name: "{name}", x: {x:.2f}, y: {y:.2f}, wide: false, '
+               f'atPass: {"true" if at_pass else "false"} }},')
+for name, x, y in wide_tags:
+    out.append(f'  {{ name: "{name}", x: {x:.2f}, y: {y:.2f}, wide: true, atPass: false }},')
 out.append("];")
 out.append("")
 for var, pts, km in [("climb", climb_xy, km_climb), ("descent", descent_xy, km_descent)]:
@@ -288,7 +320,6 @@ out.append(f"export const KM_TOTAL = {km_climb + km_descent:.0f};")
 out.append(f"export const KM_CLIMB = {km_climb:.1f};")
 out.append(f"export const KM_DESCENT = {km_descent:.1f};")
 out.append("")
-out.append(bbox_literal("OPEN_BBOX", open_box))
 out.append(bbox_literal("ROUTE_BBOX", route_box))
 out.append("")
 
@@ -296,7 +327,7 @@ os.makedirs(os.path.dirname(OUT_TS), exist_ok=True)
 with open(OUT_TS, "w") as f:
     f.write("\n".join(out))
 
-for nm, b in [("open", open_box), ("route", route_box)]:
+for nm, b in [("route", route_box)]:
     w, h = b[2] - b[0], b[3] - b[1]
     sc = min(840 / w, 1250 / h)
     print(f"{nm:6s} {w:6.1f} x {h:6.1f} units ({w*KM_PER_UNIT:4.1f} x {h*KM_PER_UNIT:4.1f} km)"
