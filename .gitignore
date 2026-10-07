@@ -5,3 +5,7 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# Banners and other client material, pulled from Google Drive at work time.
+# Never committed: see CLAUDE.md.
+public/private/

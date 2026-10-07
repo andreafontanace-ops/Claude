@@ -1,0 +1,10 @@
+#!/bin/sh
+# public/private/ holds client material pulled from Google Drive. It is
+# git-ignored, but `git add -f` would still stage it: refuse the commit.
+staged=$(git diff --cached --name-only --diff-filter=ACMR -- public/private)
+if [ -n "$staged" ]; then
+  echo "Refusing to commit files from public/private/ (Drive-only material):" >&2
+  echo "$staged" >&2
+  echo "Unstage them with: git restore --staged public/private" >&2
+  exit 1
+fi
