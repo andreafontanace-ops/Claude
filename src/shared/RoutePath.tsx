@@ -1,5 +1,6 @@
 import React from "react";
 import { Easing, interpolate } from "remotion";
+import { smoothPath, subPolyline } from "./polyline";
 
 export const RoutePath: React.FC<{
   d: string;
@@ -11,6 +12,12 @@ export const RoutePath: React.FC<{
   reverse?: boolean;
   opacity?: number;
   width?: number;
+  // The road's points. When given, the drawn part is cut out of them every
+  // frame instead of revealed with a dash: Chrome measures a long Bézier a
+  // few percent short when scaling a dash to pathLength, so the dash stops
+  // short of the end - and its head trails the TravelDot, which walks these
+  // same points.
+  points?: readonly (readonly [number, number])[];
 }> = ({
   d,
   frame,
@@ -19,6 +26,7 @@ export const RoutePath: React.FC<{
   reverse = false,
   opacity = 1,
   width = 3.4,
+  points,
 }) => {
   const progress = interpolate(frame, range, [0, 1], {
     extrapolateLeft: "clamp",
@@ -29,6 +37,34 @@ export const RoutePath: React.FC<{
   // A round linecap still paints a dot for a zero-length dash, which would
   // leave a stray blob sitting on the map before the leg starts drawing.
   if (progress <= 0 || opacity <= 0) return null;
+
+  if (points) {
+    const part = smoothPath(
+      reverse
+        ? subPolyline(points, 1 - progress, 1)
+        : subPolyline(points, 0, progress),
+    );
+    return (
+      <g opacity={opacity}>
+        <path
+          d={part}
+          fill="none"
+          stroke="#faf6ec"
+          strokeWidth={width * 1.9}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d={part}
+          fill="none"
+          stroke={color}
+          strokeWidth={width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
+    );
+  }
 
   // dasharray 1 over a pathLength of 1 means one "on" dash and one "off":
   // a positive offset slides the visible dash in from the start, a negative

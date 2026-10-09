@@ -1,5 +1,10 @@
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  interpolate,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
 import { useOltrepoCamera } from "./useOltrepoCamera";
 import { RoutePath } from "../shared/RoutePath";
 import { PinMarker } from "../shared/PinMarker";
@@ -7,13 +12,19 @@ import { WaypointTick } from "../shared/WaypointTick";
 import { TravelDot } from "../shared/TravelDot";
 import { GrainOverlay } from "../shared/GrainOverlay";
 import { RegionMap } from "../shared/RegionMap";
-import { Camera, project } from "../shared/camera";
 import { fontFamily } from "../shared/fonts";
-import { mapLabelStyle } from "../shared/labelStyle";
+import { MapName } from "../shared/MapName";
 import { Waypoint } from "../shared/types";
 import { ROUTE_RED } from "../shared/palette";
 import { SAFE_RECT } from "../shared/safeArea";
-import { beyond, comuni, home, places, regionLabels, roadLegs } from "./geoData";
+import {
+  beyond,
+  comuni,
+  home,
+  places,
+  regionLabels,
+  roadLegs,
+} from "./geoData";
 import {
   BORDERS,
   CASALE_ARRIVAL,
@@ -33,72 +44,6 @@ import {
 
 const placeById = (id: string) => places.find((p) => p.id === id)!;
 const legById = (id: string) => roadLegs.find((l) => l.id === id)!;
-
-// A name with no marker under it: a region, or the valley itself. Anchored in
-// map units so it travels with the camera, but set in screen pixels so it
-// keeps its size while the camera drops.
-const MapName: React.FC<{
-  camera: Camera;
-  frame: number;
-  x: number;
-  y: number;
-  lines: string[];
-  revealFrame: number;
-  revealFrames?: number;
-  fadeRange?: readonly [number, number];
-  width?: number;
-  size?: number;
-}> = ({
-  camera,
-  frame,
-  x,
-  y,
-  lines,
-  revealFrame,
-  revealFrames = 18,
-  fadeRange,
-  width = 300,
-  size = 40,
-}) => {
-  const { left, top } = project(camera, x, y);
-
-  const reveal = interpolate(frame, [revealFrame, revealFrame + revealFrames], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const fade = fadeRange
-    ? interpolate(frame, fadeRange, [1, 0], {
-        extrapolateLeft: "clamp",
-        extrapolateRight: "clamp",
-      })
-    : 1;
-  const opacity = Math.min(reveal, fade);
-  if (opacity <= 0) return null;
-
-  return (
-    <div
-      style={{
-        ...mapLabelStyle,
-        position: "absolute",
-        left,
-        top,
-        width,
-        opacity,
-        transform: "translate(-50%, -50%)",
-        textAlign: "center",
-        whiteSpace: "normal",
-        lineHeight: 1.15,
-        color: "#4a4033",
-        fontSize: size,
-        letterSpacing: 3,
-      }}
-    >
-      {lines.map((line) => (
-        <div key={line}>{line}</div>
-      ))}
-    </div>
-  );
-};
 
 export const ValStaffora: React.FC = () => {
   const frame = useCurrentFrame();
@@ -130,7 +75,9 @@ export const ValStaffora: React.FC = () => {
 
   return (
     <AbsoluteFill
-      style={{ background: "linear-gradient(180deg, #f7f2e6 0%, #f2ebd9 100%)" }}
+      style={{
+        background: "linear-gradient(180deg, #f7f2e6 0%, #f2ebd9 100%)",
+      }}
     >
       <AbsoluteFill style={{ opacity: introOpacity }}>
         <svg
@@ -139,7 +86,9 @@ export const ValStaffora: React.FC = () => {
           viewBox={`0 0 ${width} ${height}`}
           style={{ position: "absolute", top: 0, left: 0 }}
         >
-          <g transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}>
+          <g
+            transform={`translate(${camera.tx},${camera.ty}) scale(${camera.scale})`}
+          >
             <RegionMap
               home={home}
               beyond={beyond}

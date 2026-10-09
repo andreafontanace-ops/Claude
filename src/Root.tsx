@@ -18,6 +18,8 @@ import { BralloBobbio } from "./BobbioTour/BralloBobbio";
 import { BRALLO_BOBBIO_DURATION } from "./BobbioTour/timeline";
 import { BobbioVarzi } from "./PeniceTour/BobbioVarzi";
 import { PENICE_DURATION } from "./PeniceTour/timeline";
+import { VarziTrebecco } from "./TrebeccoTour/VarziTrebecco";
+import { TREBECCO_DURATION } from "./TrebeccoTour/timeline";
 import { HookStradaIsolata, HOOK_DURATION } from "./Hook/HookStradaIsolata";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
@@ -93,6 +95,15 @@ export const RemotionRoot: React.FC = () => {
         id="BobbioVarzi"
         component={BobbioVarzi}
         durationInFrames={PENICE_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      <Composition
+        id="VarziTrebecco"
+        component={VarziTrebecco}
+        durationInFrames={TREBECCO_DURATION}
         fps={FPS}
         width={1080}
         height={1920}

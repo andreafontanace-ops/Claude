@@ -20,15 +20,33 @@ export const RoadShield: React.FC<{
   revealFrame: number;
   label: string;
   color: string;
-}> = ({ camera, frame, points, at, dx, dy = 0, revealFrame, label, color }) => {
+  // For a light plate, such as a white road's.
+  textColor?: string;
+}> = ({
+  camera,
+  frame,
+  points,
+  at,
+  dx,
+  dy = 0,
+  revealFrame,
+  label,
+  color,
+  textColor = "#ffffff",
+}) => {
   const opacity = interpolate(frame, [revealFrame, revealFrame + 12], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const pop = interpolate(frame, [revealFrame, revealFrame + 8, revealFrame + 14], [0.6, 1.08, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const pop = interpolate(
+    frame,
+    [revealFrame, revealFrame + 8, revealFrame + 14],
+    [0.6, 1.08, 1],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
   if (opacity <= 0) return null;
 
   const p = pointAtProgress(points, at);
@@ -47,7 +65,7 @@ export const RoadShield: React.FC<{
         background: color,
         border: "4px solid #faf6ec",
         boxShadow: "0 3px 8px rgba(0,0,0,0.25)",
-        color: "#ffffff",
+        color: textColor,
         fontFamily,
         fontWeight: 800,
         fontSize: 34,
