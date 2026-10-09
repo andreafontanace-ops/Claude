@@ -22,6 +22,10 @@ import { VarziTrebecco } from "./TrebeccoTour/VarziTrebecco";
 import { TREBECCO_DURATION } from "./TrebeccoTour/timeline";
 import { HookStradaIsolata, HOOK_DURATION } from "./Hook/HookStradaIsolata";
 import { AdventouringTitle, TITLE_DURATION } from "./Title/AdventouringTitle";
+import {
+  AdventouringTitleMoto,
+  TITLE_MOTO_DURATION,
+} from "./Title/AdventouringTitleMoto";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
 // Each <Composition> is an entry in the sidebar!
@@ -126,6 +130,16 @@ export const RemotionRoot: React.FC = () => {
         id="AdventouringTitle"
         component={AdventouringTitle}
         durationInFrames={TITLE_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* The same title in a riding-film look. */}
+      <Composition
+        id="AdventouringTitleMoto"
+        component={AdventouringTitleMoto}
+        durationInFrames={TITLE_MOTO_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
