@@ -1,9 +1,8 @@
 """Builds src/TrebeccoTour/geoData.ts: Varzi - Zavattarello - Trebecco.
 
 The SP207 north-east out of Varzi, over the Passo di Pietragavina (730 m) and
-down past Crociglia to Zavattarello and its castle; then, a little after the
-village, off the provincial road onto the white road - stones and gravel more
-than asphalt, as ridden - by Valle di Sotto, Ossenisio and San Silverio to
+down past Crociglia to Zavattarello and its castle; then off the provincial
+road a little after the village, by Valle di Sotto and San Silverio to
 Trebecco, across the line into Emilia-Romagna. 20 km.
 
 Everything on the map is OpenStreetMap by way of Overture Maps: the road
@@ -149,30 +148,16 @@ for p, q in zip(track, track[1:]):
     cum.append(cum[-1] + metres(p, q))
 
 
-def nearest_i(ll):
-    return min(range(len(track)), key=lambda i: metres(track[i], ll))
-
-
 z_i = track.index(stops["zavattarello"])
-# Where the white road starts: the provincial road ends at the junction a
-# little past Zavattarello, on the far side of the Torrente Tidone.
-GRAVEL_FROM = (9.27659, 44.87075)
-g_i = nearest_i(GRAVEL_FROM)
-if not (z_i < g_i < len(track) - 1) or metres(track[g_i], GRAVEL_FROM) > 60:
-    sys.exit("the white road's junction is not on the second leg")
 leg1, leg2 = track[: z_i + 1], track[z_i:]
-gravel_at = (cum[g_i] - cum[z_i]) / (cum[-1] - cum[z_i])
 km1, km2 = cum[z_i] / 1000, (cum[-1] - cum[z_i]) / 1000
-km_gravel = (cum[-1] - cum[g_i]) / 1000
-print(f"Varzi - Zavattarello {km1:.1f} km, Zavattarello - Trebecco {km2:.1f} km "
-      f"(white road the last {km_gravel:.1f} km, from {gravel_at:.2f} of the leg)")
+print(f"Varzi - Zavattarello {km1:.1f} km, Zavattarello - Trebecco {km2:.1f} km")
 
 crossings = [i for i in range(1, len(track)) if region_of(track[i - 1]) != region_of(track[i])]
 for i in crossings:
     print(f"  {region_of(track[i - 1])} -> {region_of(track[i])} at km {cum[i] / 1000:.1f}")
 if len(crossings) != 1:
     sys.exit("expected the road to cross one regional border")
-border_km = cum[crossings[0]] / 1000
 
 
 # --- places ----------------------------------------------------------------------
@@ -280,12 +265,7 @@ cx, cy = (route_box[0] + route_box[2]) / 2, (route_box[1] + route_box[3]) / 2
 # middle - 150 km across.
 half = 150 / KM_PER_UNIT / 2
 region_box = (cx - half, cy - half, cx + half, cy + half)
-# The castle close-up: 2.4 km across, centred between the castle and the
-# village so both sit in frame.
 kx, ky = project(*CASTLE)
-zx, zy = project(*stops["zavattarello"])
-ch = 2.4 / KM_PER_UNIT / 2
-castle_box = ((kx + zx) / 2 - ch, (ky + zy) / 2 - ch, (kx + zx) / 2 + ch, (ky + zy) / 2 + ch)
 
 # Region names for the opening, checked to sit in their own region.
 REGION_NAMES = [
@@ -301,7 +281,7 @@ for name, ll, want in REGION_NAMES:
 # Close up, Emilia-Romagna is only the corner round the lake, top right, so
 # its name goes there on two lines to keep clear of the like/share rail.
 CLOSE_TAGS = [
-    ("LOMBARDIA", (9.2150, 44.8770), "Lombardia"),
+    ("LOMBARDIA", (9.2050, 44.8920), "Lombardia"),
     ("EMILIA-|ROMAGNA", (9.2921, 44.9232), "Emilia-Romagna"),
 ]
 for name, ll, want in CLOSE_TAGS:
@@ -387,22 +367,16 @@ for var, pts, km in [("leg1", ll1, km1), ("leg2", ll2, km2)]:
     out.append("  points: [" + ",".join(f"[{x:.2f},{y:.2f}]" for x, y in pts) + "],")
     out.append("};")
     out.append("")
-out.append("// Where on the second leg (0..1) the asphalt gives out.")
-out.append(f"export const GRAVEL_AT = {gravel_at:.3f};")
-out.append(f"export const KM_TOTAL = {km1 + km2:.0f};")
-out.append(f"export const KM_GRAVEL = {km_gravel:.1f};")
-out.append(f"export const BORDER_KM = {border_km:.1f};")
 out.append("")
 out.append(f"export const TARGET = {{ x: {mid[0]:.2f}, y: {mid[1]:.2f} }};")
 out.append(bbox_literal("REGION_BBOX", region_box))
 out.append(bbox_literal("ROUTE_BBOX", route_box))
-out.append(bbox_literal("CASTLE_BBOX", castle_box))
 out.append("")
 
 os.makedirs(os.path.dirname(OUT_TS), exist_ok=True)
 with open(OUT_TS, "w") as f:
     f.write("\n".join(out))
-for nm, b in [("region", region_box), ("route", route_box), ("castle", castle_box)]:
+for nm, b in [("region", region_box), ("route", route_box)]:
     w, h = b[2] - b[0], b[3] - b[1]
     sc = min(840 / w, 1250 / h)
     print(f"{nm:7s} {w*KM_PER_UNIT:6.1f} x {h*KM_PER_UNIT:5.1f} km  {KM_PER_UNIT*1000/sc:6.1f} m/px")

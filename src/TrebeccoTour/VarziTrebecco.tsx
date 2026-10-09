@@ -1,7 +1,6 @@
 import React from "react";
 import {
   AbsoluteFill,
-  Easing,
   interpolate,
   useCurrentFrame,
   useVideoConfig,
@@ -15,7 +14,6 @@ import { RegionMap } from "../shared/RegionMap";
 import { RoadShield } from "../shared/RoadShield";
 import { MapName } from "../shared/MapName";
 import { Camera, project } from "../shared/camera";
-import { smoothPath, subPolyline } from "../shared/polyline";
 import { fontFamily } from "../shared/fonts";
 import { mapLabelStyle } from "../shared/labelStyle";
 import { ROUTE_RED } from "../shared/palette";
@@ -25,9 +23,7 @@ import {
   beyond,
   CASTLE,
   comuni,
-  GRAVEL_AT,
   home,
-  KM_TOTAL,
   LAKE_LABEL,
   lakes,
   leg1,
@@ -42,14 +38,12 @@ import {
 } from "./geoData";
 import {
   CASTLE_SHOW,
-  CASTLE_OUT,
   LAKE_IN,
   LEG1,
   LEG2,
   MAP_DETAIL_IN,
   REGION_NAMES_OUT,
   REGION_TAGS_IN,
-  SUMMARY_IN,
   TARGET_OUT,
   VARZI_PIN,
   frameAt,
@@ -59,43 +53,18 @@ import {
 const placeById = (id: string) => places.find((p) => p.id === id)!;
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
 
-// The white road's colour: the plate and the dashes on the line.
-const GRAVEL = "#d8c39a";
-const GRAVEL_INK = "#4a3b22";
 const WATER = "#a9cfe8";
 const WATER_EDGE = "#78a9cc";
+
+// Where the castle's glyph sits from the castle itself, in screen px: up and
+// to the left, over the village's name.
+const CASTLE_DX = -235;
+const CASTLE_DY = -28;
 
 const ROAD_WIDTH: Record<string, number> = {
   primary: 3.6,
   secondary: 3,
   tertiary: 2.2,
-};
-
-// The second leg's white road: cream dashes over the red line, from where the
-// asphalt gives out to wherever the line has got to.
-const GravelDashes: React.FC<{
-  points: readonly (readonly [number, number])[];
-  frame: number;
-  range: readonly [number, number];
-  from: number;
-  scale: number;
-}> = ({ points, frame, range, from, scale }) => {
-  const p = interpolate(frame, range, [0, 1], {
-    ...clamp,
-    easing: Easing.inOut(Easing.cubic),
-  });
-  if (p <= from) return null;
-  return (
-    <path
-      d={smoothPath(subPolyline(points, from, p))}
-      fill="none"
-      stroke={GRAVEL}
-      strokeWidth={5 / scale}
-      strokeLinecap="butt"
-      strokeLinejoin="round"
-      strokeDasharray={`${12 / scale} ${10 / scale}`}
-    />
-  );
 };
 
 // A village or the pass, named as the line reaches it: a small dot on the
@@ -184,9 +153,7 @@ export const VarziTrebecco: React.FC = () => {
   const trebecco = placeById("trebecco");
 
   const detail = interpolate(frame, MAP_DETAIL_IN, [0, 1], clamp);
-  const castleOpacity =
-    interpolate(frame, CASTLE_SHOW, [0, 1], clamp) *
-    interpolate(frame, [CASTLE_OUT[0] + 4, CASTLE_OUT[0] + 16], [1, 0], clamp);
+  const castleOpacity = interpolate(frame, CASTLE_SHOW, [0, 1], clamp);
   const castlePop = interpolate(
     frame,
     [CASTLE_SHOW[0], CASTLE_SHOW[0] + 8, CASTLE_SHOW[0] + 16],
@@ -199,8 +166,6 @@ export const VarziTrebecco: React.FC = () => {
   const target = project(camera, TARGET.x, TARGET.y);
   const targetOpacity = interpolate(frame, TARGET_OUT, [1, 0], clamp);
   const ring = (frame % 30) / 30;
-  const summaryOpacity = interpolate(frame, SUMMARY_IN, [0, 1], clamp);
-  const summaryRise = interpolate(frame, SUMMARY_IN, [16, 0], clamp);
 
   const legRange = (leg: string) => (leg === "leg1" ? LEG1 : LEG2);
 
@@ -286,13 +251,6 @@ export const VarziTrebecco: React.FC = () => {
             range={LEG2}
             color={ROUTE_RED}
             width={14 / s}
-          />
-          <GravelDashes
-            points={leg2.points}
-            frame={frame}
-            range={LEG2}
-            from={GRAVEL_AT}
-            scale={s}
           />
         </g>
       </svg>
@@ -429,32 +387,6 @@ export const VarziTrebecco: React.FC = () => {
           label="SP207"
           color={ROUTE_RED}
         />
-        <AbsoluteFill
-          style={{
-            opacity: interpolate(
-              frame,
-              [
-                frameAt(LEG2, GRAVEL_AT + 0.05),
-                frameAt(LEG2, GRAVEL_AT + 0.05) + 12,
-              ],
-              [0, 1],
-              clamp,
-            ),
-          }}
-        >
-          <RoadShield
-            camera={camera}
-            frame={frame}
-            points={leg2.points}
-            at={GRAVEL_AT}
-            dx={70}
-            dy={95}
-            revealFrame={frameAt(LEG2, GRAVEL_AT + 0.05)}
-            label="STRADA BIANCA"
-            color={GRAVEL}
-            textColor={GRAVEL_INK}
-          />
-        </AbsoluteFill>
 
         <PinMarker
           waypoint={varzi}
@@ -479,7 +411,9 @@ export const VarziTrebecco: React.FC = () => {
           pinScale={0.7}
         />
 
-        {/* The castle, while the camera is in close on it. */}
+        {/* The castle, marked as the line gets there: a glyph and its name
+            just above the village's, with a short line down to where it
+            stands - right by the pin, so it cannot sit on its own spot. */}
         {castleOpacity > 0 && (
           <div
             style={{
@@ -487,25 +421,51 @@ export const VarziTrebecco: React.FC = () => {
               left: castle.left,
               top: castle.top,
               opacity: castleOpacity,
-              transform: `translate(-50%, -100%) scale(${castlePop})`,
-              transformOrigin: "50% 100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.3))",
             }}
           >
-            <div
+            <svg
+              width={Math.abs(CASTLE_DX) + 4}
+              height={Math.abs(CASTLE_DY) + 4}
               style={{
-                ...mapLabelStyle,
-                fontSize: 40,
-                color: "#5a4128",
-                marginBottom: 6,
+                position: "absolute",
+                left: CASTLE_DX - 2,
+                top: CASTLE_DY - 2,
               }}
             >
-              {CASTLE.name}
+              <line
+                x1={2}
+                y1={2}
+                x2={Math.abs(CASTLE_DX) + 2}
+                y2={Math.abs(CASTLE_DY) + 2}
+                stroke="#5a4128"
+                strokeWidth={3}
+                strokeDasharray="5 4"
+              />
+            </svg>
+            <div
+              style={{
+                position: "absolute",
+                left: CASTLE_DX,
+                top: CASTLE_DY,
+                transform: `translate(-50%, -100%) scale(${castlePop})`,
+                transformOrigin: "50% 100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{
+                  ...mapLabelStyle,
+                  fontSize: 28,
+                  color: "#5a4128",
+                  marginBottom: 2,
+                }}
+              >
+                {CASTLE.name}
+              </div>
+              <CastleGlyph size={64} />
             </div>
-            <CastleGlyph size={96} />
           </div>
         )}
 
@@ -520,52 +480,6 @@ export const VarziTrebecco: React.FC = () => {
           labelWidth={300}
           pinScale={0.7}
         />
-
-        {/* The closing card: the two kinds of road, and how far. */}
-        {summaryOpacity > 0 && (
-          <div
-            style={{
-              position: "absolute",
-              left: SAFE_RECT.x,
-              width: SAFE_RECT.w,
-              top: 1360,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: 18,
-              opacity: summaryOpacity,
-              transform: `translateY(${summaryRise}px)`,
-              fontWeight: 800,
-            }}
-          >
-            <div
-              style={{
-                padding: "8px 18px",
-                borderRadius: 12,
-                background: ROUTE_RED,
-                border: "5px solid #faf6ec",
-                color: "#fff",
-                fontSize: 40,
-              }}
-            >
-              SP207
-            </div>
-            <div style={{ ...mapLabelStyle, fontSize: 44 }}>+</div>
-            <div
-              style={{
-                padding: "8px 18px",
-                borderRadius: 12,
-                background: GRAVEL,
-                border: "5px solid #faf6ec",
-                color: GRAVEL_INK,
-                fontSize: 40,
-              }}
-            >
-              STRADA BIANCA
-            </div>
-            <div style={{ ...mapLabelStyle, fontSize: 52 }}>{KM_TOTAL} km</div>
-          </div>
-        )}
       </AbsoluteFill>
 
       <GrainOverlay />
