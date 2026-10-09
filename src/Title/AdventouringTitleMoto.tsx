@@ -5,47 +5,54 @@ import {
   delayRender,
   Easing,
   interpolate,
+  spring,
   staticFile,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
-import { SAFE_RECT } from "../shared/safeArea";
 import { LOMBARDIA, OLTREPO, VARZI as VARZI_MINI, VIEW } from "./titleShapes";
 import { contours, TOPO_SIZE } from "./topo";
 
-// The series title in a riding-film look: a transparent 1080x1920 clip, 4s.
-// Real contour lines of the Oltrepò's mountains draw themselves behind; an
-// orange slash sweeps across and leaves ADVENTOURING in its wake; a GPS
-// readout and a mini Lombardia tick in above; the subtitle decodes; a bike
-// rides in laying the road down; then a second slash wipes it all away.
-// Centred in SAFE_RECT, clear of every platform's buttons.
+// The series title in a riding-film look: a transparent 1080x1920 clip, 4s,
+// to lay over any footage. Everything sits on one solid, slanted dark plate,
+// so it reads the same over a white sky as over a dark wood: real contour
+// lines of the Oltrepò's mountains drawn across it, a GPS readout with a
+// mini Lombardia, ADVEN / TOURING big on two lines, the subtitle, and a bike
+// riding along the plate's foot laying the orange road down. An orange slash
+// brings the plate in and another takes it away. Inside the safe area
+// (x 60-900, y 250-1500), clear of every platform's buttons.
 export const TITLE_MOTO_DURATION = 120; // 4s @30fps
 
 const DISPLAY = "Barlow Condensed";
 const MONO = "JetBrains Mono";
 const WHITE = "#ffffff";
 const ORANGE = "#ff5a1f";
+const PLATE = "#141414";
 
-const TOPO_IN = [0, 30] as const;
-const SCRIM_IN = [0, 10] as const;
-const SLASH_IN = [6, 22] as const;
-const HUD_IN = [16, 28] as const;
-const COORDS = [20, 44] as const;
+const SLASH_IN = [0, 14] as const;
+const TOPO_IN = [6, 40] as const;
+const HUD_IN = [12, 24] as const;
+const COORDS = [16, 40] as const;
+const ADVEN_IN = 12;
+const TOURING_IN = 17;
 const SUB = [24, 46] as const;
-const RIDE = [34, 82] as const;
+const RIDE = [32, 82] as const;
 const SLASH_OUT = [100, 116] as const;
 
 const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
-const ease = Easing.bezier(0.33, 0, 0.2, 1);
 
-const CX = SAFE_RECT.x + SAFE_RECT.w / 2; // 480
-const HUD_TOP = 690;
-const TITLE_TOP = 790;
-const TITLE_H = 150;
-const SUB_TOP = 955;
-const ROAD_Y = 1118;
-const ROAD_X0 = CX - 380;
-const ROAD_X1 = CX + 380;
-const TOPO_PX = 940;
+// The plate: a parallelogram leaning right, x 60-900, y 600-1370.
+const X0 = 60;
+const X1 = 900;
+const TOP = 600;
+const BOTTOM = 1370;
+const LEAN = 70;
+const PLATE_POLY = `${X0 + LEAN},${TOP} ${X1},${TOP} ${X1 - LEAN},${BOTTOM} ${X0},${BOTTOM}`;
+const INNER_X = 130;
+const ROAD_Y = 1326;
+const ROAD_X0 = 120;
+const ROAD_X1 = 820;
+const BIKE = 0.74;
 
 // A deterministic scramble: each character cycles through look-alikes and
 // settles on its own frame, left to right.
@@ -164,51 +171,65 @@ const useFonts = () => {
   }, [handle]);
 };
 
-// A slanted bar crossing the frame from left to right; `x` is its leading
-// edge. The clip it returns reveals (or hides) what lies behind that edge.
+// A slanted bar crossing the frame from left to right; returns its leading
+// edge's x.
 const slashX = (frame: number, range: readonly [number, number]) =>
-  interpolate(frame, range, [-260, 1200], {
+  interpolate(frame, range, [-200, 1260], {
     ...clamp,
     easing: Easing.inOut(Easing.cubic),
   });
 
-// `pool` lays a soft dark pool behind the type for bright skies. It costs:
-// a third of the frame half-transparent makes a ProRes 4444 several times
-// larger (the alpha is stored lossless), so it is off by default and the
-// type carries its own shadow instead.
-export const AdventouringTitleMoto: React.FC<{ pool?: boolean }> = ({
-  pool = false,
-}) => {
+// The same lean as the plate, over the plate's height and a little more.
+const slashPoly = (x: number, w: number) => {
+  const top = TOP - 40;
+  const h = BOTTOM - TOP + 80;
+  const lean = (h * LEAN) / (BOTTOM - TOP);
+  return `polygon(${x - w}px ${top + h}px, ${x - w + lean}px ${top}px, ${x + lean}px ${top}px, ${x}px ${top + h}px)`;
+};
+
+export const AdventouringTitleMoto: React.FC = () => {
   useFonts();
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  if (frame >= SLASH_OUT[1]) return <AbsoluteFill />;
 
   const inX = slashX(frame, SLASH_IN);
   const outX = slashX(frame, SLASH_OUT);
-  const gone = frame >= SLASH_OUT[1];
-  if (gone) return <AbsoluteFill />;
-  // Everything left of the outgoing slash is wiped away.
-  const exitClip =
-    frame >= SLASH_OUT[0]
-      ? `inset(0 0 0 ${Math.max(0, outX - 60)}px)`
-      : undefined;
+  // Revealed behind the incoming slash, hidden behind the outgoing one. The
+  // clip leans with the slash so the plate's edge never shows a vertical cut.
+  const lean = LEAN + 40;
+  const reveal =
+    frame < SLASH_IN[1]
+      ? `polygon(-200px -200px, ${inX - 40 + lean}px -200px, ${inX - 40 + lean}px ${TOP - 40}px, ${inX - 40}px ${BOTTOM + 40}px, ${inX - 40}px 2200px, -200px 2200px)`
+      : frame >= SLASH_OUT[0]
+        ? `polygon(${outX - 60 + lean}px ${TOP - 40}px, 1300px ${TOP - 40}px, 1300px 2200px, ${outX - 60}px 2200px, ${outX - 60}px ${BOTTOM + 40}px)`
+        : undefined;
 
-  const scrim =
-    interpolate(frame, SCRIM_IN, [0, 1], clamp) *
-    interpolate(frame, SLASH_OUT, [1, 0], clamp);
   const topoDraw = interpolate(frame, TOPO_IN, [0, 1], {
     ...clamp,
-    easing: ease,
+    easing: Easing.out(Easing.cubic),
   });
-  const topoZoom = interpolate(frame, [0, TITLE_MOTO_DURATION], [1, 1.08]);
-  const hud = interpolate(frame, HUD_IN, [0, 1], { ...clamp, easing: ease });
+  const topoDrift = interpolate(frame, [0, TITLE_MOTO_DURATION], [0, -40]);
+  const hud = interpolate(frame, HUD_IN, [0, 1], {
+    ...clamp,
+    easing: Easing.out(Easing.cubic),
+  });
   const pulse = (Math.max(0, frame - HUD_IN[0]) % 24) / 24;
-  const subIn = interpolate(frame, [SUB[0], SUB[0] + 6], [0, 1], clamp);
+  const pop = (start: number) =>
+    spring({
+      frame: frame - start,
+      fps,
+      config: { damping: 15, mass: 0.6, stiffness: 170 },
+    });
+  const adven = pop(ADVEN_IN);
+  const touring = pop(TOURING_IN);
+  const subIn = interpolate(frame, [SUB[0], SUB[0] + 4], [0, 1], clamp);
 
   const ride = interpolate(frame, RIDE, [0, 1], {
     ...clamp,
     easing: Easing.out(Easing.cubic),
   });
-  const head = ROAD_X0 + (ROAD_X1 - 60 - ROAD_X0) * ride;
+  const head = ROAD_X0 + 40 + (ROAD_X1 - 40 - ROAD_X0 - 40) * ride;
   const speed = interpolate(
     frame,
     [RIDE[0], RIDE[0] + 10, RIDE[1] - 12, RIDE[1]],
@@ -216,244 +237,227 @@ export const AdventouringTitleMoto: React.FC<{ pool?: boolean }> = ({
     clamp,
   );
   const bounce = ride < 1 ? Math.sin(frame * 1.9) * 1.4 : 0;
-  const BIKE = 0.82;
-
-  // The same lean (about 14 degrees) however tall the bar.
-  const slashPoly = (x: number, top: number, h: number, w: number) => {
-    const lean = h * 0.25;
-    return `polygon(${x - w}px ${top + h}px, ${x - w + lean}px ${top}px, ${x + lean}px ${top}px, ${x}px ${top + h}px)`;
-  };
 
   return (
-    <AbsoluteFill style={{ clipPath: exitClip }}>
-      {/* A soft dark pool behind the type, so white reads over any sky. */}
-      {pool && (
+    <AbsoluteFill>
+      <AbsoluteFill style={{ clipPath: reveal }}>
+        <svg
+          width={1080}
+          height={1920}
+          style={{ position: "absolute", inset: 0 }}
+        >
+          <defs>
+            <clipPath id="plate">
+              <polygon points={PLATE_POLY} />
+            </clipPath>
+          </defs>
+          {/* The plate, with a soft shadow so it sits on the footage. */}
+          <polygon
+            points={PLATE_POLY}
+            fill={PLATE}
+            style={{ filter: "drop-shadow(0 18px 30px rgba(0,0,0,0.45))" }}
+          />
+          {/* Real contour lines of the Oltrepò's mountains, inside the plate. */}
+          <g clipPath="url(#plate)">
+            <g
+              transform={`translate(${X0 - 60 + topoDrift} ${TOP - 140}) scale(${980 / TOPO_SIZE})`}
+            >
+              {contours.map((c, i) => (
+                <path
+                  key={i}
+                  d={c.d}
+                  fill="none"
+                  stroke={WHITE}
+                  strokeOpacity={c.index ? 0.32 : 0.16}
+                  strokeWidth={c.index ? 3 : 1.8}
+                  pathLength={1}
+                  strokeDasharray={topoDraw >= 1 ? undefined : "1.05 1.05"}
+                  strokeDashoffset={
+                    topoDraw >= 1 ? undefined : 1.05 * (1 - topoDraw)
+                  }
+                />
+              ))}
+            </g>
+          </g>
+          {/* The orange edge down the plate's left side. */}
+          <polygon
+            points={`${X0 + LEAN},${TOP} ${X0 + LEAN + 16},${TOP} ${X0 + 16},${BOTTOM} ${X0},${BOTTOM}`}
+            fill={ORANGE}
+          />
+
+          {/* The road along the plate's foot, laid down by the bike. */}
+          <line
+            x1={ROAD_X0}
+            y1={ROAD_Y}
+            x2={ROAD_X1}
+            y2={ROAD_Y}
+            stroke={WHITE}
+            strokeOpacity={0.3}
+            strokeWidth={3}
+            strokeDasharray="12 12"
+          />
+          {head > ROAD_X0 + 2 && frame >= RIDE[0] && (
+            <line
+              x1={ROAD_X0}
+              y1={ROAD_Y}
+              x2={head + 30}
+              y2={ROAD_Y}
+              stroke={ORANGE}
+              strokeWidth={8}
+              strokeLinecap="round"
+            />
+          )}
+          {frame >= RIDE[0] && (
+            <g
+              transform={`translate(${head} ${ROAD_Y - 3 + bounce}) scale(${BIKE}) translate(-100 -118)`}
+            >
+              {[30, 60, 92].map((y, i) => (
+                <line
+                  key={y}
+                  x1={-20 - 90 * speed - i * 20}
+                  y1={y}
+                  x2={-14 - i * 6}
+                  y2={y}
+                  stroke={WHITE}
+                  strokeOpacity={0.7 * speed}
+                  strokeWidth={4}
+                  strokeLinecap="round"
+                />
+              ))}
+              {WHEELS.map((w) => (
+                <Wheel
+                  key={w.x}
+                  {...w}
+                  turn={((head - ROAD_X0) / (w.r * BIKE)) * 57.3}
+                />
+              ))}
+              <BikeBody />
+            </g>
+          )}
+        </svg>
+
+        {/* GPS readout: Lombardia with its south lit, and Varzi. */}
         <div
           style={{
             position: "absolute",
-            left: CX - 560,
-            top: 520,
-            width: 1120,
-            height: 820,
-            opacity: scrim,
-            background:
-              "radial-gradient(ellipse at center, rgba(10,10,10,0.5) 0%, rgba(10,10,10,0.28) 40%, rgba(10,10,10,0) 70%)",
-          }}
-        />
-      )}
-
-      {/* Real contour lines of the Oltrepò's mountains, fading to the edges. */}
-      <svg
-        width={TOPO_PX}
-        height={TOPO_PX}
-        viewBox={`0 0 ${TOPO_SIZE} ${TOPO_SIZE}`}
-        style={{
-          position: "absolute",
-          left: CX - TOPO_PX / 2,
-          top: 940 - TOPO_PX / 2,
-          opacity: scrim,
-          transform: `scale(${topoZoom}) rotate(-4deg)`,
-          WebkitMaskImage:
-            "radial-gradient(ellipse at center, #000 25%, transparent 68%)",
-          maskImage:
-            "radial-gradient(ellipse at center, #000 25%, transparent 68%)",
-        }}
-      >
-        {contours.map((c, i) => (
-          <path
-            key={i}
-            d={c.d}
-            fill="none"
-            stroke={WHITE}
-            strokeOpacity={c.index ? 0.5 : 0.26}
-            strokeWidth={c.index ? 2.4 : 1.3}
-            pathLength={1}
-            strokeDasharray={topoDraw >= 1 ? undefined : "1.05 1.05"}
-            strokeDashoffset={topoDraw >= 1 ? undefined : 1.05 * (1 - topoDraw)}
-          />
-        ))}
-      </svg>
-
-      {/* HUD: Lombardia with its south lit, and where the films start. */}
-      <div
-        style={{
-          position: "absolute",
-          left: CX - 380,
-          top: HUD_TOP,
-          display: "flex",
-          alignItems: "center",
-          gap: 22,
-          opacity: hud,
-          transform: `translateX(${(1 - hud) * -40}px)`,
-        }}
-      >
-        <svg width={84} height={84} viewBox={`0 0 ${VIEW} ${VIEW}`}>
-          <path
-            d={LOMBARDIA}
-            fill="rgba(255,255,255,0.12)"
-            stroke={WHITE}
-            strokeWidth={10}
-            strokeLinejoin="round"
-          />
-          <path d={OLTREPO} fill={ORANGE} />
-          <circle
-            cx={VARZI_MINI.x}
-            cy={VARZI_MINI.y}
-            r={14 + 60 * pulse}
-            fill="none"
-            stroke={ORANGE}
-            strokeWidth={10}
-            opacity={1 - pulse}
-          />
-          <circle cx={VARZI_MINI.x} cy={VARZI_MINI.y} r={16} fill={WHITE} />
-        </svg>
-        <div
-          style={{
-            fontFamily: MONO,
-            fontWeight: 500,
-            fontSize: 30,
-            letterSpacing: 2,
-            color: WHITE,
-            whiteSpace: "pre",
-            lineHeight: 1.25,
-            textShadow: "0 2px 0 rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.6)",
+            left: INNER_X + 40,
+            top: TOP + 38,
+            display: "flex",
+            alignItems: "center",
+            gap: 24,
+            opacity: hud,
+            transform: `translateX(${(1 - hud) * -30}px)`,
           }}
         >
-          <div style={{ color: ORANGE }}>
-            {scramble("OLTREPÒ PAVESE", frame, COORDS)}
+          <svg width={104} height={104} viewBox={`0 0 ${VIEW} ${VIEW}`}>
+            <path
+              d={LOMBARDIA}
+              fill="rgba(255,255,255,0.14)"
+              stroke={WHITE}
+              strokeWidth={10}
+              strokeLinejoin="round"
+            />
+            <path d={OLTREPO} fill={ORANGE} />
+            <circle
+              cx={VARZI_MINI.x}
+              cy={VARZI_MINI.y}
+              r={14 + 60 * pulse}
+              fill="none"
+              stroke={ORANGE}
+              strokeWidth={10}
+              opacity={1 - pulse}
+            />
+            <circle cx={VARZI_MINI.x} cy={VARZI_MINI.y} r={16} fill={WHITE} />
+          </svg>
+          <div
+            style={{
+              fontFamily: MONO,
+              fontWeight: 500,
+              fontSize: 36,
+              letterSpacing: 1,
+              color: WHITE,
+              whiteSpace: "pre",
+              lineHeight: 1.3,
+            }}
+          >
+            <div style={{ color: ORANGE }}>
+              {scramble("OLTREPÒ PAVESE", frame, COORDS)}
+            </div>
+            <div>{scramble("44°49′25″N 9°11′49″E", frame, COORDS)}</div>
           </div>
-          <div>{scramble("44°49′25″N  9°11′49″E", frame, COORDS)}</div>
         </div>
-      </div>
 
-      {/* The title, revealed behind the slash's trailing edge. */}
-      <div
-        style={{
-          position: "absolute",
-          left: SAFE_RECT.x,
-          width: SAFE_RECT.w,
-          top: TITLE_TOP,
-          height: TITLE_H,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          clipPath: `inset(-20px ${Math.max(-60, SAFE_RECT.x + SAFE_RECT.w - (inX - 40))}px -20px -60px)`,
-        }}
-      >
+        {/* ADVEN / TOURING, big, on two lines. */}
         <div
           style={{
+            position: "absolute",
+            left: INNER_X + 18,
+            top: TOP + 150,
             fontFamily: DISPLAY,
             fontWeight: 800,
             fontStyle: "italic",
-            fontSize: 150,
-            lineHeight: 1,
-            letterSpacing: 1,
-            color: WHITE,
-            textShadow: "0 4px 0 rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.55)",
-            transform: `translateX(${interpolate(frame, SLASH_IN, [-24, 0], clamp)}px)`,
+            fontSize: 214,
+            lineHeight: 0.86,
+            letterSpacing: 2,
           }}
         >
-          ADVEN<span style={{ color: ORANGE }}>TOURING</span>
+          <div
+            style={{
+              color: WHITE,
+              opacity: frame < ADVEN_IN ? 0 : 1,
+              transform: `translateX(${(1 - adven) * -90}px)`,
+            }}
+          >
+            ADVEN
+          </div>
+          <div
+            style={{
+              color: ORANGE,
+              opacity: frame < TOURING_IN ? 0 : 1,
+              transform: `translateX(${(1 - touring) * 90}px)`,
+            }}
+          >
+            TOURING
+          </div>
         </div>
-      </div>
-      {/* The slash itself. */}
-      {frame >= SLASH_IN[0] && frame <= SLASH_IN[1] && (
+
+        {/* Subtitle, decoding. */}
+        <div
+          style={{
+            position: "absolute",
+            left: INNER_X + 24,
+            top: TOP + 548,
+            fontFamily: DISPLAY,
+            fontWeight: 600,
+            fontSize: 54,
+            letterSpacing: 7,
+            color: WHITE,
+            opacity: subIn,
+            whiteSpace: "pre",
+          }}
+        >
+          {scramble("NEL SUD DELLA LOMBARDIA", frame, SUB)}
+        </div>
+      </AbsoluteFill>
+
+      {/* The slashes that bring the plate in and take it away. */}
+      {frame <= SLASH_IN[1] && (
         <div
           style={{
             position: "absolute",
             inset: 0,
             background: ORANGE,
-            clipPath: slashPoly(inX, TITLE_TOP - 16, TITLE_H + 32, 110),
+            clipPath: slashPoly(inX, 90),
           }}
         />
       )}
-
-      {/* Subtitle, decoding. */}
-      <div
-        style={{
-          position: "absolute",
-          left: SAFE_RECT.x,
-          width: SAFE_RECT.w,
-          top: SUB_TOP,
-          textAlign: "center",
-          fontFamily: DISPLAY,
-          fontWeight: 600,
-          fontSize: 46,
-          letterSpacing: 13,
-          color: WHITE,
-          opacity: subIn,
-          whiteSpace: "pre",
-          textShadow: "0 2px 0 rgba(0,0,0,0.35), 0 3px 12px rgba(0,0,0,0.6)",
-        }}
-      >
-        {scramble("NEL SUD DELLA LOMBARDIA", frame, SUB)}
-      </div>
-
-      {/* The road, laid down by the bike riding it. */}
-      <svg
-        width={1080}
-        height={1920}
-        style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}
-      >
-        <line
-          x1={ROAD_X0}
-          y1={ROAD_Y}
-          x2={ROAD_X1}
-          y2={ROAD_Y}
-          stroke={WHITE}
-          strokeOpacity={0.35 * subIn}
-          strokeWidth={2}
-          strokeDasharray="10 12"
-        />
-        {head > ROAD_X0 + 2 && (
-          <line
-            x1={ROAD_X0}
-            y1={ROAD_Y}
-            x2={head + 40}
-            y2={ROAD_Y}
-            stroke={ORANGE}
-            strokeWidth={7}
-            strokeLinecap="round"
-          />
-        )}
-        {frame >= RIDE[0] && (
-          <g
-            transform={`translate(${head} ${ROAD_Y - 2 + bounce}) scale(${BIKE}) translate(-100 -118)`}
-          >
-            {/* speed lines */}
-            {[30, 60, 92].map((y, i) => (
-              <line
-                key={y}
-                x1={-20 - 90 * speed - i * 20}
-                y1={y}
-                x2={-14 - i * 6}
-                y2={y}
-                stroke={WHITE}
-                strokeOpacity={0.7 * speed}
-                strokeWidth={4}
-                strokeLinecap="round"
-              />
-            ))}
-            {WHEELS.map((w) => (
-              <Wheel
-                key={w.x}
-                {...w}
-                turn={((head - ROAD_X0) / (w.r * BIKE)) * 57.3}
-              />
-            ))}
-            <BikeBody />
-          </g>
-        )}
-      </svg>
-
-      {/* The outgoing slash. */}
       {frame >= SLASH_OUT[0] && (
         <div
           style={{
             position: "absolute",
             inset: 0,
             background: ORANGE,
-            clipPath: slashPoly(outX, HUD_TOP - 30, ROAD_Y - HUD_TOP + 70, 120),
+            clipPath: slashPoly(outX, 110),
           }}
         />
       )}
