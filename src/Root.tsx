@@ -21,6 +21,7 @@ import { PENICE_DURATION } from "./PeniceTour/timeline";
 import { VarziTrebecco } from "./TrebeccoTour/VarziTrebecco";
 import { TREBECCO_DURATION } from "./TrebeccoTour/timeline";
 import { HookStradaIsolata, HOOK_DURATION } from "./Hook/HookStradaIsolata";
+import { AdventouringTitle, TITLE_DURATION } from "./Title/AdventouringTitle";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 
 // Each <Composition> is an entry in the sidebar!
@@ -115,6 +116,16 @@ export const RemotionRoot: React.FC = () => {
         id="HookStradaIsolata"
         component={HookStradaIsolata}
         durationInFrames={HOOK_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* The series title: a transparent overlay like the hook. */}
+      <Composition
+        id="AdventouringTitle"
+        component={AdventouringTitle}
+        durationInFrames={TITLE_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
