@@ -9,3 +9,6 @@ out
 # HyperFrames: static ffmpeg/ffprobe, recreated by two lines in
 # hyperframes/README.md. 138MB of binaries have no business in git.
 hyperframes/bin
+
+# Python bytecode from the geo/photo scripts.
+__pycache__
