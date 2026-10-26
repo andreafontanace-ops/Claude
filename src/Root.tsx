@@ -34,6 +34,7 @@ import {
   WinterQuestion,
   WINTER_QUESTION_DURATION,
 } from "./Seasons/WinterQuestion";
+import { SeasonsTitle, SEASONS_TITLE_DURATION } from "./Seasons/SeasonsTitle";
 
 // Each <Composition> is an entry in the sidebar!
 
@@ -263,6 +264,21 @@ export const RemotionRoot: React.FC = () => {
         width={1080}
         height={1920}
         defaultProps={{ overlay: true }}
+      />
+      {/* The opening title: every line a prop, so other wording is one render. */}
+      <Composition
+        id="SeasonsTitle"
+        component={SeasonsTitle}
+        durationInFrames={SEASONS_TITLE_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          line1: "4 STAGIONI",
+          line2: "4 STRADE",
+          sub1: "UNA TAPPA IN MOTO",
+          sub2: "PER OGNI STAGIONE",
+        }}
       />
 
       <Composition
