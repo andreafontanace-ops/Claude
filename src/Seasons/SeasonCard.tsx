@@ -28,7 +28,7 @@ import {
 // the footage as the chapter opens. One solid, slanted dark plate (it reads
 // over any sky) carrying the season's glyph, TAPPA n DI 4, the season's name
 // big, and the place. Behind the type, the place's own contour lines in the
-// season's colour - the Verdon's gorge, the Val Taleggio's narrows, the
+// season's colour - the Verdon's gorge, the Novena's switchbacks, the
 // Staffora's valley; winter, still a secret, gets falling snow instead.
 // Inside the safe area, clear of every platform's buttons.
 export const SEASON_CARD_DURATION = 120;
@@ -90,9 +90,6 @@ export const SeasonCard: React.FC<SeasonCardProps> = ({
     config: { damping: 15, mass: 0.6, stiffness: 170 },
   });
   const placeIn = interpolate(frame, [PLACE[0], PLACE[0] + 4], [0, 1], clamp);
-  // A long place name shrinks to fit the plate (about 0.42 em a letter plus
-  // the tracking, in 700px).
-  const placeSize = Math.min(66, Math.floor((700 / place.length - 4) / 0.42));
 
   // The place's contour lines, fitted into the plate.
   let topo: React.ReactNode = null;
@@ -231,8 +228,8 @@ export const SeasonCard: React.FC<SeasonCardProps> = ({
             top: TOP + 384,
             fontFamily: DISPLAY,
             fontWeight: 600,
-            fontSize: placeSize,
-            letterSpacing: 4,
+            fontSize: 66,
+            letterSpacing: 5,
             color,
             opacity: placeIn,
             whiteSpace: "pre",

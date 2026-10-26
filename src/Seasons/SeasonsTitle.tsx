@@ -25,7 +25,7 @@ import {
 // overlay, 5s. Four slanted bars in the seasons' colours slam in one after
 // another, each with its glyph and name; they close up to the left into the
 // four-colour edge of a dark plate, on which the title lands - the first line
-// white, the second in the four colours - over the Val Taleggio's contour lines,
+// white, the second in the four colours - over the Novena's contour lines,
 // with the subtitle decoding below. Four coloured slashes take it away.
 // Every line of text is a prop, so another title is one render away.
 export const SEASONS_TITLE_DURATION = 150;
@@ -108,8 +108,8 @@ export const SeasonsTitle: React.FC<SeasonsTitleProps> = ({
       ? `polygon(${edge + SLASH_BOTTOM * SLOPE}px 0px, 1500px 0px, 1500px 2000px, ${edge + (SLASH_BOTTOM - 2000) * SLOPE}px 2000px)`
       : undefined;
 
-  const taleggio = stages.find((s) => s.id === "taleggio")!;
-  const b = taleggio.box;
+  const novena = stages.find((s) => s.id === "novena")!;
+  const b = novena.box;
   const s = (X1 - X0 + 100) / (b.x1 - b.x0);
   const drift = interpolate(frame, [0, SEASONS_TITLE_DURATION], [0, -40]);
 
@@ -137,7 +137,7 @@ export const SeasonsTitle: React.FC<SeasonsTitleProps> = ({
               <g
                 transform={`translate(${X0 - 50 + drift} ${(TOP + BOTTOM) / 2}) scale(${s}) translate(${-b.x0} ${-(b.y0 + b.y1) / 2})`}
               >
-                {taleggio.contours.map((c, i) => (
+                {novena.contours.map((c, i) => (
                   <path
                     key={i}
                     d={c.d}
