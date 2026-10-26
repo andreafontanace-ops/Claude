@@ -179,8 +179,8 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{
           season: "ESTATE",
           n: 2,
-          place: "PASSO DELLA NOVENA",
-          stageId: "novena",
+          place: "GOLE DELLA VAL TALEGGIO",
+          stageId: "taleggio",
         }}
       />
       <Composition
@@ -221,13 +221,13 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{ stageId: "verdon" }}
       />
       <Composition
-        id="SeasonMap-Novena"
+        id="SeasonMap-Taleggio"
         component={SeasonMap}
         durationInFrames={SEASON_MAP_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
-        defaultProps={{ stageId: "novena" }}
+        defaultProps={{ stageId: "taleggio" }}
       />
       <Composition
         id="SeasonMap-Staffora"

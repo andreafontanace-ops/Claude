@@ -4,22 +4,23 @@ One projection for the whole Western Alps (equirectangular, longitude scaled
 by cos 45 deg, 1 map unit = 1 km), so the three stages sit on one map:
 
   spring  Gorges du Verdon       - Alpes-de-Haute-Provence, France
-  summer  Passo della Novena     - Nufenenpass, Valais / Ticino, 2478 m
+  summer  Gole della Val Taleggio - the Enna's gorge, Bergamo, Lombardia
   autumn  Valle Staffora         - Oltrepò Pavese, Lombardia
 
 For the opening, the countries (Natural Earth 1:50m). Close to each stage the
-finer admin lines take over - the départements, the cantons, the regions -
+finer admin lines take over - the départements, the provinces, the regions -
 with the rivers and lakes that make the place (the Verdon and the Lac de
-Sainte-Croix, the Staffora; OpenStreetMap via Overture Maps) and real
+Sainte-Croix, the Enna, the Staffora; OpenStreetMap via Overture Maps) and real
 contour lines from the Terrarium elevation tiles (AWS Open Data).
 
     python3 scripts/geo/build_seasons.py NATURAL_EARTH_COUNTRIES.geojson
 """
-import io, json, math, os, ssl, sys, urllib.request
+import io, json, math, os, ssl, sys, time, urllib.request
 
 import numpy as np
 import pyarrow.dataset as ds
 import shapely
+import shapely.ops
 from PIL import Image
 from scipy import ndimage as ndi
 from shapely.geometry import box, shape
@@ -128,9 +129,15 @@ def contours(bbox, step, z=12, grid=700):
     tx, ty = range(int(fx0), int(fx1) + 1), range(int(fy0), int(fy1) + 1)
 
     def fetch(x, y):
-        with urllib.request.urlopen(TILE.format(z=z, x=x, y=y), context=CTX, timeout=60) as r:
-            a = np.asarray(Image.open(io.BytesIO(r.read())).convert("RGB")).astype(np.float64)
-        return a[..., 0] * 256 + a[..., 1] + a[..., 2] / 256 - 32768
+        for attempt in range(5):  # the tile server drops the odd connection
+            try:
+                with urllib.request.urlopen(TILE.format(z=z, x=x, y=y), context=CTX, timeout=60) as r:
+                    a = np.asarray(Image.open(io.BytesIO(r.read())).convert("RGB")).astype(np.float64)
+                return a[..., 0] * 256 + a[..., 1] + a[..., 2] / 256 - 32768
+            except OSError:
+                if attempt == 4:
+                    raise
+                time.sleep(2 ** attempt)
 
     mosaic = np.vstack([np.hstack([fetch(x, y) for x in tx]) for y in ty])
     gx = np.linspace(fx0, fx1, grid) - tx[0]
@@ -157,7 +164,7 @@ def contours(bbox, step, z=12, grid=700):
 
 
 regions = load("italy_regions.geojson")
-cantons = load("switzerland_cantons.geojson")
+provinces = load("italy_provinces.geojson")
 departements = load("france_departements.geojson")
 
 
@@ -179,22 +186,20 @@ STAGES = [
          window_km=34, step=100, rivers=["Le Verdon", "Verdon"],
          admin=(departements["features"], "nom"),
          tags=[("ALPES-DE-HAUTE-PROVENCE", 6.30, 43.88), ("VAR", 6.38, 43.70)]),
-    dict(id="novena", season="ESTATE", n=2, name="PASSO DELLA NOVENA",
-         sub="Nufenenpass · Vallese / Ticino · Svizzera", point=(8.38934, 46.4729), elevation=2478,
-         window_km=30, step=150, rivers=[],
-         admin=(cantons["features"], "name"),
-         # Italy - the Val Formazza - is a few km south-west of the pass.
-         neighbours=(regions["features"], "reg_name"),
-         tags=[("VALLESE", 8.30, 46.52), ("TICINO", 8.50, 46.43), ("ITALIA", 8.36, 46.405)]),
+    # The gorge is the Enna's, between Peghera and San Giovanni Bianco; the pin
+    # is snapped onto the river at its middle.
+    dict(id="taleggio", season="ESTATE", n=2, name="GOLE DELLA VAL TALEGGIO",
+         sub="Prealpi Orobie · Bergamo · Lombardia", point=(9.615, 45.8835), snap=True, elevation=None,
+         window_km=22, step=100, rivers=["Torrente Enna", "Fiume Brembo"],
+         admin=(provinces["features"], "prov_name"),
+         tags=[("BERGAMO", 9.73, 45.845), ("LECCO", 9.48, 45.93)],
+         tag_areas={"BERGAMO": "Bergamo", "LECCO": "Lecco"}),
     dict(id="staffora", season="AUTUNNO", n=3, name="VALLE STAFFORA",
          sub="Oltrepò Pavese · Lombardia · Italia", point=(9.1969, 44.82354), elevation=None,
          window_km=34, step=100, rivers=["Torrente Staffora"],
          admin=(regions["features"], "reg_name"),
          tags=[("LOMBARDIA", 9.08, 44.90), ("EMILIA-ROMAGNA", 9.40, 44.78)]),
 ]
-
-CANTON_IT = {"Valais": "VALLESE", "Wallis": "VALLESE", "Ticino": "TICINO", "Uri": "URI", "Graubünden": "GRIGIONI",
-             "Bern": "BERNA"}
 
 stage_out = []
 for st in STAGES:
@@ -203,6 +208,13 @@ for st in STAGES:
     w = st["window_km"]
     bb = (lon - w / (KM * K) * 0.75, lat - w / KM * 0.75, lon + w / (KM * K) * 0.75, lat + w / KM * 0.75)
     river, lakes = water((bb[0] - 0.2, bb[1] - 0.2, bb[2] + 0.2, bb[3] + 0.2), st["rivers"])
+    if st.get("snap"):
+        if river is None:
+            sys.exit(f"{st['id']}: no river to snap the pin to")
+        snapped = shapely.ops.nearest_points(river, shapely.geometry.Point(lon, lat))[0]
+        print(f"  pin snapped {snapped.distance(shapely.geometry.Point(lon, lat)) * KM * 1000:.0f} m onto the river")
+        lon, lat = snapped.x, snapped.y
+        st["point"] = (lon, lat)
     feats, key = st["admin"]
     areas = [(n, g, True) for n, g in admin(feats, key, st["point"], w * 1.6)]
     if "neighbours" in st:
@@ -222,11 +234,15 @@ for st in STAGES:
         contours=cont,
         tags=[(t, *project(tl, ta)) for t, tl, ta in st["tags"]],
     ))
-    home_country = {"verdon": "France", "novena": "Switzerland", "staffora": "Italy"}[st["id"]]
+    home_country = {"verdon": "France", "taleggio": "Italy", "staffora": "Italy"}[st["id"]]
     for t, tl, ta in st["tags"]:
-        owner = "Italy" if t == "ITALIA" else home_country
-        if not _shapes[owner].contains(shapely.geometry.Point(tl, ta)):
-            sys.exit(f"{t} tag is not inside {owner}")
+        pt = shapely.geometry.Point(tl, ta)
+        if t in st.get("tag_areas", {}):
+            want = st["tag_areas"][t]
+            if not any(n == want and g.contains(pt) for n, g, _ in areas):
+                sys.exit(f"{t} tag is not inside {want}")
+        elif not _shapes["Italy" if t == "ITALIA" else home_country].contains(pt):
+            sys.exit(f"{t} tag is not inside {home_country}")
     print(f"  {len(areas)} admin areas, river {'yes' if river is not None else 'no'}, {len(lakes)} lakes")
 
 
@@ -240,7 +256,7 @@ def dms(v, pos, neg):
 # --- emit ----------------------------------------------------------------------------
 
 o = ["// Auto-generated by scripts/geo/build_seasons.py - do not hand-edit.",
-     "// Countries: Natural Earth 1:50m. Admin: ISTAT/openpolis, IGN, swisstopo (via the repo's",
+     "// Countries: Natural Earth 1:50m. Admin: ISTAT/openpolis and IGN (via the repo's",
      "// geojson). Water: OpenStreetMap via Overture Maps. Contours: Terrarium tiles (AWS Open Data).",
      "// Equirectangular, longitude scaled by cos(45 deg); 1 unit = 1 km.", ""]
 W, H = project(LON1, LAT0)

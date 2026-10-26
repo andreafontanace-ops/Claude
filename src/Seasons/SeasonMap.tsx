@@ -70,12 +70,12 @@ const P_POLY = `${60 + P_LEAN},${P_TOP} 900,${P_TOP} ${900 - P_LEAN},${P_BOTTOM}
 
 const HOME: Record<string, string> = {
   verdon: "France",
-  novena: "Switzerland",
+  taleggio: "Italy",
   staffora: "Italy",
 };
 const SEASON_OF: Record<string, SeasonId> = {
   verdon: "PRIMAVERA",
-  novena: "ESTATE",
+  taleggio: "ESTATE",
   staffora: "AUTUNNO",
 };
 
@@ -131,6 +131,9 @@ export const SeasonMap: React.FC<{ stageId: string }> = ({ stageId }) => {
     config: { damping: 15, mass: 0.6, stiffness: 170 },
   });
   const subIn = interpolate(frame, SUB_IN, [0, 1], clamp);
+  // Long names (GOLE DELLA VAL TALEGGIO) shrink to stay on the plate; the
+  // condensed italic runs about 0.47 em a letter.
+  const nameSize = Math.min(84, Math.floor(740 / (stage.name.length * 0.47)));
   // 2.478 m, as in the other films (it-IT leaves four digits ungrouped).
   const elev = stage.elevation
     ? ` · ${String(stage.elevation).replace(/\B(?=(\d{3})+(?!\d))/g, ".")} m`
@@ -432,7 +435,7 @@ export const SeasonMap: React.FC<{ stageId: string }> = ({ stageId }) => {
               fontFamily: DISPLAY,
               fontWeight: 800,
               fontStyle: "italic",
-              fontSize: 84,
+              fontSize: nameSize,
               lineHeight: 1,
               color: WHITE,
               whiteSpace: "nowrap",

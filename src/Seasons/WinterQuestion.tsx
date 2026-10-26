@@ -61,12 +61,12 @@ const OVERVIEW = (() => {
 const MAP_RECT = { x: 60, y: 260, w: 840, h: 840 };
 const SEASON_OF: Record<string, SeasonId> = {
   verdon: "PRIMAVERA",
-  novena: "ESTATE",
+  taleggio: "ESTATE",
   staffora: "AUTUNNO",
 };
 const SHORT: Record<string, string> = {
   verdon: "VERDON",
-  novena: "NOVENA",
+  taleggio: "TALEGGIO",
   staffora: "STAFFORA",
 };
 
