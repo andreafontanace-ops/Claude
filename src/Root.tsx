@@ -30,6 +30,10 @@ import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
 import { SeasonCard, SEASON_CARD_DURATION } from "./Seasons/SeasonCard";
 import { SeasonMap, SEASON_MAP_DURATION } from "./Seasons/SeasonMap";
 import { WinterFollow, WINTER_FOLLOW_DURATION } from "./Seasons/WinterFollow";
+import {
+  WinterQuestion,
+  WINTER_QUESTION_DURATION,
+} from "./Seasons/WinterQuestion";
 
 // Each <Composition> is an entry in the sidebar!
 
@@ -240,6 +244,25 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={1080}
         height={1920}
+      />
+      {/* Winter, chosen by the viewers: on the map, and as an overlay. */}
+      <Composition
+        id="WinterQuestion"
+        component={WinterQuestion}
+        durationInFrames={WINTER_QUESTION_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ overlay: false }}
+      />
+      <Composition
+        id="WinterQuestion-Overlay"
+        component={WinterQuestion}
+        durationInFrames={WINTER_QUESTION_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ overlay: true }}
       />
 
       <Composition
