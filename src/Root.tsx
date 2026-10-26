@@ -27,6 +27,9 @@ import {
   TITLE_MOTO_DURATION,
 } from "./Title/AdventouringTitleMoto";
 import { VaubanOverlay, OVERLAY_DURATION } from "./Overlays/VaubanOverlay";
+import { SeasonCard, SEASON_CARD_DURATION } from "./Seasons/SeasonCard";
+import { SeasonMap, SEASON_MAP_DURATION } from "./Seasons/SeasonMap";
+import { WinterFollow, WINTER_FOLLOW_DURATION } from "./Seasons/WinterFollow";
 
 // Each <Composition> is an entry in the sidebar!
 
@@ -140,6 +143,100 @@ export const RemotionRoot: React.FC = () => {
         id="AdventouringTitleMoto"
         component={AdventouringTitleMoto}
         durationInFrames={TITLE_MOTO_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+      />
+
+      {/* "4 stagioni, 4 tappe": season cards (transparent overlays), the
+          stage maps (full screen) and the winter call to follow. */}
+      <Composition
+        id="SeasonCard-Primavera"
+        component={SeasonCard}
+        durationInFrames={SEASON_CARD_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          season: "PRIMAVERA",
+          n: 1,
+          place: "GORGES DU VERDON",
+          stageId: "verdon",
+        }}
+      />
+      <Composition
+        id="SeasonCard-Estate"
+        component={SeasonCard}
+        durationInFrames={SEASON_CARD_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          season: "ESTATE",
+          n: 2,
+          place: "PASSO DELLA NOVENA",
+          stageId: "novena",
+        }}
+      />
+      <Composition
+        id="SeasonCard-Autunno"
+        component={SeasonCard}
+        durationInFrames={SEASON_CARD_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          season: "AUTUNNO",
+          n: 3,
+          place: "VALLE STAFFORA",
+          stageId: "staffora",
+        }}
+      />
+      <Composition
+        id="SeasonCard-Inverno"
+        component={SeasonCard}
+        durationInFrames={SEASON_CARD_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          season: "INVERNO",
+          n: 4,
+          place: "LA TAPPA SEGRETA",
+          stageId: null,
+        }}
+      />
+      <Composition
+        id="SeasonMap-Verdon"
+        component={SeasonMap}
+        durationInFrames={SEASON_MAP_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ stageId: "verdon" }}
+      />
+      <Composition
+        id="SeasonMap-Novena"
+        component={SeasonMap}
+        durationInFrames={SEASON_MAP_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ stageId: "novena" }}
+      />
+      <Composition
+        id="SeasonMap-Staffora"
+        component={SeasonMap}
+        durationInFrames={SEASON_MAP_DURATION}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{ stageId: "staffora" }}
+      />
+      <Composition
+        id="WinterFollow"
+        component={WinterFollow}
+        durationInFrames={WINTER_FOLLOW_DURATION}
         fps={FPS}
         width={1080}
         height={1920}
