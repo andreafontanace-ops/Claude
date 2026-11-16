@@ -1,0 +1,86 @@
+{
+  "_comment": "The only file to edit by hand once the products exist on Gumroad: paste each product's link (Gumroad > Products > Share, e.g. https://tornanti.gumroad.com/l/agnello) into 'checkout'. An empty checkout shows the product as 'in arrivo'. Prices are in euro and must match the ones set on Gumroad, which adds VAT for the buyer's country at checkout.",
+  "brand": "Tornanti",
+  "tagline": "Tracce GPX dei passi alpini, pronte per il navigatore",
+  "siteUrl": "",
+  "contactEmail": "",
+  "currency": "EUR",
+  "mapTiles": {
+    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "attribution": "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+    "maxZoom": 17
+  },
+  "products": {
+    "colle-del-monginevro": {
+      "free": true
+    },
+    "col-de-vars": {
+      "free": true
+    },
+    "col-de-l-izoard": {
+      "price": 4.9,
+      "checkout": ""
+    },
+    "colle-dell-agnello": {
+      "price": 4.9,
+      "checkout": ""
+    },
+    "colle-della-maddalena": {
+      "price": 4.9,
+      "checkout": ""
+    },
+    "colle-del-moncenisio": {
+      "price": 4.9,
+      "checkout": ""
+    },
+    "anello-gottardo-furka-nufenen": {
+      "price": 4.9,
+      "checkout": ""
+    },
+    "anello-furka-grimsel-susten": {
+      "price": 4.9,
+      "checkout": ""
+    }
+  },
+  "bundles": [
+    {
+      "slug": "passi-svizzeri",
+      "title": "Passi svizzeri",
+      "description": "I due anelli da Airolo e da Andermatt: Gottardo, Furka, Nufenen, Grimsel e Susten.",
+      "rides": [
+        "anello-gottardo-furka-nufenen",
+        "anello-furka-grimsel-susten"
+      ],
+      "price": 7.9,
+      "checkout": ""
+    },
+    {
+      "slug": "confine-italia-francia",
+      "title": "Colli di confine Italia–Francia",
+      "description": "Izoard, Agnello, Maddalena e Moncenisio: si concatenano con le due tracce gratuite in un giro di più giorni.",
+      "rides": [
+        "col-de-l-izoard",
+        "colle-dell-agnello",
+        "colle-della-maddalena",
+        "colle-del-moncenisio"
+      ],
+      "price": 14.9,
+      "checkout": ""
+    },
+    {
+      "slug": "tutto-il-catalogo",
+      "title": "Tutto il catalogo",
+      "description": "Tutte e sei le tracce a pagamento: i due anelli svizzeri e i quattro colli di confine.",
+      "rides": [
+        "col-de-l-izoard",
+        "colle-dell-agnello",
+        "colle-della-maddalena",
+        "colle-del-moncenisio",
+        "anello-gottardo-furka-nufenen",
+        "anello-furka-grimsel-susten"
+      ],
+      "price": 19.9,
+      "checkout": ""
+    }
+  ]
+}

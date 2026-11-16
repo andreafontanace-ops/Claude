@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tornanti · Tracce GPX dei passi alpini in moto</title>
+  <meta name="description" content="Tracce GPX dei passi alpini pronte per il navigatore: Gottardo, Furka, Nufenen, Grimsel, Susten, Izoard, Agnello, Maddalena, Moncenisio. Due tracce gratuite, le altre da 4,90 €.">
+  <meta property="og:title" content="Tornanti · Tracce GPX dei passi alpini in moto">
+  <meta property="og:description" content="Percorsi curati sui passi alpini, con passi segnati, profilo altimetrico e file pronti per Garmin, TomTom, Calimoto e Kurviger.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="home">
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="./" aria-label="Tornanti, home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#231f16"/><path d="M9 25c6 0 13-1.5 13-4s-12-2-12-5 12-2.5 12-5-7-4-13-4" fill="none" stroke="#c0392b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Tornanti
+      </a>
+      <nav class="nav" aria-label="Sezioni">
+        <a href="#tracce" class="nav-key">Tracce</a>
+        <a href="#pacchetti">Pacchetti</a>
+        <a href="#come-funziona">Come funziona</a>
+        <a href="#domande">Domande</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div>
+          <p class="eyebrow">Tracce GPX per moto</p>
+          <h1>I passi alpini, già nel navigatore.</h1>
+          <p class="lead">Percorsi curati sulle strade giuste, con i passi segnati, il profilo altimetrico e le chiusure invernali. Scarichi il GPX e parti.</p>
+          <div class="actions">
+            <a class="btn free" href="tracce/colle-del-monginevro.html">Prova gratis il Monginevro</a>
+            <a class="btn ghost" href="#tracce">Guarda tutte le tracce</a>
+          </div>
+          <ul class="hero-facts" id="hero-facts">
+            <li>8 tracce, 2 gratuite</li>
+            <li>Garmin, TomTom, Calimoto, Kurviger</li>
+            <li>Italia, Francia, Svizzera</li>
+          </ul>
+        </div>
+        <div class="overview" id="overview" role="region" aria-label="Mappa di tutte le tracce"></div>
+      </div>
+    </section>
+
+    <section id="tracce">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Catalogo</p>
+            <h2>Le tracce</h2>
+            <p>Ogni traccia è calcolata sulla rete stradale reale e contiene percorso, waypoint dei passi e quote. Due sono gratuite, così puoi provarle prima di comprare.</p>
+          </div>
+          <div class="filters" role="group" aria-label="Filtra per area" id="filters">
+            <button class="chip" type="button" data-filter="all" aria-pressed="true">Tutte</button>
+            <button class="chip" type="button" data-filter="free" aria-pressed="false">Gratis</button>
+            <button class="chip" type="button" data-filter="Svizzera" aria-pressed="false">Svizzera</button>
+            <button class="chip" type="button" data-filter="Francia" aria-pressed="false">Francia</button>
+            <button class="chip" type="button" data-filter="Italia" aria-pressed="false">Italia</button>
+          </div>
+        </div>
+        <div class="grid" id="grid" aria-live="polite">
+          <noscript><p>Il catalogo richiede JavaScript. Le pagine delle tracce sono comunque raggiungibili dalla mappa del sito.</p></noscript>
+        </div>
+      </div>
+    </section>
+
+    <section id="pacchetti">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Risparmia</p>
+            <h2>Pacchetti</h2>
+            <p>Più tracce in un solo acquisto, per un weekend o un viaggio di più giorni.</p>
+          </div>
+        </div>
+        <div class="bundles" id="bundles"></div>
+      </div>
+    </section>
+
+    <section id="come-funziona">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Semplice</p>
+            <h2>Come funziona</h2>
+          </div>
+        </div>
+        <ol class="steps">
+          <li><h3>Scegli il giro</h3><p>Guarda percorso, profilo e passi di ogni traccia. Le gratuite si scaricano subito.</p></li>
+          <li><h3>Paga in sicurezza</h3><p>Il pagamento avviene su Gumroad, con carta o PayPal. L'IVA e la ricevuta le gestisce Gumroad.</p></li>
+          <li><h3>Ricevi il GPX</h3><p>Il file arriva subito per email e resta nella tua libreria Gumroad, sempre riscaricabile.</p></li>
+          <li><h3>Caricalo e parti</h3><p>Importalo nell'app o nel navigatore: traccia, percorso e passi sono già dentro.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="domande">
+      <div class="wrap">
+        <div class="section-head"><div><p class="eyebrow">Prima di partire</p><h2>Domande frequenti</h2></div></div>
+        <div class="faq">
+          <details><summary>Con quali navigatori e app funzionano le tracce?</summary>
+            <p>Con tutti quelli che leggono il formato GPX: Garmin Zumo e Montana, TomTom Rider, BMW Navigator, Calimoto, Kurviger, OsmAnd, Google My Maps. Ogni file contiene la traccia completa, un percorso a punti di passaggio per i navigatori che ricalcolano e i waypoint dei passi.</p></details>
+          <details><summary>Le strade sono aperte tutto l'anno?</summary>
+            <p>No. Molti passi chiudono d'inverno, spesso da ottobre o novembre fino a maggio o giugno, e le date cambiano ogni anno con la neve. Ogni traccia indica la chiusura invernale segnata in OpenStreetMap, ma prima di partire controlla sempre i siti ufficiali delle strade.</p></details>
+          <details><summary>Le tracce sono state percorse?</summary>
+            <p>Ogni traccia è calcolata sulla rete stradale di OpenStreetMap passando per i punti scelti, così segue la strada del passo e non il tunnel. Le quote vengono dal modello altimetrico SRTM. Usa la traccia come guida e segui sempre la segnaletica: lavori, frane e deviazioni non possono essere previsti.</p></details>
+          <details><summary>Come ricevo il file dopo l'acquisto?</summary>
+            <p>Subito dopo il pagamento Gumroad ti manda un'email con il link per scaricare il GPX. Il file resta nella tua libreria Gumroad e puoi riscaricarlo quando vuoi.</p></details>
+          <details><summary>Posso avere un rimborso?</summary>
+            <p>Se il file non funziona con il tuo navigatore scrivici: proviamo a risolvere e, se non ci riusciamo, ti rimborsiamo. Trovi i dettagli nelle <a href="condizioni.html">condizioni di vendita</a>.</p></details>
+          <details><summary>Posso condividere la traccia con il mio gruppo?</summary>
+            <p>Sì, con i compagni con cui fai il giro. Non puoi invece rivenderla o pubblicarla online.</p></details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <div>
+        <p><strong>Tornanti</strong> · Tracce GPX dei passi alpini in moto.</p>
+        <p class="muted">Le tracce sono indicative. Guida con prudenza, rispetta il codice della strada e verifica aperture e chiusure prima di partire.</p>
+      </div>
+      <div>
+        <nav aria-label="Informazioni">
+          <a href="condizioni.html">Condizioni di vendita</a>
+          <a href="privacy.html">Privacy</a>
+        </nav>
+        <p class="muted" style="margin-top:10px">Dati stradali © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL), distribuiti da <a href="https://overturemaps.org">Overture Maps</a>. Quote: SRTM via AWS Terrain Tiles.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

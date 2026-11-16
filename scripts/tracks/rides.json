@@ -1,0 +1,434 @@
+{
+  "_comment": "Route recipes and editorial copy for every ride. 'via' points are snapped to the nearest road; 'road' restricts the snap to roads whose name or number contains that text, which is how a recipe insists on the Tremola instead of the new Gotthard road. Pass elevations are the official signposted figures. Run scripts/tracks/build_tracks.py after editing.",
+  "rides": [
+    {
+      "slug": "colle-del-monginevro",
+      "title": "Colle del Monginevro",
+      "subtitle": "Da Oulx a Briançon, il valico più antico delle Alpi occidentali",
+      "region": "alpi-sud",
+      "area": "Italia · Francia",
+      "description": "Una salita breve e scorrevole sulla SS24: da Oulx si sale a Cesana Torinese e Claviere, si passa il confine al colle e si scende sulla N94 fino a Briançon, la città fortificata di Vauban. Perfetta per provare una traccia prima di partire per i giri più lunghi.",
+      "highlights": [
+        "Cesana Torinese e Claviere",
+        "Il confine al colle, 1854 m",
+        "Discesa a tornanti su Briançon"
+      ],
+      "via": [
+        {
+          "name": "Oulx",
+          "lon": 6.8333,
+          "lat": 45.0326,
+          "stop": true
+        },
+        {
+          "name": "Cesana Torinese",
+          "lon": 6.7925,
+          "lat": 44.9525,
+          "stop": true
+        },
+        {
+          "name": "Claviere",
+          "lon": 6.752,
+          "lat": 44.938
+        },
+        {
+          "name": "Colle del Monginevro",
+          "lon": 6.7295,
+          "lat": 44.9312,
+          "pass": 1854
+        },
+        {
+          "name": "Briançon",
+          "lon": 6.64,
+          "lat": 44.8994,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "col-de-vars",
+      "title": "Col de Vars",
+      "subtitle": "Da Guillestre a Barcelonnette sulla Route des Grandes Alpes",
+      "region": "alpi-sud",
+      "area": "Francia",
+      "description": "Dal Guillestrois si sale tra i lacets di Peyre-Haute e i villaggi di Vars, si scollina a 2109 m e si scende lungo l'Ubaye fino a Barcelonnette. Un tratto classico della Route des Grandes Alpes, scorrevole e panoramico.",
+      "highlights": [
+        "Lacets di Peyre-Haute",
+        "Col de Vars, 2109 m",
+        "Valle dell'Ubaye e Barcelonnette"
+      ],
+      "via": [
+        {
+          "name": "Guillestre",
+          "lon": 6.6494,
+          "lat": 44.6597,
+          "stop": true
+        },
+        {
+          "name": "Col de Vars",
+          "lon": 6.70275,
+          "lat": 44.5389,
+          "pass": 2109
+        },
+        {
+          "name": "Saint-Paul-sur-Ubaye",
+          "lon": 6.7522,
+          "lat": 44.5158
+        },
+        {
+          "name": "Jausiers",
+          "lon": 6.731,
+          "lat": 44.416
+        },
+        {
+          "name": "Barcelonnette",
+          "lon": 6.6522,
+          "lat": 44.387,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "col-de-l-izoard",
+      "title": "Col de l'Izoard",
+      "subtitle": "Da Briançon alla Casse Déserte e giù per la Combe du Queyras",
+      "region": "alpi-sud",
+      "area": "Francia",
+      "description": "Da Briançon la D902 sale per la valle della Cerveyrette fino al colle a 2360 m. Sul versante sud si attraversa la Casse Déserte, il paesaggio di ghiaioni e guglie reso celebre dal Tour de France, poi Arvieux e la gola della Combe du Queyras fino a Guillestre.",
+      "highlights": [
+        "Col de l'Izoard, 2360 m",
+        "La Casse Déserte",
+        "La gola della Combe du Queyras"
+      ],
+      "via": [
+        {
+          "name": "Briançon",
+          "lon": 6.64,
+          "lat": 44.8994,
+          "stop": true
+        },
+        {
+          "name": "Cervières",
+          "lon": 6.724,
+          "lat": 44.868,
+          "road": "Izoard"
+        },
+        {
+          "name": "Col de l'Izoard",
+          "lon": 6.735,
+          "lat": 44.8203,
+          "pass": 2360
+        },
+        {
+          "name": "Arvieux",
+          "lon": 6.728,
+          "lat": 44.768
+        },
+        {
+          "name": "Guillestre",
+          "lon": 6.6494,
+          "lat": 44.6597,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "colle-dell-agnello",
+      "title": "Colle dell'Agnello",
+      "subtitle": "Dalla Val Varaita al Queyras sul terzo valico asfaltato più alto delle Alpi",
+      "region": "alpi-sud",
+      "area": "Italia · Francia",
+      "description": "Da Sampeyre si risale la Val Varaita passando Casteldelfino e il lago di Pontechianale, poi la strada si arrampica oltre Chianale fino ai 2744 m del colle, sul confine. Sul versante francese si scende verso Molines-en-Queyras e Château-Queyras. Aperto solo d'estate.",
+      "highlights": [
+        "Lago di Pontechianale e Chianale",
+        "Colle dell'Agnello, 2744 m",
+        "Discesa nel Parco del Queyras"
+      ],
+      "via": [
+        {
+          "name": "Sampeyre",
+          "lon": 7.188,
+          "lat": 44.579,
+          "stop": true
+        },
+        {
+          "name": "Casteldelfino",
+          "lon": 7.069,
+          "lat": 44.59
+        },
+        {
+          "name": "Chianale",
+          "lon": 6.999,
+          "lat": 44.646
+        },
+        {
+          "name": "Colle dell'Agnello",
+          "lon": 6.97963,
+          "lat": 44.68394,
+          "pass": 2744
+        },
+        {
+          "name": "Molines-en-Queyras",
+          "lon": 6.851,
+          "lat": 44.729
+        },
+        {
+          "name": "Château-Queyras",
+          "lon": 6.786,
+          "lat": 44.7556,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "colle-della-maddalena",
+      "title": "Colle della Maddalena",
+      "subtitle": "Dalla Valle Stura all'Ubaye, da Demonte a Barcelonnette",
+      "region": "alpi-sud",
+      "area": "Italia · Francia",
+      "description": "La SS21 risale tutta la Valle Stura: Demonte, Vinadio con il suo forte, Argentera e gli ultimi tornanti fino al colle a 1996 m, sul confine. In Francia il Col de Larche scende per la valle dell'Ubayette fino a Jausiers e Barcelonnette.",
+      "highlights": [
+        "Il forte di Vinadio",
+        "Colle della Maddalena, 1996 m",
+        "Valle dell'Ubayette"
+      ],
+      "via": [
+        {
+          "name": "Demonte",
+          "lon": 7.2967,
+          "lat": 44.3156,
+          "stop": true
+        },
+        {
+          "name": "Vinadio",
+          "lon": 7.176,
+          "lat": 44.307
+        },
+        {
+          "name": "Argentera",
+          "lon": 6.9372,
+          "lat": 44.3967
+        },
+        {
+          "name": "Colle della Maddalena",
+          "lon": 6.8892,
+          "lat": 44.4192,
+          "pass": 1996
+        },
+        {
+          "name": "Larche",
+          "lon": 6.8478,
+          "lat": 44.4497,
+          "road": "Madeleine"
+        },
+        {
+          "name": "Jausiers",
+          "lon": 6.731,
+          "lat": 44.416
+        },
+        {
+          "name": "Barcelonnette",
+          "lon": 6.6522,
+          "lat": 44.387,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "colle-del-moncenisio",
+      "title": "Colle del Moncenisio",
+      "subtitle": "Da Susa al lago del Moncenisio e giù fino a Lanslebourg",
+      "region": "alpi-sud",
+      "area": "Italia · Francia",
+      "description": "La SS25 lascia Susa e sale a tornanti fino all'altopiano del Moncenisio, con il grande lago artificiale sotto il colle a 2083 m. La strada napoleonica scende poi in Maurienne fino a Lanslebourg-Mont-Cenis.",
+      "highlights": [
+        "I tornanti sopra Susa",
+        "Il lago del Moncenisio",
+        "Colle del Moncenisio, 2083 m"
+      ],
+      "via": [
+        {
+          "name": "Susa",
+          "lon": 7.049,
+          "lat": 45.138,
+          "stop": true
+        },
+        {
+          "name": "Moncenisio",
+          "lon": 6.99,
+          "lat": 45.205,
+          "road": "SS25"
+        },
+        {
+          "name": "Colle del Moncenisio",
+          "lon": 6.9053,
+          "lat": 45.2536,
+          "pass": 2083
+        },
+        {
+          "name": "Lanslebourg-Mont-Cenis",
+          "lon": 6.879,
+          "lat": 45.286,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "anello-gottardo-furka-nufenen",
+      "title": "Anello Gottardo · Furka · Nufenen",
+      "subtitle": "Tre passi oltre i 2000 m in un giro ad anello da Airolo",
+      "region": "svizzera",
+      "area": "Svizzera",
+      "description": "Da Airolo si sale al San Gottardo sulla Tremola, la storica strada in pavé a tornanti. Poi Hospental, Realp e il Furka con la vista sul ghiacciaio del Rodano, discesa a Gletsch e nel Goms fino a Ulrichen. Si chiude sul Nufenen, il passo stradale più alto interamente in Svizzera, e per la Val Bedretto si torna ad Airolo.",
+      "highlights": [
+        "La Tremola in pavé",
+        "Furkapass, 2429 m",
+        "Nufenenpass, 2478 m"
+      ],
+      "via": [
+        {
+          "name": "Airolo",
+          "lon": 8.611,
+          "lat": 46.528,
+          "stop": true
+        },
+        {
+          "name": "Tremola",
+          "lon": 8.576,
+          "lat": 46.547,
+          "road": "Tremola"
+        },
+        {
+          "name": "Passo del San Gottardo",
+          "lon": 8.5615,
+          "lat": 46.559,
+          "pass": 2106
+        },
+        {
+          "name": "Hospental",
+          "lon": 8.569,
+          "lat": 46.619
+        },
+        {
+          "name": "Realp",
+          "lon": 8.503,
+          "lat": 46.5983
+        },
+        {
+          "name": "Furkapass",
+          "lon": 8.4153,
+          "lat": 46.5726,
+          "pass": 2429,
+          "road": "Furka"
+        },
+        {
+          "name": "Gletsch",
+          "lon": 8.3615,
+          "lat": 46.5625
+        },
+        {
+          "name": "Ulrichen",
+          "lon": 8.308,
+          "lat": 46.505,
+          "stop": true
+        },
+        {
+          "name": "Nufenenpass",
+          "lon": 8.387,
+          "lat": 46.4778,
+          "pass": 2478
+        },
+        {
+          "name": "All'Acqua",
+          "lon": 8.492,
+          "lat": 46.488
+        },
+        {
+          "name": "Airolo",
+          "lon": 8.608,
+          "lat": 46.529,
+          "stop": true
+        }
+      ]
+    },
+    {
+      "slug": "anello-furka-grimsel-susten",
+      "title": "Anello Furka · Grimsel · Susten",
+      "subtitle": "Il grande giro dei passi bernesi e urani da Andermatt",
+      "region": "svizzera",
+      "area": "Svizzera",
+      "description": "Da Andermatt si sale al Furka e si scende a Gletsch, si risale subito al Grimsel tra i laghi artificiali e si scende per la valle dell'Aar fino a Innertkirchen. Il Susten riporta in quota con la vista sullo Steingletscher, poi Wassen e la gola della Schöllenen chiudono l'anello ad Andermatt.",
+      "highlights": [
+        "Furkapass, 2429 m",
+        "Grimselpass, 2164 m",
+        "Sustenpass, 2224 m"
+      ],
+      "via": [
+        {
+          "name": "Andermatt",
+          "lon": 8.5939,
+          "lat": 46.6356,
+          "stop": true
+        },
+        {
+          "name": "Realp",
+          "lon": 8.503,
+          "lat": 46.5983
+        },
+        {
+          "name": "Furkapass",
+          "lon": 8.4153,
+          "lat": 46.5726,
+          "pass": 2429,
+          "road": "Furka"
+        },
+        {
+          "name": "Gletsch",
+          "lon": 8.3615,
+          "lat": 46.5625
+        },
+        {
+          "name": "Grimselpass",
+          "lon": 8.337,
+          "lat": 46.5615,
+          "pass": 2164,
+          "road": "Grimsel"
+        },
+        {
+          "name": "Guttannen",
+          "lon": 8.2905,
+          "lat": 46.6555
+        },
+        {
+          "name": "Innertkirchen",
+          "lon": 8.229,
+          "lat": 46.706,
+          "stop": true
+        },
+        {
+          "name": "Sustenpass",
+          "lon": 8.447,
+          "lat": 46.7295,
+          "pass": 2224,
+          "road": "Susten"
+        },
+        {
+          "name": "Wassen",
+          "lon": 8.599,
+          "lat": 46.707
+        },
+        {
+          "name": "Göschenen",
+          "lon": 8.587,
+          "lat": 46.668
+        },
+        {
+          "name": "Andermatt",
+          "lon": 8.5935,
+          "lat": 46.634,
+          "stop": true
+        }
+      ]
+    }
+  ]
+}

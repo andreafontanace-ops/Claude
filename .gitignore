@@ -5,3 +5,8 @@ dist
 
 # Ignore the output video from Git but not videos you import into src/.
 out
+
+# GPX store
+scripts/tracks/.cache/
+private-tracks/
+__pycache__/
