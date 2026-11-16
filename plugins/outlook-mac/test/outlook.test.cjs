@@ -484,13 +484,13 @@ test('run: esegue le azioni approvate, rifiuta quelle non consentite', () => {
   assert.equal(r.code, 1);
   const lines = r.text.split('\n');
   assert.equal(lines[0], '# Azioni eseguite in Outlook (5)');
-  assert.match(lines[1], /^✓ 1\. create_reply_draft \(preventivo\) → bozza «Re: Preventivo fornitura» per Mario Rossi <mario@cliente\.it>$/);
+  assert.match(lines[1], /^✓ 1\. create_reply_draft \(preventivo\) → bozza «Re: Preventivo fornitura» per Mario Rossi <mario@cliente\.it> \(salvata in Bozze, aperta in una finestra\)$/);
   assert.match(lines[2], /^✓ 2\. create_reply_draft → bozza «Re: Cena sabato»/);
   assert.match(lines[3], /^✓ 3\. set_flag → flag flagged su «Preventivo fornitura»$/);
   assert.match(lines[4], /^✓ 4\. create_task → attività «Preparare preventivo» entro 2026-11-20$/);
   assert.match(lines[5], /^✗ 5\. send: azione non consentita$/);
   assert.match(lines[6], /1 azioni non riuscite/);
-  assert.deepEqual(t.st.opened, [], 'con più bozze non apre finestre');
+  assert.equal(t.st.opened.length, 2, 'ogni bozza si apre in una finestra');
 
   // rieseguire lo stesso blocco non duplica le bozze
   const draftsBefore = t.drafts.messages.length;
@@ -566,6 +566,26 @@ test('flag e letto: se JXA rifiuta la scrittura (-1700) si passa ad AppleScript'
   const noAs = S.callTool('outlook_set_flag', { message_id: mock.m1.id, status: 'flagged' }, S.createOutlook(() => mock.app, {}));
   assert.equal(noAs.isError, true);
   assert.match(noAs.text, /Impossibile convertire tipi/);
+});
+
+test('bozze non salvate da Outlook (caso reale): si apre la finestra e lo si dice', () => {
+  const t = setup();
+  // come Outlook legacy reale: la risposta creata senza finestra non finisce in nessuna cartella Bozze
+  const origReply = t.app.replyTo;
+  t.app.replyTo = (m, opts) => {
+    const s = origReply(m, opts);
+    const d = s.__obj;
+    t.drafts.messages.splice(t.drafts.messages.indexOf(d), 1);
+    return s;
+  };
+  const r = S.cliMain(['run', JSON.stringify({ azioni: [{ tool: 'create_reply_draft', args: { message_id: t.m1.id, body: 'Ciao Mario' } }] })], t.outlook);
+  assert.equal(r.code, 0, r.text);
+  assert.match(r.text, /\(aperta in una finestra, non ancora in Bozze\)/);
+  assert.equal(t.st.opened.length, 1);
+  const noWin = t.call('outlook_create_reply_draft', { message_id: t.m1.id, body: 'Ciao di nuovo', open_window: false }).data;
+  assert.equal(noWin.saved_in_drafts, false);
+  assert.equal(noWin.opened_in_outlook, false);
+  assert.match(noWin.note, /ATTENZIONE/);
 });
 
 test('bozze: elenco in tutte le cartelle Bozze e apertura per oggetto', () => {

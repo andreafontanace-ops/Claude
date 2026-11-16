@@ -661,7 +661,26 @@ function createOutlook(getApp, env) {
     }, false);
   }
 
-  var DRAFT_NOTE = "Bozza salvata in Bozze e NON inviata: l'utente deve controllarla e premere Invia in Outlook.";
+  var DRAFT_NOTE = "Bozza NON inviata: l'utente deve controllarla e premere Invia in Outlook.";
+
+  /**
+   * Outlook (legacy) non salva in Bozze i messaggi creati da script senza finestra: prova a salvarlo,
+   * apre la finestra (salvo open_window: false) e verifica davvero se la bozza è nelle cartelle Bozze.
+   */
+  function finishDraft(item, a, subjectForCheck, body) {
+    try {
+      A().save(item);
+    } catch (e) {
+      rethrowIfFatal(e);
+    }
+    var opened = openWindow(item, a);
+    var saved = !!safe(function () { return findExistingDraft(subjectForCheck, body); }, null);
+    var note;
+    if (saved) note = 'Bozza salvata in Bozze e NON inviata' + (opened ? ', aperta anche in una finestra di Outlook' : '') + ': controllala e premi Invia.';
+    else if (opened) note = 'Bozza aperta in una finestra di Outlook ma non ancora in Bozze: rileggila e premi Invia, oppure Cmd+S per salvarla. Non è stata inviata.';
+    else note = 'ATTENZIONE: Outlook non ha salvato la bozza e nessuna finestra è aperta. Rifai con open_window: true.';
+    return { opened: opened, saved: saved, note: note };
+  }
 
   /** Tutte le cartelle Bozze: quelle degli account e quella predefinita (spesso «In questo computer»). */
   function draftFolders() {
@@ -780,6 +799,7 @@ function createOutlook(getApp, env) {
         : html + existing;
     } else next = body + '\n\n' + existing;
     r.content = next;
+    var fin = finishDraft(r, a, safe(function () { return m.subject(); }, ''), body);
     return {
       draft_created: true,
       sent: false,
@@ -787,8 +807,9 @@ function createOutlook(getApp, env) {
       subject: safe(function () { return r.subject(); }, ''),
       to: recips(r, 'toRecipients'),
       cc: recips(r, 'ccRecipients'),
-      opened_in_outlook: openWindow(r, a),
-      note: DRAFT_NOTE
+      opened_in_outlook: fin.opened,
+      saved_in_drafts: fin.saved,
+      note: fin.note
     };
   }
 
@@ -826,6 +847,7 @@ function createOutlook(getApp, env) {
     var warnings = [];
     to.forEach(function (x) { addRecipient(app, msg, 'to', x, warnings); });
     cc.forEach(function (x) { addRecipient(app, msg, 'cc', x, warnings); });
+    var fin = finishDraft(msg, a, subject, body);
     return {
       draft_created: true,
       sent: false,
@@ -833,9 +855,10 @@ function createOutlook(getApp, env) {
       subject: subject,
       to: recips(msg, 'toRecipients'),
       cc: recips(msg, 'ccRecipients'),
-      opened_in_outlook: openWindow(msg, a),
+      opened_in_outlook: fin.opened,
+      saved_in_drafts: fin.saved,
       warnings: warnings.length ? warnings : undefined,
-      note: DRAFT_NOTE
+      note: fin.note + ' ' + DRAFT_NOTE
     };
   }
 
@@ -1603,7 +1626,10 @@ var RUN_ALLOWED = [
 function summarizeResult(res) {
   if (!res || typeof res !== 'object') return '';
   if (res.already_exists) return ' → bozza per «' + (res.subject || '') + '» già presente, non duplicata';
-  if (res.draft_created) return ' → bozza «' + (res.subject || '') + '» per ' + ((res.to || []).join(', ') || '?');
+  if (res.draft_created) {
+    var where = res.saved_in_drafts ? 'salvata in Bozze' : res.opened_in_outlook ? 'aperta in una finestra, non ancora in Bozze' : 'NON salvata: rifare';
+    return ' → bozza «' + (res.subject || '') + '» per ' + ((res.to || []).join(', ') || '?') + ' (' + where + (res.saved_in_drafts && res.opened_in_outlook ? ', aperta in una finestra' : '') + ')';
+  }
   if (res.moved) return ' → «' + (res.subject || '') + '» spostata in ' + res.to_folder;
   if (res.created) return ' → attività «' + res.title + '»' + (res.due ? ' entro ' + res.due.slice(0, 10) : '');
   if (res.flag) return ' → flag ' + res.flag + ' su «' + (res.subject || '') + '»';
@@ -1650,7 +1676,6 @@ function runActions(text, outlook, io) {
       lines.push('✗ ' + label + ': azione non consentita');
       return;
     }
-    if (/draft/.test(name) && args.open_window === undefined && drafts > 1) args.open_window = false;
     var r = callTool(name, args, outlook);
     if (r.isError) {
       failed++;
