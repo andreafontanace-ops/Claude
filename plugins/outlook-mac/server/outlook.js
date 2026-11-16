@@ -663,20 +663,84 @@ function createOutlook(getApp, env) {
 
   var DRAFT_NOTE = "Bozza salvata in Bozze e NON inviata: l'utente deve controllarla e premere Invia in Outlook.";
 
+  /** Tutte le cartelle Bozze: quelle degli account e quella predefinita (spesso «In questo computer»). */
+  function draftFolders() {
+    var out = [];
+    var seen = {};
+    function add(spec, path) {
+      var id = safe(function () { return spec.id(); });
+      if (id === null || seen[id]) return;
+      seen[id] = true;
+      out.push({ spec: spec, path: path, id: id });
+    }
+    safe(function () {
+      allFolders().forEach(function (x) {
+        if (/^(drafts|bozze)$/i.test(x.name)) add(x.spec, x.path);
+      });
+    });
+    safe(function () {
+      var d = A().drafts;
+      add(d, safe(function () { return d.name(); }, 'Bozze'));
+    });
+    return out;
+  }
+
+  function listDrafts(a) {
+    var limit = clampInt(a.limit, 30, 1, 200);
+    var folders = draftFolders();
+    var rows = [];
+    folders.forEach(function (f) {
+      var msgs = f.spec.messages;
+      var ids = safe(function () { return msgs.id(); }, []);
+      var subs = safe(function () { return msgs.subject(); }, []);
+      ids.forEach(function (id, i) {
+        rows.push({ id: id, subject: subs[i] || '(senza oggetto)', folder: f.path, spec: msgs });
+      });
+    });
+    rows.sort(function (x, y) { return y.id - x.id; }); // id più alto = creata più di recente
+    return {
+      folders: folders.map(function (f) { return f.path + ' (id ' + f.id + ')'; }),
+      count: rows.length,
+      drafts: rows.slice(0, limit).map(function (r) {
+        return { id: r.id, subject: r.subject, folder: r.folder, to: recips(r.spec.byId(r.id), 'toRecipients') };
+      })
+    };
+  }
+
+  /** Apre in una finestra di Outlook la bozza più recente che contiene «query» nell'oggetto (o quella con message_id). */
+  function openDraft(a) {
+    var target = null;
+    var folder = null;
+    if (hasVal(a.message_id)) {
+      target = findMessage(a.message_id);
+      folder = safe(function () { return target.folder.name(); });
+    } else {
+      var q = String(req(a, 'query')).trim().toLowerCase();
+      var best = null;
+      draftFolders().forEach(function (f) {
+        var msgs = f.spec.messages;
+        var ids = safe(function () { return msgs.id(); }, []);
+        var subs = safe(function () { return msgs.subject(); }, []);
+        ids.forEach(function (id, i) {
+          if (String(subs[i] || '').toLowerCase().indexOf(q) >= 0 && (!best || id > best.id)) best = { id: id, msgs: msgs, folder: f.path };
+        });
+      });
+      if (!best) throw new UserError('Nessuna bozza con «' + a.query + '» nell\'oggetto nelle cartelle Bozze.');
+      target = best.msgs.byId(best.id);
+      folder = best.folder;
+    }
+    A().open(target);
+    return { opened: true, id: target.id(), subject: safe(function () { return target.subject(); }, ''), folder: folder, note: 'La bozza è aperta in una finestra di Outlook: rileggila e premi Invia.' };
+  }
+
   /** Cerca nelle cartelle Bozze una bozza di risposta già creata con lo stesso testo (per non duplicarla). */
   function findExistingDraft(subject, body) {
     var key = normSubject(subject);
     var probe = oneLine(body).slice(0, 60).toLowerCase();
     if (!probe) return null;
-    var folders = [];
-    safe(function () { folders.push(A().drafts); });
-    safe(function () {
-      allFolders().forEach(function (x) {
-        if (/^(drafts|bozze)$/i.test(x.name)) folders.push(x.spec);
-      });
-    });
+    var folders = draftFolders();
     for (var i = 0; i < folders.length; i++) {
-      var msgs = folders[i].messages;
+      var msgs = folders[i].spec.messages;
       var ids = safe(function () { return msgs.id(); }, []);
       var subs = safe(function () { return msgs.subject(); }, []);
       for (var j = 0; j < ids.length; j++) {
@@ -1192,6 +1256,8 @@ function createOutlook(getApp, env) {
   }
 
   return {
+    listDrafts: listDrafts,
+    openDraft: openDraft,
     digest: digest,
     readBrief: readBrief,
     status: status,
@@ -1316,6 +1382,21 @@ var TOOLS = [
       ['message_id', 'body']
     ),
     run: function (o, a) { return o.createReplyDraft(a); }
+  },
+  {
+    name: 'outlook_list_drafts',
+    description: 'List drafts in every Drafts folder (account drafts and the default/On My Computer one), newest first, with folder and recipients.',
+    annotations: READ_ONLY,
+    inputSchema: schema({ limit: { type: 'integer', minimum: 1, maximum: 200 } }),
+    run: function (o, a) { return o.listDrafts(a); }
+  },
+  {
+    name: 'outlook_open_draft',
+    description: 'Open a draft in an Outlook window so the user can review and send it: the newest draft whose subject contains query, or the one with message_id.',
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    primary: 'query',
+    inputSchema: schema({ query: { type: 'string', description: 'Text contained in the draft subject.' }, message_id: MESSAGE_ID }),
+    run: function (o, a) { return o.openDraft(a); }
   },
   {
     name: 'outlook_create_draft',
@@ -1481,7 +1562,9 @@ var CLI_ALIASES = {
   search: 'outlook_search_messages',
   events: 'outlook_list_events',
   calendar: 'outlook_list_events',
-  tasks: 'outlook_list_tasks'
+  tasks: 'outlook_list_tasks',
+  bozze: 'outlook_list_drafts',
+  apri: 'outlook_open_draft'
 };
 
 var HELP = [
@@ -1496,6 +1579,8 @@ var HELP = [
   '  folders                    elenca le cartelle con i loro id',
   '  events                     appuntamenti da oggi a 7 giorni',
   '  tasks                      attività aperte',
+  '  bozze                      bozze in tutte le cartelle Bozze',
+  '  apri <parole>              apre in Outlook la bozza più recente con quelle parole nell\'oggetto',
   '  <strumento> \'{"k": "v"}\'   qualsiasi strumento, es. list_messages \'{"unread_only": true}\'',
   '  <strumento> @file.json     argomenti letti da un file JSON (comodo per i testi delle bozze)',
   '  digest [giorni]            riepilogo testuale di posta, agenda e posta inviata (da incollare in chat)',

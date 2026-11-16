@@ -187,7 +187,7 @@ test('protocollo MCP: initialize, tools/list, notifiche, metodo sconosciuto', ()
   assert.ok(init.result.capabilities.tools);
   assert.equal(S.handleRpc({ jsonrpc: '2.0', method: 'notifications/initialized' }, outlook), null);
   const list = S.handleRpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, outlook);
-  assert.equal(list.result.tools.length, 13);
+  assert.equal(list.result.tools.length, 15);
   for (const t of list.result.tools) {
     assert.equal(t.inputSchema.type, 'object');
     assert.ok(t.description.length > 20);
@@ -566,6 +566,26 @@ test('flag e letto: se JXA rifiuta la scrittura (-1700) si passa ad AppleScript'
   const noAs = S.callTool('outlook_set_flag', { message_id: mock.m1.id, status: 'flagged' }, S.createOutlook(() => mock.app, {}));
   assert.equal(noAs.isError, true);
   assert.match(noAs.text, /Impossibile convertire tipi/);
+});
+
+test('bozze: elenco in tutte le cartelle Bozze e apertura per oggetto', () => {
+  const t = setup();
+  t.call('outlook_create_reply_draft', { message_id: t.m1.id, body: 'prima', open_window: false });
+  const second = t.call('outlook_create_reply_draft', { message_id: t.m1.id, body: 'seconda', open_window: false }).data;
+  const list = S.cliMain(['bozze'], t.outlook);
+  assert.equal(list.code, 0, list.text);
+  const d = JSON.parse(list.text);
+  assert.equal(d.count, 2);
+  assert.equal(d.drafts[0].id, second.draft_id, 'la più recente per prima');
+  assert.equal(d.drafts[0].folder, 'Lavoro/Bozze');
+  assert.deepEqual(d.drafts[0].to, ['Mario Rossi <mario@cliente.it>']);
+  const open = S.cliMain(['apri', 'preventivo'], t.outlook);
+  assert.equal(open.code, 0, open.text);
+  assert.equal(JSON.parse(open.text).id, second.draft_id);
+  assert.deepEqual(t.st.opened, [second.draft_id]);
+  const none = S.cliMain(['apri', 'BDG 27'], t.outlook);
+  assert.equal(none.code, 1);
+  assert.match(none.text, /Nessuna bozza con «BDG 27»/);
 });
 
 test('utilità: html, indirizzi, liste, date', () => {
