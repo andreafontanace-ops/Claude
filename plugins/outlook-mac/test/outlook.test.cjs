@@ -437,6 +437,68 @@ test('CLI: alias, argomento posizionale, JSON, errori', () => {
   assert.equal(S.cliMain(['read', '@/tmp/a.json'], t.outlook).code, 2);
 });
 
+test('digest: sezioni, email automatiche separate, Cc, posta inviata', () => {
+  const t = setup();
+  // mittente ripetitivo: 4 report con oggetti uguali
+  for (let i = 0; i < 4; i++) {
+    t.inbox.messages.push({ id: 9100 + i, folderId: 10, subject: i % 2 ? 'Amazon report' : 'Buy box Oggi', sender: { address: 'info@report.example' }, timeReceived: new Date(Date.now() - (i + 3) * 3600000), isRead: i > 0, todoFlag: 'not flagged', plainTextContent: 'dati', content: '', toRecipients: [], ccRecipients: [], attachments: [], categories: [] });
+  }
+  // un collega che risponde più volte nella stessa discussione NON è ripetitivo
+  for (let i = 0; i < 4; i++) {
+    t.inbox.messages.push({ id: 9200 + i, folderId: 10, subject: i ? 'RE: Listing codici' : 'Listing codici', sender: { name: 'Cavallotti Alberto', address: 'alberto@azienda.it' }, timeReceived: new Date(Date.now() - (i + 8) * 3600000), isRead: true, todoFlag: 'not flagged', plainTextContent: 'ok ' + i, content: '', toRecipients: [{ emailAddress: { address: 'io@azienda.it' } }], ccRecipients: [], attachments: [], categories: [] });
+  }
+  const out = S.cliMain(['digest', '7'], t.outlook);
+  assert.equal(out.code, 0, out.text);
+  const d = out.text;
+  assert.match(d, /^# Riepilogo Outlook del .* \(ultimi 7 giorni\)/);
+  assert.match(d, /Account: io@azienda\.it/);
+  assert.match(d, /## Agenda\n- \w{3} \d{2}\/\d{2} 10:00-11:00 Riunione progetto @ Sala 2/);
+  assert.match(d, /Stand-up settimanale \(\S+ 09:00\)/);
+  assert.match(d, /11 messaggi: 6 da persone, 5 automatici o ripetitivi\./);
+  assert.match(d, /Cavallotti Alberto · RE: Listing codici\n    ok 1/);
+  assert.match(d, new RegExp('\\[' + t.m1.id + '\\] .* · Mario Rossi · Preventivo fornitura  \\(non letta, 1 allegati\\)\\n    Ciao, ci mandi il preventivo'));
+  assert.match(d, /Luca · Cena sabato  \(non letta, flag, non sei in A\/Cc\)/);
+  assert.match(d, /- info@report\.example ×4 \(1 non lette\): Buy box Oggi \| Amazon report/);
+  assert.match(d, /- Shop <news@shop\.com> ×1: Newsletter di novembre/);
+  assert.doesNotMatch(d, /Vecchio messaggio/, 'fuori periodo e senza flag');
+  assert.match(d, /## Posta inviata\n\[\d+\] .* → \? · Re: Preventivo fornitura/);
+
+  t.m3.plainTextContent = ''; // il più recente: l'unico con testo quando bodies = 1
+  const missing = S.cliMain(['digest', '{"days": 7, "bodies": 1}'], t.outlook).text;
+  assert.match(missing, /\[testo non ancora scaricato\]/);
+  assert.match(missing, /testi inclusi solo per i 1 messaggi/);
+});
+
+test('run: esegue le azioni approvate, rifiuta quelle non consentite', () => {
+  const t = setup();
+  const block = JSON.stringify({
+    azioni: [
+      { tool: 'create_reply_draft', args: { message_id: t.m1.id, body: "Ciao Mario, ecco l'offerta." }, nota: 'preventivo' },
+      { tool: 'outlook_create_reply_draft', args: { message_id: t.m3.id, body: 'Ci sono!' } },
+      { tool: 'set_flag', args: { message_id: t.m1.id, status: 'flagged' } },
+      { tool: 'create_task', args: { title: 'Preparare preventivo', due: '2026-11-20' } },
+      { tool: 'send', args: { message_id: t.m1.id } }
+    ]
+  });
+  const r = S.cliMain(['run', block], t.outlook);
+  assert.equal(r.code, 1);
+  const lines = r.text.split('\n');
+  assert.equal(lines[0], '# Azioni eseguite in Outlook (5)');
+  assert.match(lines[1], /^✓ 1\. create_reply_draft \(preventivo\) → bozza «Re: Preventivo fornitura» per Mario Rossi <mario@cliente\.it>$/);
+  assert.match(lines[2], /^✓ 2\. create_reply_draft → bozza «Re: Cena sabato»/);
+  assert.match(lines[3], /^✓ 3\. set_flag → flag flagged su «Preventivo fornitura»$/);
+  assert.match(lines[4], /^✓ 4\. create_task → attività «Preparare preventivo» entro 2026-11-20$/);
+  assert.match(lines[5], /^✗ 5\. send: azione non consentita$/);
+  assert.match(lines[6], /1 azioni non riuscite/);
+  assert.deepEqual(t.st.opened, [], 'con più bozze non apre finestre');
+
+  const ok = S.cliMain(['run', JSON.stringify([{ tool: 'mark_read', args: { message_id: t.m1.id } }])], t.outlook);
+  assert.equal(ok.code, 0);
+  assert.match(ok.text, /letta\nTutto fatto\.$/);
+  assert.equal(S.cliMain(['run', 'ciao'], t.outlook).code, 2);
+  assert.equal(S.cliMain(['run', '{"azioni": []}'], t.outlook).code, 2);
+});
+
 test('utilità: html, indirizzi, liste, date', () => {
   assert.equal(S.htmlToText('<div>Ciao&nbsp;<b>Mario</b></div><ul><li>uno</li><li>due</li></ul><style>x{}</style>'), 'Ciao Mario\n• uno\n• due');
   assert.deepEqual(S.parseAddr('"Rossi, Mario" <m@x.it>'), { name: 'Rossi, Mario', address: 'm@x.it' });

@@ -8,7 +8,7 @@ user-invocable: false
 
 Il plugin comanda l'app Outlook installata sul Mac tramite AppleScript: niente connettori e niente permessi dell'amministratore, perché usa l'account già configurato in Outlook.
 
-## Due modi di raggiungerlo
+## Tre modi di raggiungerlo
 
 1. **Strumenti MCP `outlook_*`**: disponibili quando Claude Code gira sul Mac con il plugin installato. Usa quelli.
 2. **Riga di comando sul Mac**: da una chat cloud con una cartella del Mac collegata, esegui sul Mac:
@@ -17,7 +17,19 @@ Il plugin comanda l'app Outlook installata sul Mac tramite AppleScript: niente c
    ```
    `<strumento>` è il nome senza il prefisso `outlook_` (es. `list_messages`, `create_reply_draft`). Per i testi delle bozze **non** passare il JSON nella riga di comando: scrivilo in un file nella cartella del Mac e passa `@percorso/file.json`. Così apostrofi e virgolette non creano problemi. Cancella il file dopo l'uso.
 
-Le risposte sono JSON. Se un comando fallisce, esegui `status` (o `outlook_status`) e riferisci all'utente il campo `hint`.
+3. **Copia e incolla** (chat cloud senza collegamento al Mac): l'utente ha installato il comando `assistente` (vedi `assistente.zsh`).
+   - `assistente [giorni]` nel Terminale produce un riepilogo testuale (agenda, Posta in arrivo con i testi, email automatiche raggruppate, posta inviata) che l'utente incolla in chat. Gli id tra parentesi quadre sono i `message_id`.
+   - Per agire, dopo l'ok dell'utente, scrivi **un solo** blocco JSON da copiare, poi chiedigli di lanciare `assistente esegui` e di incollare l'esito:
+     ```json
+     {"azioni": [
+       {"tool": "create_reply_draft", "args": {"message_id": 167, "body": "Ciao Edoardo,\n…"}, "nota": "OB 17/11"},
+       {"tool": "set_flag", "args": {"message_id": 159, "status": "flagged"}},
+       {"tool": "create_task", "args": {"title": "…", "due": "2026-11-20"}}
+     ]}
+     ```
+     Strumenti ammessi: `create_reply_draft`, `create_draft`, `set_flag`, `mark_read`, `move_message`, `create_task`. Gli altri vengono rifiutati.
+
+Le risposte degli strumenti sono JSON. Se un comando fallisce, esegui `status` (o `outlook_status`) e riferisci all'utente il campo `hint`.
 
 ## Regole (sempre)
 

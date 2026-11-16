@@ -33,9 +33,21 @@ osascript -l JavaScript plugins/outlook-mac/server/outlook.js inbox 10
 osascript -l JavaScript plugins/outlook-mac/server/outlook.js help
 ```
 
-## Due modi di usarlo
+## Tre modi di usarlo
 
-### A. Da una chat nell'app Claude (sessione cloud)
+### 0. Da qualsiasi chat, con copia e incolla (il più semplice)
+
+Installazione, una volta sola, nel Terminale del Mac:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/andreafontanace-ops/Claude/claude/zen-hawking-vfbu9v/plugins/outlook-mac/assistente.zsh -o ~/.assistente-outlook.zsh && (grep -q assistente-outlook ~/.zshrc 2>/dev/null || echo 'source ~/.assistente-outlook.zsh' >> ~/.zshrc) && source ~/.assistente-outlook.zsh
+```
+
+Uso quotidiano:
+- `assistente` (oppure `assistente 14` per 14 giorni) raccoglie posta, agenda e posta inviata e le copia negli appunti. Una notifica avvisa quando ha finito: incolla in chat con Cmd+V.
+- Claude propone le cose da fare e le risposte. Quando le approvi, ti dà un blocco di azioni da copiare: lancia `assistente esegui`, che crea bozze, flag e attività in Outlook, poi incolla l'esito in chat.
+
+### A. Da una chat nell'app Claude, collegando una cartella del Mac
 
 La sessione cloud raggiunge il Mac tramite **Remote Control**:
 1. nell'app Claude desktop sul Mac: Impostazioni → Claude Code → Remote Control, e aggiungi una cartella di lavoro (ad esempio `~/Assistente`);
