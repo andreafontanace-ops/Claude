@@ -5,7 +5,7 @@
     {
       "name": "outlook-mac",
       "source": "./plugins/outlook-mac",
-      "description": "Outlook per Mac via AppleScript: smistamento posta, cose da fare, bozze di risposta da approvare. Non invia e non elimina mai."
+      "description": "Outlook per Mac via AppleScript: smistamento posta, cose da fare, bozze di risposta da approvare, invio solo su tuo ordine con conferma. Non elimina mai."
     }
   ]
 }

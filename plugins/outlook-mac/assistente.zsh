@@ -5,7 +5,8 @@
 #   assistente esegui     esegue il blocco di azioni copiato dalla chat (bozze, flag, attività)
 #                         → l'esito viene copiato negli appunti: incollalo in chat
 #
-# A ogni uso lo script outlook.js si aggiorna dal repository. Non invia e non elimina mai email.
+# A ogni uso lo script outlook.js si aggiorna dal repository. Non elimina mai email; invia solo
+# le risposte che hai ordinato in chat, dopo la tua conferma in una finestra del Mac.
 #
 # Installazione: salva questo file come ~/.assistente-outlook.zsh e aggiungi a ~/.zshrc la riga
 #   source ~/.assistente-outlook.zsh

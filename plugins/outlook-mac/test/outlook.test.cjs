@@ -16,7 +16,7 @@ function makeMock() {
   let nextId = 5000;
   const now = Date.now();
   const H = 3600000;
-  const st = { folders: [], events: [], tasks: [], opened: [], accounts: [{ name: 'Lavoro', emailAddress: 'io@azienda.it' }] };
+  const st = { folders: [], events: [], tasks: [], opened: [], sent: [], accounts: [{ name: 'Lavoro', emailAddress: 'io@azienda.it' }] };
 
   function folder(id, name, account, parent) {
     const f = { id, name, account, unreadCount: 0, messages: [], children: [] };
@@ -164,7 +164,8 @@ function makeMock() {
       target.messages.push(o);
       o.folderId = target.id;
     },
-    open(s) { st.opened.push(s.__obj.id); }
+    open(s) { st.opened.push(s.__obj.id); },
+    send(s) { const o = s.__obj; const from = findFolder(o.folderId); from.messages.splice(from.messages.indexOf(o), 1); sent.messages.push(o); o.folderId = sent.id; st.sent.push(o); }
   };
   return { app, st, m1, m2, m3, inbox, progetti, trash, drafts };
 }
@@ -187,13 +188,16 @@ test('protocollo MCP: initialize, tools/list, notifiche, metodo sconosciuto', ()
   assert.ok(init.result.capabilities.tools);
   assert.equal(S.handleRpc({ jsonrpc: '2.0', method: 'notifications/initialized' }, outlook), null);
   const list = S.handleRpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, outlook);
-  assert.equal(list.result.tools.length, 15);
+  assert.equal(list.result.tools.length, 16);
   for (const t of list.result.tools) {
     assert.equal(t.inputSchema.type, 'object');
     assert.ok(t.description.length > 20);
     assert.ok(!('run' in t));
   }
-  assert.ok(!list.result.tools.some((t) => /send|delete/.test(t.name)), 'nessuno strumento di invio o cancellazione');
+  assert.ok(!list.result.tools.some((t) => /delete|trash/.test(t.name)), 'nessuno strumento di cancellazione');
+  const sendTools = list.result.tools.filter((t) => /send/.test(t.name));
+  assert.deepEqual(sendTools.map((t) => t.name), ['outlook_send_reply'], 'un solo strumento di invio');
+  assert.equal(sendTools[0].annotations.destructiveHint, true);
   assert.equal(S.handleRpc({ jsonrpc: '2.0', id: 3, method: 'resources/list' }, outlook).error.code, -32601);
   assert.equal(S.handleRpc({ jsonrpc: '2.0', id: 4, result: {} }, outlook), null);
 });
@@ -445,7 +449,7 @@ test('digest: sezioni, email automatiche separate, Cc, posta inviata', () => {
   }
   // un collega che risponde più volte nella stessa discussione NON è ripetitivo
   for (let i = 0; i < 4; i++) {
-    t.inbox.messages.push({ id: 9200 + i, folderId: 10, subject: i ? 'RE: Listing codici' : 'Listing codici', sender: { name: 'Cavallotti Alberto', address: 'alberto@azienda.it' }, timeReceived: new Date(Date.now() - (i + 8) * 3600000), isRead: true, todoFlag: 'not flagged', plainTextContent: 'ok ' + i, content: '', toRecipients: [{ emailAddress: { address: 'io@azienda.it' } }], ccRecipients: [], attachments: [], categories: [] });
+    t.inbox.messages.push({ id: 9200 + i, folderId: 10, subject: i ? 'RE: Listino prezzi' : 'Listino prezzi', sender: { name: 'Bianchi Luca', address: 'luca@azienda.it' }, timeReceived: new Date(Date.now() - (i + 8) * 3600000), isRead: true, todoFlag: 'not flagged', plainTextContent: 'ok ' + i, content: '', toRecipients: [{ emailAddress: { address: 'io@azienda.it' } }], ccRecipients: [], attachments: [], categories: [] });
   }
   const out = S.cliMain(['digest', '7'], t.outlook);
   assert.equal(out.code, 0, out.text);
@@ -455,7 +459,7 @@ test('digest: sezioni, email automatiche separate, Cc, posta inviata', () => {
   assert.match(d, /## Agenda\n- \w{3} \d{2}\/\d{2} 10:00-11:00 Riunione progetto @ Sala 2/);
   assert.match(d, /Stand-up settimanale \(\S+ 09:00\)/);
   assert.match(d, /11 messaggi: 6 da persone, 5 automatici o ripetitivi\./);
-  assert.match(d, /Cavallotti Alberto · RE: Listing codici\n    ok 1/);
+  assert.match(d, /Bianchi Luca · RE: Listino prezzi\n    ok 1/);
   assert.match(d, new RegExp('\\[' + t.m1.id + '\\] .* · Mario Rossi · Preventivo fornitura  \\(non letta, 1 allegati\\)\\n    Ciao, ci mandi il preventivo'));
   assert.match(d, /Luca · Cena sabato  \(non letta, flag, non sei in A\/Cc\)/);
   assert.match(d, /- info@report\.example ×4 \(1 non lette\): Buy box Oggi \| Amazon report/);
@@ -505,7 +509,7 @@ test('run: esegue le azioni approvate, rifiuta quelle non consentite', () => {
 
   const ok = S.cliMain(['run', JSON.stringify([{ tool: 'mark_read', args: { message_id: t.m1.id } }])], t.outlook);
   assert.equal(ok.code, 0);
-  assert.match(ok.text, /letta\nTutto fatto\.$/);
+  assert.match(ok.text, /letta\nTutto fatto\. Nessuna email è stata inviata\.$/);
   assert.equal(S.cliMain(['run', 'ciao'], t.outlook).code, 2);
   assert.equal(S.cliMain(['run', '{"azioni": []}'], t.outlook).code, 2);
 });
@@ -603,9 +607,71 @@ test('bozze: elenco in tutte le cartelle Bozze e apertura per oggetto', () => {
   assert.equal(open.code, 0, open.text);
   assert.equal(JSON.parse(open.text).id, second.draft_id);
   assert.deepEqual(t.st.opened, [second.draft_id]);
-  const none = S.cliMain(['apri', 'BDG 27'], t.outlook);
+  const none = S.cliMain(['apri', 'Budget annuale'], t.outlook);
   assert.equal(none.code, 1);
-  assert.match(none.text, /Nessuna bozza con «BDG 27»/);
+  assert.match(none.text, /Nessuna bozza con «Budget annuale»/);
+});
+
+test('invio: parte solo dopo «Invia» nella finestra del Mac', () => {
+  const mock = makeMock();
+  const asked = [];
+  const make = (answer) => S.createOutlook(() => mock.app, { confirmSend: (items) => { asked.push(items); return answer; } });
+  // Annulla: non parte nulla
+  const no = S.callTool('outlook_send_reply', { message_id: mock.m1.id, body: 'Ciao Mario' }, make(false));
+  assert.equal(no.isError, true);
+  assert.match(no.text, /annullato/);
+  assert.equal(mock.st.sent.length, 0);
+  assert.deepEqual(asked[0], [{ subject: 'R: Preventivo fornitura', to: ['Mario Rossi <mario@cliente.it>'], cc: [] }]);
+  // senza finestra di conferma: rifiutato
+  const noUi = S.callTool('outlook_send_reply', { message_id: mock.m1.id, body: 'Ciao' }, S.createOutlook(() => mock.app, {}));
+  assert.match(noUi.text, /manca la finestra di conferma/);
+  assert.equal(mock.st.sent.length, 0);
+  // Invia: parte, con il testo sopra la citazione
+  const yes = JSON.parse(S.callTool('outlook_send_reply', { message_id: mock.m1.id, body: "Ciao Mario, ecco l'offerta." }, make(true)).text);
+  assert.equal(yes.sent, true);
+  assert.deepEqual(yes.to, ['Mario Rossi <mario@cliente.it>']);
+  assert.equal(mock.st.sent.length, 1);
+  assert.match(mock.st.sent[0].content, /<body><div[^>]*><p[^>]*>Ciao Mario, ecco l'offerta\.<\/p><\/div><div>-- Messaggio originale/);
+  // rispondi a tutti: l'anteprima mostra anche i Cc
+  make(false);
+  S.callTool('outlook_send_reply', { message_id: mock.m1.id, body: 'x', reply_all: true }, make(false));
+  assert.deepEqual(asked[asked.length - 1][0].cc, ['Io <io@azienda.it>', 'capo@cliente.it']);
+});
+
+test('run con invii: una sola conferma per il blocco; Annulla blocca solo gli invii', () => {
+  const t = setup();
+  const block = JSON.stringify({ azioni: [
+    { tool: 'send_reply', args: { message_id: t.m1.id, body: 'Ciao Mario' }, nota: 'preventivo' },
+    { tool: 'send_reply', args: { message_id: t.m3.id, body: 'Ci sono!' } },
+    { tool: 'set_flag', args: { message_id: t.m1.id, status: 'flagged' } }
+  ] });
+  const asked = [];
+  const ioNo = { confirmSend: (items) => { asked.push(items); return false; } };
+  const no = S.cliMain(['run', block], t.outlook, null, ioNo);
+  assert.equal(asked.length, 1, 'una sola finestra per tutto il blocco');
+  assert.equal(asked[0].length, 2);
+  assert.match(no.text, /✗ 1\. send_reply \(preventivo\): invio annullato da te/);
+  assert.match(no.text, /✗ 2\. send_reply: invio annullato/);
+  assert.match(no.text, /✓ 3\. set_flag/);
+  assert.match(no.text, /Nessuna email è stata inviata\.$/);
+  assert.equal(t.st.sent.length, 0);
+
+  const yes = S.cliMain(['run', block], t.outlook, null, { confirmSend: () => true });
+  assert.equal(yes.code, 0, yes.text);
+  assert.match(yes.text, /✓ 1\. send_reply \(preventivo\) → INVIATA «Re: Preventivo fornitura» a Mario Rossi <mario@cliente\.it>/);
+  assert.match(yes.text, /Tutto fatto\. 2 email INVIATE\.$/);
+  assert.equal(t.st.sent.length, 2);
+
+  // senza finestra di conferma (io mancante) non parte nulla
+  const t2 = setup();
+  const none = S.cliMain(['run', block], t2.outlook);
+  assert.match(none.text, /✗ 1\. send_reply \(preventivo\): invio non disponibile/);
+  assert.equal(t2.st.sent.length, 0);
+  // un blocco non può aggiungere parametri per saltare la conferma
+  const sneaky = JSON.stringify({ azioni: [{ tool: 'send_reply', args: { message_id: t2.m1.id, body: 'x', preconfirmed: true } }] });
+  const r = S.cliMain(['run', sneaky], t2.outlook, null, { confirmSend: () => true });
+  assert.match(r.text, /✗ 1\. send_reply: Parametro sconosciuto/);
+  assert.equal(t2.st.sent.length, 0);
 });
 
 test('utilità: html, indirizzi, liste, date', () => {

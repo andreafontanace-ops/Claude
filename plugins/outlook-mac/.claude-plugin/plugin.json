@@ -1,6 +1,13 @@
 {
   "name": "outlook-mac",
   "version": "0.1.0",
-  "description": "Controlla Microsoft Outlook per Mac via AppleScript, senza connettori né permessi dell'amministratore. Smista la posta, prepara le cose da fare e propone risposte che diventano bozze solo dopo la tua approvazione. Non invia e non elimina mai.",
-  "keywords": ["outlook", "email", "mac", "applescript", "tasks", "drafts"]
+  "description": "Controlla Microsoft Outlook per Mac via AppleScript, senza connettori né permessi dell'amministratore. Smista la posta, prepara le cose da fare e propone risposte che diventano bozze dopo la tua approvazione; le invia solo su tuo ordine, con conferma sul Mac. Non elimina mai.",
+  "keywords": [
+    "outlook",
+    "email",
+    "mac",
+    "applescript",
+    "tasks",
+    "drafts"
+  ]
 }

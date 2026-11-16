@@ -8,7 +8,7 @@ Cosa fa:
 - **propone le risposte in chat** nel tuo stile e le salva come **bozze** in Outlook solo dopo il tuo ok;
 - legge calendario e attività per il **briefing** della giornata.
 
-Cosa non fa mai: **inviare** o **eliminare** email. Non esistono comandi per farlo: premi sempre tu Invia.
+Cosa non fa mai: **eliminare** email. **Invia** solo quando glielo ordini tu in chat, e anche allora il Mac apre una finestra con destinatari e oggetti: l'email parte solo se clicchi «Invia».
 
 ## Requisiti
 
