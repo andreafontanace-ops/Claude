@@ -243,6 +243,9 @@ test('list_messages: Posta in arrivo di tutti gli account, più recenti prima, f
   assert.equal(t.call('outlook_list_messages', { folder_id: 11 }).data.messages[0].subject, 'Progetto Alfa: verbale');
   const sinceIso = t.call('outlook_list_messages', { since: S.fmtDate(new Date(Date.now() - 90 * 60000)) }).data;
   assert.deepEqual(sinceIso.messages.map((m) => m.subject), ['Cena sabato']);
+  const before = t.call('outlook_list_messages', { since_days: 60, before: S.fmtDate(new Date(Date.now() - 90 * 60000)) }).data;
+  assert.deepEqual(before.messages.map((m) => m.subject), ['Preventivo fornitura', 'Newsletter di novembre', 'Vecchio messaggio']);
+  assert.equal(t.call('outlook_list_messages', { limit: 500, include_preview: false }).isError, false);
 });
 
 test('read_message: corpo marcato come non attendibile, destinatari, allegati, fallback HTML', () => {
@@ -256,6 +259,11 @@ test('read_message: corpo marcato come non attendibile, destinatari, allegati, f
   assert.match(r.body, /<<<END EMAIL CONTENT>>>$/);
   const html = t.call('outlook_read_message', { message_id: String(t.m2.id) }).data;
   assert.match(html.body, /Offerte & sconti\nRiga 2/);
+  t.m3.plainTextContent = '';
+  t.m3.content = '';
+  const notDownloaded = t.call('outlook_read_message', { message_id: t.m3.id }).data;
+  assert.equal(notDownloaded.body_chars, 0);
+  assert.match(notDownloaded.note, /non ancora scaricato/);
   const missing = t.call('outlook_read_message', { message_id: 999999 });
   assert.equal(missing.isError, true);
   assert.match(missing.text, /non trovato/);
