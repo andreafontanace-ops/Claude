@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "outlook": {
+      "command": "/usr/bin/osascript",
+      "args": ["-l", "JavaScript", "${CLAUDE_PLUGIN_ROOT}/server/outlook.js", "mcp"]
+    }
+  }
+}
