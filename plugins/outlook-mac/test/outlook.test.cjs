@@ -499,6 +499,34 @@ test('run: esegue le azioni approvate, rifiuta quelle non consentite', () => {
   assert.equal(S.cliMain(['run', '{"azioni": []}'], t.outlook).code, 2);
 });
 
+test('digest con elenco di id: legge i messaggi indicati', () => {
+  const t = setup();
+  const r = S.cliMain(['digest', t.m1.id + ',' + t.m2.id + ',424242'], t.outlook);
+  assert.equal(r.code, 0, r.text);
+  assert.match(r.text, /^# Messaggi richiesti \(3\)/);
+  assert.match(r.text, new RegExp('\\[' + t.m1.id + '\\] .* · Mario Rossi <mario@cliente\\.it> · Preventivo fornitura  \\(non letta, 1 allegati\\)\\n    A: Io <io@azienda\\.it> \\| Cc: capo@cliente\\.it\\n    Ciao, ci mandi'));
+  assert.match(r.text, /Offerte & sconti/);
+  assert.match(r.text, /\[424242\] Messaggio 424242 non trovato/);
+  const one = S.cliMain(['digest', t.m1.id + ','], t.outlook);
+  assert.match(one.text, /^# Messaggi richiesti \(1\)/);
+  assert.match(S.cliMain(['digest', '14'], t.outlook).text, /^# Riepilogo Outlook/);
+});
+
+test('run: save_tasks aggiorna TASKS.md tramite io', () => {
+  const t = setup();
+  let saved = null;
+  const io = { saveTasks: (c) => { saved = c; return 'TASKS.md aggiornato'; } };
+  const block = JSON.stringify({ azioni: [{ tool: 'save_tasks', args: { content: '# Tasks\n\n## Active\n- [ ] **Prova**' } }, { tool: 'set_flag', args: { message_id: t.m1.id, status: 'flagged' } }] });
+  const r = S.cliMain(['run', block], t.outlook, null, io);
+  assert.equal(r.code, 0, r.text);
+  assert.match(r.text, /✓ 1\. save_tasks → TASKS\.md aggiornato/);
+  assert.equal(saved, '# Tasks\n\n## Active\n- [ ] **Prova**');
+  const noIo = S.cliMain(['run', block], t.outlook);
+  assert.equal(noIo.code, 1);
+  assert.match(noIo.text, /✗ 1\. save_tasks: salvataggio di TASKS\.md non disponibile/);
+  assert.match(S.cliMain(['run', JSON.stringify({ azioni: [{ tool: 'save_tasks', args: {} }] })], t.outlook, null, io).text, /manca "content"/);
+});
+
 test('utilità: html, indirizzi, liste, date', () => {
   assert.equal(S.htmlToText('<div>Ciao&nbsp;<b>Mario</b></div><ul><li>uno</li><li>due</li></ul><style>x{}</style>'), 'Ciao Mario\n• uno\n• due');
   assert.deepEqual(S.parseAddr('"Rossi, Mario" <m@x.it>'), { name: 'Rossi, Mario', address: 'm@x.it' });
