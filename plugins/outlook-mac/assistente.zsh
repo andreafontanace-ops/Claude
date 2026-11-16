@@ -10,11 +10,18 @@
 # Installazione: salva questo file come ~/.assistente-outlook.zsh e aggiungi a ~/.zshrc la riga
 #   source ~/.assistente-outlook.zsh
 
-ASSISTENTE_URL="https://raw.githubusercontent.com/andreafontanace-ops/Claude/claude/zen-hawking-vfbu9v/plugins/outlook-mac/server/outlook.js"
+ASSISTENTE_REPO="andreafontanace-ops/Claude"
+ASSISTENTE_BRANCH="claude/zen-hawking-vfbu9v"
 
 assistente() {
   local js="$HOME/outlook.js"
-  if curl -fsSL "$ASSISTENTE_URL?$(date +%s)" -o "$js.new" 2>/dev/null; then
+  # Scarica la versione esatta dell'ultimo commit: l'indirizzo «per branch» di GitHub può restare
+  # in cache per alcuni minuti e servire una versione vecchia.
+  local sha
+  sha=$(curl -fsSL "https://api.github.com/repos/$ASSISTENTE_REPO/commits/$ASSISTENTE_BRANCH" 2>/dev/null |
+    sed -n 's/^  "sha": "\([0-9a-f]\{40\}\)".*/\1/p' | head -1)
+  local ref="${sha:-$ASSISTENTE_BRANCH}"
+  if curl -fsSL "https://raw.githubusercontent.com/$ASSISTENTE_REPO/$ref/plugins/outlook-mac/server/outlook.js" -o "$js.new" 2>/dev/null; then
     mv "$js.new" "$js"
   else
     rm -f "$js.new"
