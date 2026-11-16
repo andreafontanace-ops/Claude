@@ -492,6 +492,17 @@ test('run: esegue le azioni approvate, rifiuta quelle non consentite', () => {
   assert.match(lines[6], /1 azioni non riuscite/);
   assert.deepEqual(t.st.opened, [], 'con più bozze non apre finestre');
 
+  // rieseguire lo stesso blocco non duplica le bozze
+  const draftsBefore = t.drafts.messages.length;
+  const again = S.cliMain(['run', block], t.outlook);
+  assert.equal(t.drafts.messages.length, draftsBefore, 'nessuna nuova bozza');
+  assert.match(again.text, /✓ 1\. create_reply_draft \(preventivo\) → bozza per «Preventivo fornitura» già presente, non duplicata/);
+  assert.match(again.text, /✓ 2\. create_reply_draft → bozza per «Cena sabato» già presente/);
+  // testo diverso → nuova bozza
+  const other = S.cliMain(['run', JSON.stringify([{ tool: 'create_reply_draft', args: { message_id: t.m1.id, body: 'Testo diverso' } }])], t.outlook);
+  assert.match(other.text, /✓ 1\. create_reply_draft → bozza «Re: Preventivo fornitura»/);
+  assert.equal(t.drafts.messages.length, draftsBefore + 1);
+
   const ok = S.cliMain(['run', JSON.stringify([{ tool: 'mark_read', args: { message_id: t.m1.id } }])], t.outlook);
   assert.equal(ok.code, 0);
   assert.match(ok.text, /letta\nTutto fatto\.$/);

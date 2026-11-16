@@ -646,9 +646,47 @@ function createOutlook(getApp, env) {
 
   var DRAFT_NOTE = "Bozza salvata in Bozze e NON inviata: l'utente deve controllarla e premere Invia in Outlook.";
 
+  /** Cerca nelle cartelle Bozze una bozza di risposta già creata con lo stesso testo (per non duplicarla). */
+  function findExistingDraft(subject, body) {
+    var key = normSubject(subject);
+    var probe = oneLine(body).slice(0, 60).toLowerCase();
+    if (!probe) return null;
+    var folders = [];
+    safe(function () { folders.push(A().drafts); });
+    safe(function () {
+      allFolders().forEach(function (x) {
+        if (/^(drafts|bozze)$/i.test(x.name)) folders.push(x.spec);
+      });
+    });
+    for (var i = 0; i < folders.length; i++) {
+      var msgs = folders[i].messages;
+      var ids = safe(function () { return msgs.id(); }, []);
+      var subs = safe(function () { return msgs.subject(); }, []);
+      for (var j = 0; j < ids.length; j++) {
+        if (normSubject(subs[j]) !== key) continue;
+        var text = oneLine(safe(function () { return bodyText(msgs.byId(ids[j])); }, '')).toLowerCase();
+        if (text.indexOf(probe) >= 0) return ids[j];
+      }
+    }
+    return null;
+  }
+
   function createReplyDraft(a) {
     var m = findMessage(req(a, 'message_id'));
     var body = String(req(a, 'body'));
+    if (a.skip_if_exists !== false) {
+      var existing0 = findExistingDraft(safe(function () { return m.subject(); }, ''), body);
+      if (existing0) {
+        return {
+          draft_created: false,
+          already_exists: true,
+          sent: false,
+          draft_id: existing0,
+          subject: safe(function () { return m.subject(); }, ''),
+          note: 'Esiste già una bozza con questa risposta: non ne ho creata un\'altra.'
+        };
+      }
+    }
     var r = A().replyTo(m, { openingWindow: false, replyToAll: a.reply_all === true });
     if (!r) throw new UserError('Outlook non ha restituito la bozza di risposta.');
     var existing = String(safe(function () { return r.content(); }, ''));
@@ -1255,6 +1293,7 @@ var TOOLS = [
         message_id: MESSAGE_ID,
         body: { type: 'string', description: 'Reply text (plain text, blank line between paragraphs).' },
         reply_all: { type: 'boolean', description: 'Reply to all recipients. Default false.' },
+        skip_if_exists: { type: 'boolean', description: 'Do not create a second draft when one with the same reply text already exists. Default true.' },
         open_window: { type: 'boolean', description: 'Open the draft in Outlook. Default true; use false when preparing many drafts.' }
       },
       ['message_id', 'body']
@@ -1461,6 +1500,7 @@ var RUN_ALLOWED = [
 
 function summarizeResult(res) {
   if (!res || typeof res !== 'object') return '';
+  if (res.already_exists) return ' → bozza per «' + (res.subject || '') + '» già presente, non duplicata';
   if (res.draft_created) return ' → bozza «' + (res.subject || '') + '» per ' + ((res.to || []).join(', ') || '?');
   if (res.moved) return ' → «' + (res.subject || '') + '» spostata in ' + res.to_folder;
   if (res.created) return ' → attività «' + res.title + '»' + (res.due ? ' entro ' + res.due.slice(0, 10) : '');
