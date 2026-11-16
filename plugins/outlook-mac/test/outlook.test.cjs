@@ -388,6 +388,18 @@ test('status: ok, nuovo Outlook, permesso negato', () => {
   assert.equal(n.ok, false);
   assert.equal(n.new_outlook, true);
   assert.match(n.hint, /Outlook legacy/);
+
+  // caso reale: nuovo Outlook che risponde ma mostra solo «In questo computer» vuoto e nessun account;
+  // la preferenza è solo nel contenitore sandbox
+  const empty = makeMock();
+  empty.st.accounts.length = 0;
+  empty.st.folders.forEach((f) => { f.messages.length = 0; f.children.forEach((c) => { c.messages.length = 0; }); });
+  const shell = (cmd) => { if (cmd.includes('Containers')) return '1\n'; throw new Error('does not exist'); };
+  const e = JSON.parse(S.callTool('outlook_status', {}, S.createOutlook(() => empty.app, { shell })).text);
+  assert.equal(e.ok, false);
+  assert.equal(e.new_outlook, true);
+  assert.deepEqual(e.accounts, []);
+  assert.match(e.hint, /nessun account/);
 });
 
 test('CLI: alias, argomento posizionale, JSON, errori', () => {

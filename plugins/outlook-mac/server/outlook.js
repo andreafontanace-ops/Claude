@@ -857,10 +857,19 @@ function createOutlook(getApp, env) {
       return out;
     }
     if (env.shell) {
-      out.new_outlook = safe(function () {
-        var v = String(env.shell('defaults read com.microsoft.Outlook IsRunningNewOutlook')).trim();
-        return v === '1' ? true : v === '0' ? false : v;
-      }, 'sconosciuto');
+      // la preferenza può stare nel dominio normale o nel contenitore sandbox di Outlook
+      out.new_outlook = 'sconosciuto';
+      var prefCmds = [
+        'defaults read com.microsoft.Outlook IsRunningNewOutlook',
+        'defaults read ~/Library/Containers/com.microsoft.Outlook/Data/Library/Preferences/com.microsoft.Outlook IsRunningNewOutlook'
+      ];
+      for (var pc = 0; pc < prefCmds.length; pc++) {
+        var v = safe(function () { return String(env.shell(prefCmds[pc])).trim(); });
+        if (v === '1' || v === '0') {
+          out.new_outlook = v === '1';
+          break;
+        }
+      }
     }
     out.running = safe(function () { return A().running(); });
     if (out.running === false) {
@@ -880,6 +889,14 @@ function createOutlook(getApp, env) {
         };
       });
       out.ok = true;
+      var total = out.inbox_folders.reduce(function (s, f) { return s + (f.messages || 0); }, 0);
+      if (!out.accounts.length && total === 0) {
+        out.ok = false;
+        out.hint =
+          'Outlook risponde ma non mostra nessun account: di solito significa che è attivo il «nuovo Outlook», ' +
+          'che agli script fa vedere solo le cartelle locali vuote. Passa a Outlook legacy (menu Outlook o Aiuto → «Outlook legacy», ' +
+          'oppure disattiva l\'interruttore «Nuovo Outlook»). Se non hai mai usato la versione legacy, al primo avvio accedi di nuovo al tuo account.';
+      }
     } catch (e) {
       out.ok = false;
       out.error = errorText(e);
