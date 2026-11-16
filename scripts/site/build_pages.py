@@ -43,6 +43,53 @@ def top_of(ride):
     return max(passes) if passes else ride["maxEle"]
 
 
+def guide_section(ride, free, e):
+    """The sales pitch for the guide: what is inside, when to go, and the
+    photo stops by name as a teaser. Restaurants and hotels stay in the
+    guide; the page only says how many there are."""
+    g = ride.get("guide")
+    if not g:
+        return ""
+    season = g.get("season") or {}
+    pages = f" di {g['pages']} pagine" if g.get("pages") else ""
+    reco = (f" {g['recommended']} li abbiamo provati di persona e sono segnati come consigliati."
+            if g.get("recommended") else "")
+    spots = "".join(f"<li><strong>{e(s['name'])}</strong><span>km {fmt_num(s['km'], 1)}</span></li>"
+                    for s in g.get("spots", []))
+    items = [
+        ("Traccia GPX", f"{fmt_num(ride['trackPoints'])} punti con quota, percorso per Garmin e TomTom, "
+                        "e tutti i punti della guida come waypoint nel navigatore."),
+        (f"Guida PDF{pages}", "Mappa con i punti numerati, tabella chilometrica, profilo altimetrico, "
+                              "istruzioni per caricare la traccia."),
+        (f"{len(g.get('spots', []))} punti panoramici", "Dove fermarsi per la vista e le foto, con chilometro e coordinate."),
+        (f"{g.get('eat', 0)} ristoranti", "Lungo il percorso o a pochi metri, con telefono, email e sito per prenotare."),
+        (f"{g.get('sleep', 0)} hotel e B&B", "Con i contatti diretti e il link alle recensioni pubbliche di ogni struttura." + reco),
+        ("Quando andare", "Periodo consigliato, apertura dei passi e chiusure invernali."),
+    ]
+    lis = "".join(f"<li><b>{e(t)}</b><span>{e(d)}</span></li>" for t, d in items)
+    label = "Inclusa gratis" if free else "Inclusa nell'acquisto"
+    return f"""
+    <section class="guide" aria-labelledby="guide-title">
+      <div>
+        <p class="eyebrow">{label}</p>
+        <h2 id="guide-title">Cosa c'è nella guida</h2>
+        <p class="guide-lead">Non solo la traccia: tutto quello che serve per organizzare il giro, in un PDF da tenere sul telefono.</p>
+        <ul class="guide-list">{lis}</ul>
+      </div>
+      <aside class="guide-side">
+        <div class="season-box">
+          <p class="eyebrow">Quando andare</p>
+          <p class="season-best">{e(season.get('best', ''))}</p>
+          <p>{e(season.get('note', ''))}</p>
+        </div>
+        <div class="spots-box">
+          <p class="eyebrow">I punti foto della guida</p>
+          <ul>{spots}</ul>
+        </div>
+      </aside>
+    </section>"""
+
+
 def page(ride, store):
     e = html.escape
     brand = store["brand"]
@@ -50,10 +97,10 @@ def page(ride, store):
     free = prod.get("free", False)
     passes = [m for m in ride["markers"] if m["kind"] == "pass"]
     stops = [m for m in ride["markers"] if m["kind"] == "stop"]
-    title = f"{ride['title']} in moto: traccia GPX · {brand}"
+    title = f"{ride['title']} in moto: traccia GPX e guida · {brand}"
     desc = (f"{ride['subtitle']}. {fmt_km(ride['km'])}, {fmt_m(ride['ascent'])} di salita, "
             f"quota massima {fmt_m(top_of(ride))}. "
-            + ("Traccia GPX gratuita." if free else f"Traccia GPX a {fmt_eur(prod.get('price', 0))}."))
+            + ("Traccia GPX e guida gratuite." if free else f"Traccia GPX e guida PDF con ristoranti, hotel e punti foto a {fmt_eur(prod.get('price', 0))}."))
 
     ld = {
         "@context": "https://schema.org", "@type": "Product",
@@ -81,6 +128,7 @@ def page(ride, store):
     highlights = "".join(f"<li>{e(h)}</li>" for h in ride["highlights"])
     pass_list = "".join(f"<li>{e(m['name'])}, {fmt_m(m['ele'])}, al km {fmt_num(m['km'], 1)}</li>"
                         for m in passes)
+    guide = guide_section(ride, free, e)
 
     return f"""<!doctype html>
 <html lang="it">
@@ -148,9 +196,11 @@ def page(ride, store):
         {roads_row}
         <dt>Chiusura invernale</dt><dd>{e(closures)}</dd>
         <dt>Tempo di guida</dt><dd>{fmt_dur(ride['minutes'])}, soste escluse (indicativo)</dd>
-        <dt>Nel file GPX</dt><dd>Traccia di {fmt_num(ride['trackPoints'])} punti con quota, percorso a punti di passaggio per Garmin e TomTom, waypoint di {len(stops)} tappe e {len(passes)} {'passo' if len(passes) == 1 else 'passi'}</dd>
+        <dt>Tappe</dt><dd>{len(stops)} tappe e {len(passes)} {'passo' if len(passes) == 1 else 'passi'}</dd>
       </dl>
     </div>
+
+    {guide}
 
     <section class="profile" aria-labelledby="profile-title">
       <h2 id="profile-title">Profilo altimetrico</h2>

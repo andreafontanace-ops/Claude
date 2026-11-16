@@ -24,14 +24,36 @@ private-tracks/           generato, ESCLUSO da git: GPX e zip a pagamento
 Il repository è pubblico: i GPX a pagamento finiscono solo in `private-tracks/`
 (ignorata da git) e vanno caricati su Gumroad, mai committati.
 
-### Rigenerare le tracce
+### Rigenerare tracce e guide
 
 ```bash
 pip install -r scripts/tracks/requirements.txt
 python scripts/tracks/fetch_roads.py      # una volta, circa 20 secondi
-python scripts/tracks/build_tracks.py
+python scripts/tracks/fetch_places.py     # una volta: ristoranti, hotel, luoghi
+python scripts/tracks/build_tracks.py     # tracce, scelta dei locali, dati del sito
+python scripts/tracks/build_guides.py     # guide PDF (Playwright) e zip dei pacchetti
 python scripts/site/build_pages.py
 ```
+
+Ogni giro ha una **guida PDF**: mappa con punti numerati, tabella chilometrica,
+profilo, punti foto (`spots` in `rides.json`), ristoranti e hotel con contatti
+(scelti automaticamente da Overture Maps Places vicino alla strada) e periodo
+consigliato (`season`). Gli stessi punti finiscono come waypoint nel GPX.
+
+**Le tue recensioni** vanno in `scripts/tracks/reviews.json`, con l'id del locale
+che trovi in `private-tracks/guides/<giro>.json`:
+
+```json
+{
+  "places": {
+    "<id>": { "recommended": true, "rating": 5, "review": "Polenta e vista sul lago, parcheggio moto davanti." }
+  },
+  "exclude": ["<id di un locale chiuso o da non proporre>"]
+}
+```
+
+Solo i locali con `recommended: true` ricevono il bollino «Consigliato». Il file
+è pubblico come il resto del repository.
 
 Per aggiungere un giro: aggiungi una voce in `scripts/tracks/rides.json` (i punti
 `via` costringono il percorso sulla strada del passo; `road` limita l'aggancio a
@@ -42,7 +64,7 @@ rilancia gli script. Se il giro è fuori dalle aree in `fetch_roads.py`, allarga
 ### Mettere in vendita su Gumroad
 
 1. Crea un prodotto digitale per ogni traccia e pacchetto, con il prezzo di `store.json`.
-2. Carica il file da `private-tracks/` (il `.gpx`, o lo `.zip` per i pacchetti).
+2. Carica i file da `private-tracks/`: il `.gpx` e la `-guida.pdf` del giro, o lo `.zip` per i pacchetti.
 3. Copia il link del prodotto nel campo `checkout` di `site/store.json`.
 
 Un prodotto senza link appare sul sito come «In arrivo».

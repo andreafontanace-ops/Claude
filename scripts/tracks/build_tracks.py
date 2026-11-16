@@ -23,12 +23,14 @@ import math
 import os
 import struct
 import urllib.request
-import zipfile
+
 from collections import defaultdict
 from xml.sax.saxutils import escape
 
 import numpy as np
 import pyarrow.parquet as pq
+
+import guides
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -439,9 +441,12 @@ def build_ride(ride, graph, terrain):
     lons = [p[0] for p in pts]
     lats = [p[1] for p in pts]
 
+    names = [" ".join([e["name"]] + e["refs"]) if e else "" for e in edges]
     return {
         "points": pts, "eles": eles, "via": ride["via"], "snapped":
             [graph.coord[n] for n in snapped],
+        "samples": samples,
+        "roadPoints": [(p[0], p[1], el, n) for p, el, n in zip(pts, eles, names)],
         "data": {
             "slug": ride["slug"], "title": ride["title"], "subtitle": ride["subtitle"],
             "area": ride["area"], "description": ride["description"],
@@ -488,6 +493,25 @@ def gpx(ride, built, brand):
                 f"    <desc>{escape(m['name'])}, {m['ele']} m, km {m['km']}</desc>",
                 f"    <sym>{sym}</sym>",
                 "  </wpt>"]
+    # The guide's stops, so they show up in the navigator along the ride.
+    g = built.get("guide") or {}
+    for s in g.get("spots", []):
+        out += [f'  <wpt lat="{s["lat"]:.6f}" lon="{s["lon"]:.6f}">',
+                f"    <ele>{s['ele']}</ele>",
+                f"    <name>{escape('Foto: ' + s['name'])}</name>",
+                f"    <desc>{escape(s['text'])} (km {s['km']})</desc>",
+                "    <sym>Scenic Area</sym>",
+                "  </wpt>"]
+    for kind, sym in (("eat", "Restaurant"), ("sleep", "Lodging")):
+        for p in g.get(kind, []):
+            contact = " · ".join(x for x in [p["type"], p["address"], p["phone"] and f"tel. {p['phone']}",
+                                             p["email"]] if x)
+            out += [f'  <wpt lat="{p["lat"]:.6f}" lon="{p["lon"]:.6f}">',
+                    f"    <name>{escape(p['name'])}</name>",
+                    f"    <desc>{escape(contact)} (km {p['km']})</desc>"]
+            if p["website"]:
+                out.append(f'    <link href="{escape(p["website"], {chr(34): "&quot;"})}"><text>Sito</text></link>')
+            out += [f"    <sym>{sym}</sym>", "  </wpt>"]
     # A route of shaping points for navigators that recalculate (Garmin Zumo,
     # TomTom Rider): every via point, so the recalculation keeps to the pass.
     out += ["  <rte>", f"    <name>{escape(d['title'])} (percorso)</name>"]
@@ -517,6 +541,21 @@ def main():
             graphs[region] = Graph(region)
         built = build_ride(ride, graphs[region], terrain)
         d = built["data"]
+        g = guides.build(ride, built["samples"], d["markers"], built["roadPoints"],
+                         region, haversine)
+        built["guide"] = g
+        # The site only shows what the guide holds, not the places themselves.
+        d["guide"] = {
+            "season": g["season"],
+            "spots": [{"name": s["name"], "km": s["km"]} for s in g["spots"]],
+            "eat": len(g["eat"]), "sleep": len(g["sleep"]),
+            "contacts": sum(1 for p in g["eat"] + g["sleep"] if p["phone"] or p["email"]),
+            "recommended": sum(1 for p in g["eat"] + g["sleep"] if p["recommended"]),
+        }
+        os.makedirs(os.path.join(PRIVATE, "guides"), exist_ok=True)
+        with open(os.path.join(PRIVATE, "guides", f"{ride['slug']}.json"), "w", encoding="utf-8") as f:
+            json.dump({**g, "ride": {k: v for k, v in d.items() if k != "guide"}}, f,
+                      ensure_ascii=False, indent=1)
         free = store["products"].get(ride["slug"], {}).get("free", False)
         folder = os.path.join(SITE, "tracks") if free else PRIVATE
         path = os.path.join(folder, f"{ride['slug']}.gpx")
@@ -524,18 +563,13 @@ def main():
             f.write(gpx(ride, built, brand))
         print(f"{d['title']}: {d['km']} km, +{d['ascent']} m, max {d['maxEle']} m, "
               f"{d['minutes']} min, {d['trackPoints']} pts, roads {d['roads']}, "
-              f"closures {d['closures']} -> {os.path.relpath(path, ROOT)}")
+              f"closures {d['closures']}, guide {len(g['spots'])} spots / "
+              f"{len(g['eat'])} eat / {len(g['sleep'])} sleep -> {os.path.relpath(path, ROOT)}")
         site_rides.append(d)
 
     with open(os.path.join(SITE, "data", "rides.json"), "w", encoding="utf-8") as f:
         json.dump({"rides": site_rides}, f, ensure_ascii=False, separators=(",", ":"))
-
-    for b in store["bundles"]:
-        path = os.path.join(PRIVATE, f"{b['slug']}.zip")
-        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-            for slug in b["rides"]:
-                z.write(os.path.join(PRIVATE, f"{slug}.gpx"), f"{slug}.gpx")
-        print(f"bundle {b['slug']}: {len(b['rides'])} tracks -> {os.path.relpath(path, ROOT)}")
+    print("next: python scripts/tracks/build_guides.py (PDF guides and bundle archives)")
 
 
 if __name__ == "__main__":

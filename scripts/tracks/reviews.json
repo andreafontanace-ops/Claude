@@ -1,0 +1,5 @@
+{
+  "_comment": "Your own verdict on the places in the guides, keyed by the place id printed in private-tracks/guides/<ride>.json. Only a place with recommended: true gets the Consigliato badge, and only your review is printed. Ids in exclude are dropped from every guide (closed, disappointing, not biker-friendly).",
+  "places": {},
+  "exclude": []
+}

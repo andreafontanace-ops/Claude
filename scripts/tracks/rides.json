@@ -43,6 +43,27 @@
           "lat": 44.8994,
           "stop": true
         }
+      ],
+      "season": {
+        "best": "maggio–ottobre",
+        "note": "Strada internazionale di fondovalle e di valico, normalmente percorribile tutto l'anno; con neve servono pneumatici invernali o catene."
+      },
+      "spots": [
+        {
+          "name": "Confine al colle",
+          "anchor": "Frontiera Italia-France Claviere",
+          "text": "Il passaggio tra Claviere e Montgenèvre: sosta per la foto con i cartelli di confine e la conca del colle."
+        },
+        {
+          "name": "Colle del Monginevro",
+          "pass": "Colle del Monginevro",
+          "text": "Il valico a 1854 m, tra le piste di Montgenèvre, porta d'ingresso storica tra Italia e Francia."
+        },
+        {
+          "name": "Briançon, Cité Vauban",
+          "anchor": "Cité Vauban",
+          "text": "La città fortificata di Vauban, patrimonio UNESCO: si parcheggia sotto le mura e si sale a piedi alla Porte de Pignerol."
+        }
       ]
     },
     {
@@ -85,6 +106,27 @@
           "lon": 6.6522,
           "lat": 44.387,
           "stop": true
+        }
+      ],
+      "season": {
+        "best": "giugno–settembre",
+        "note": "Passo di stazione sciistica: in inverno può essere innevato, verificare sempre prima di partire."
+      },
+      "spots": [
+        {
+          "name": "Col de Vars",
+          "pass": "Col de Vars",
+          "text": "Il colle a 2109 m, con ampi pascoli e vista sulle due valli: buona sosta a metà giro."
+        },
+        {
+          "name": "Redoute de Berwick",
+          "anchor": "Redoute de Berwick",
+          "text": "Una fortificazione storica lungo la discesa verso l'Ubaye: piazzola per una foto della valle."
+        },
+        {
+          "name": "Barcelonnette, le ville messicane",
+          "anchor": "Villa Bleue",
+          "text": "Le ville costruite dagli emigrati rientrati dal Messico: si vedono passando, meglio una sosta a piedi in centro."
         }
       ]
     },
@@ -129,6 +171,28 @@
           "lon": 6.6494,
           "lat": 44.6597,
           "stop": true
+        }
+      ],
+      "season": {
+        "best": "luglio–settembre",
+        "note": "Passo d'alta quota chiuso d'inverno: l'apertura dipende dalla neve, di solito tra fine maggio e giugno."
+      },
+      "spots": [
+        {
+          "name": "Briançon, Cité Vauban",
+          "anchor": "Cité Vauban",
+          "text": "Prima di partire, la città fortificata di Vauban, patrimonio UNESCO, a pochi minuti dalla partenza."
+        },
+        {
+          "name": "Col de l'Izoard",
+          "pass": "Col de l'Izoard",
+          "text": "Il colle a 2360 m con l'obelisco: vista su entrambi i versanti, parcheggio in cima."
+        },
+        {
+          "name": "Casse Déserte",
+          "lon": 6.7372,
+          "lat": 44.8075,
+          "text": "Il paesaggio lunare di ghiaioni e guglie del versante sud, pochi chilometri sotto il colle: una delle foto più famose delle Alpi francesi."
         }
       ]
     },
@@ -177,6 +241,32 @@
           "lon": 6.786,
           "lat": 44.7556,
           "stop": true
+        }
+      ],
+      "season": {
+        "best": "luglio–settembre",
+        "note": "Aperto solo d'estate: in OpenStreetMap la chiusura è segnata da ottobre a giugno, le date esatte dipendono dalla neve."
+      },
+      "spots": [
+        {
+          "name": "Lago di Pontechianale",
+          "anchor": "Lago Di Pontechianale",
+          "text": "Il lago artificiale della Val Varaita: la strada lo costeggia, ci sono spiazzi per fermarsi."
+        },
+        {
+          "name": "Chianale",
+          "anchor": "Chianale 1798m",
+          "text": "L'ultimo borgo prima del colle, case in pietra e ponte sul torrente: sosta a piedi nel centro."
+        },
+        {
+          "name": "Colle dell'Agnello",
+          "pass": "Colle dell'Agnello",
+          "text": "Il colle a 2744 m sul confine, tra i valichi asfaltati più alti delle Alpi: nelle giornate limpide si vede il Monviso."
+        },
+        {
+          "name": "Fort Queyras",
+          "anchor": "Fort Queyras",
+          "text": "La fortezza di Château-Queyras sul suo sperone di roccia, all'arrivo del giro."
         }
       ]
     },
@@ -232,6 +322,27 @@
           "lat": 44.387,
           "stop": true
         }
+      ],
+      "season": {
+        "best": "giugno–settembre",
+        "note": "Valico di transito internazionale; in inverno può chiudere o richiedere catene con forti nevicate."
+      },
+      "spots": [
+        {
+          "name": "Forte di Vinadio",
+          "anchor": "Forte di Vinadio",
+          "text": "La lunga fortezza ottocentesca (Forte Albertino) che sbarra la Valle Stura: la strada ci passa accanto."
+        },
+        {
+          "name": "Colle della Maddalena",
+          "pass": "Colle della Maddalena",
+          "text": "Il colle a 1996 m sul confine, con il piccolo lago e i pascoli: spazio per fermarsi."
+        },
+        {
+          "name": "Barcelonnette, le ville messicane",
+          "anchor": "Villa Bleue",
+          "text": "All'arrivo, le ville costruite dagli emigrati rientrati dal Messico."
+        }
       ]
     },
     {
@@ -270,6 +381,22 @@
           "lon": 6.879,
           "lat": 45.286,
           "stop": true
+        }
+      ],
+      "season": {
+        "best": "luglio–settembre",
+        "note": "Chiuso d'inverno: in OpenStreetMap la chiusura è segnata da novembre a maggio."
+      },
+      "spots": [
+        {
+          "name": "Susa, Arco di Augusto",
+          "anchor": "Arco di Augusto",
+          "text": "L'arco romano di Susa, a pochi minuti dalla partenza."
+        },
+        {
+          "name": "Colle del Moncenisio",
+          "pass": "Colle del Moncenisio",
+          "text": "Il colle a 2083 m e l'altopiano con il grande lago artificiale: la sosta più bella del giro."
         }
       ]
     },
@@ -349,6 +476,32 @@
           "lat": 46.529,
           "stop": true
         }
+      ],
+      "season": {
+        "best": "luglio–settembre",
+        "note": "Tutti e tre i passi chiudono d'inverno: di solito riaprono tra fine maggio e giugno e chiudono tra ottobre e novembre."
+      },
+      "spots": [
+        {
+          "name": "In cima alla Tremola",
+          "roadTop": "Tremola",
+          "text": "Dall'ultimo tornante della Tremola si vede la strada in pavé che scende a zig-zag verso Airolo."
+        },
+        {
+          "name": "Passo del San Gottardo",
+          "pass": "Passo del San Gottardo",
+          "text": "L'ospizio, i laghetti e il museo del passo a 2106 m: la sosta caffè classica."
+        },
+        {
+          "name": "Ghiacciaio del Rodano",
+          "anchor": "Glacier Du Rhône",
+          "text": "Sul versante vallesano del Furka, la vista sul ghiacciaio del Rodano dai tornanti sopra Gletsch."
+        },
+        {
+          "name": "Nufenenpass",
+          "pass": "Nufenenpass",
+          "text": "Il passo stradale più alto interamente in Svizzera, 2478 m, con vista sui ghiacciai del Gries."
+        }
       ]
     },
     {
@@ -427,6 +580,37 @@
           "lon": 8.5935,
           "lat": 46.634,
           "stop": true
+        }
+      ],
+      "season": {
+        "best": "luglio–settembre",
+        "note": "Furka, Grimsel e Susten chiudono d'inverno: di solito riaprono tra fine maggio e giugno e chiudono tra ottobre e novembre."
+      },
+      "spots": [
+        {
+          "name": "Ghiacciaio del Rodano",
+          "anchor": "Glacier Du Rhône",
+          "text": "Sul versante vallesano del Furka, la vista sul ghiacciaio del Rodano dai tornanti sopra Gletsch."
+        },
+        {
+          "name": "Totensee al Grimsel",
+          "anchor": "Totensee",
+          "text": "Il lago sul passo del Grimsel, a 2164 m: parcheggi e bar intorno al lago."
+        },
+        {
+          "name": "Grimselsee",
+          "anchor": "Lago Grimsel",
+          "text": "Il grande lago artificiale con le dighe, appena sotto il passo sul versante bernese."
+        },
+        {
+          "name": "Sustenpass",
+          "pass": "Sustenpass",
+          "text": "Il passo a 2224 m; scendendo verso Gadmen si vede lo Steingletscher."
+        },
+        {
+          "name": "Ponte del Diavolo",
+          "anchor": "Teufelsbrücke",
+          "text": "Nella gola della Schöllenen, il Ponte del Diavolo e il monumento a Suvorov, poco prima di Andermatt."
         }
       ]
     }

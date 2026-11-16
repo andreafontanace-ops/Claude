@@ -33,6 +33,88 @@
     <desc>Briançon, 1282 m, km 31.3</desc>
     <sym>Flag, Blue</sym>
   </wpt>
+  <wpt lat="44.935677" lon="6.744487">
+    <ele>1790</ele>
+    <name>Foto: Confine al colle</name>
+    <desc>Il passaggio tra Claviere e Montgenèvre: sosta per la foto con i cartelli di confine e la conca del colle. (km 17.4)</desc>
+    <sym>Scenic Area</sym>
+  </wpt>
+  <wpt lat="44.932688" lon="6.728236">
+    <ele>1848</ele>
+    <name>Foto: Colle del Monginevro</name>
+    <desc>Il valico a 1854 m, tra le piste di Montgenèvre, porta d'ingresso storica tra Italia e Francia. (km 18.9)</desc>
+    <sym>Scenic Area</sym>
+  </wpt>
+  <wpt lat="44.901526" lon="6.644097">
+    <ele>1333</ele>
+    <name>Foto: Briançon, Cité Vauban</name>
+    <desc>La città fortificata di Vauban, patrimonio UNESCO: si parcheggia sotto le mura e si sale a piedi alla Porte de Pignerol. (km 30.3)</desc>
+    <sym>Scenic Area</sym>
+  </wpt>
+  <wpt lat="45.031742" lon="6.832349">
+    <name>Trattoria da Cecilia</name>
+    <desc>Ristorante · Via Monginevro, 74, 10056 Oulx · tel. +390122831984 · liak76@vodafone.it (km 0.1)</desc>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="45.007048" lon="6.823874">
+    <name>Pizzeria Rio Nero</name>
+    <desc>Ristorante · SS24, 25, 10056 Oulx · tel. +390122832347 · potito18@tiscali.it (km 3.1)</desc>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.954716" lon="6.789360">
+    <name>La Cabassa</name>
+    <desc>Ristorante · Via Ortigara, 25, 10054 Cesana Torinese · tel. +390122897250 · placaba@ristorantepizzerialacabassa.it (km 10.2)</desc>
+    <link href="https://aliceforner00.wixsite.com/lacabassa"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.937717" lon="6.748470">
+    <name>MiChi?i38 Ristorante</name>
+    <desc>Ristorante · Via Nazionale, 38, 10050 Claviere · tel. +39012231026 · reception@piandelsolelifestyle.it (km 17.0)</desc>
+    <link href="http://www.piandelsolelifestyle.it/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.931997" lon="6.725924">
+    <name>Le Transalpin</name>
+    <desc>Ristorante · 653 Rte d'Italie, 05100 Montgenèvre · tel. +33492551215 · letransalpin@gmail.com (km 19.1)</desc>
+    <link href="http://www.letransalpin.com/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.900002" lon="6.643603">
+    <name>Au plaisir ambré</name>
+    <desc>Ristorante · 26 Grande Rue, 05100 Briançon · tel. +33492526346 · namiam.restaurant@orange.fr (km 30.4)</desc>
+    <link href="http://www.auplaisirambre.com/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="45.028564" lon="6.832158">
+    <name>Hotel Oberje Dla Viere</name>
+    <desc>Hotel · Via Des Ambrois, 41, 10056 Oulx · tel. +390122830888 · info@oberjedlaviere.it (km 0.4)</desc>
+    <link href="http://www.oberjedlaviere.it/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.954468" lon="6.790938">
+    <name>Hotel Edelweiss</name>
+    <desc>Hotel · Piazza Degli Escarton, 6, 10054 Cesana Torinese · tel. +39012289450 · info@hoteledelweisscesana.com (km 10.1)</desc>
+    <link href="http://www.hoteledelweisscesana.com/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.934166" lon="6.729316">
+    <name>Le Chalet Blanc Hôtel &amp; SPA</name>
+    <desc>Hotel · Hameau de l'obélisque, 05100 Montgenèvre · tel. +33673568694 · info@hotellechaletblanc.com (km 18.7)</desc>
+    <link href="http://www.hotellechaletblanc.com/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.927708" lon="6.685739">
+    <name>Location saisonnière Lys Martagon</name>
+    <desc>Hotel · 277 Rue des Arbennes, 05100 Montgenèvre · tel. +33682090006 · localys05@gmail.com (km 25.0)</desc>
+    <link href="https://sites.google.com/view/localys05"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.898037" lon="6.638768">
+    <name>Hôtel Edelweiss</name>
+    <desc>Hotel · 32 Av. de la République, 05100 Briançon · tel. +33492210294 · contact@hotel-edelweiss-briancon.fr (km 31.3)</desc>
+    <link href="http://www.hotel-edelweiss-briancon.fr/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
   <rte>
     <name>Colle del Monginevro (percorso)</name>
     <rtept lat="45.032675" lon="6.833118"><name>Oulx</name></rtept>

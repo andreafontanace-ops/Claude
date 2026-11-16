@@ -27,6 +27,88 @@
     <desc>Barcelonnette, 1140 m, km 50.3</desc>
     <sym>Flag, Blue</sym>
   </wpt>
+  <wpt lat="44.538848" lon="6.702802">
+    <ele>2111</ele>
+    <name>Foto: Col de Vars</name>
+    <desc>Il colle a 2109 m, con ampi pascoli e vista sulle due valli: buona sosta a metà giro. (km 19.7)</desc>
+    <sym>Scenic Area</sym>
+  </wpt>
+  <wpt lat="44.482961" lon="6.750175">
+    <ele>1329</ele>
+    <name>Foto: Redoute de Berwick</name>
+    <desc>Una fortificazione storica lungo la discesa verso l'Ubaye: piazzola per una foto della valle. (km 32.7)</desc>
+    <sym>Scenic Area</sym>
+  </wpt>
+  <wpt lat="44.386913" lon="6.656765">
+    <ele>1138</ele>
+    <name>Foto: Barcelonnette, le ville messicane</name>
+    <desc>Le ville costruite dagli emigrati rientrati dal Messico: si vedono passando, meglio una sosta a piedi in centro. (km 49.6)</desc>
+    <sym>Scenic Area</sym>
+  </wpt>
+  <wpt lat="44.660542" lon="6.650974">
+    <name>O'Délices</name>
+    <desc>Ristorante · Pl. Joseph Salva, 05600 Guillestre · tel. +33492240534 · odelice@gmx.fr (km 0.1)</desc>
+    <link href="https://odelices.restaurant/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.592438" lon="6.690121">
+    <name>La Cabane</name>
+    <desc>Ristorante · 05560 Vars · tel. +33492510071 · lacabanevars@orange.fr (km 12.4)</desc>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.573318" lon="6.680899">
+    <name>Le Bistrot de Vars</name>
+    <desc>Ristorante · 56 Cr Fontanarosa, 05560 Vars · tel. +33492236117 · lebistrotdevars@gmail.com (km 14.9)</desc>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.515739" lon="6.754162">
+    <name>Restaurant L'Ubaïa</name>
+    <desc>Ristorante · Le village, 04530 Saint-Paul-sur-Ubaye · tel. +33679845367 (km 27.5)</desc>
+    <link href="http://www.haute-ubaye.com/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.419399" lon="6.734938">
+    <name>Bar des Arcades</name>
+    <desc>Ristorante · 2 Grand Rue, 04850 Jausiers · tel. +33492810637 · iaria.stephane@orange.fr (km 41.6)</desc>
+    <link href="https://les-arcades-jausiers.fr/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.386122" lon="6.651889">
+    <name>Le Gaudissart</name>
+    <desc>Ristorante · 15 Place Aimé Gassier, 04400 Barcelonnette · tel. +33492810045 · legaudissart@orange.fr (km 50.0)</desc>
+    <link href="http://www.legaudissart.com/"><text>Sito</text></link>
+    <sym>Restaurant</sym>
+  </wpt>
+  <wpt lat="44.570320" lon="6.682555">
+    <name>Hotel Les Escondus</name>
+    <desc>Hotel · 05560 Vars · tel. +33492466700 · info@escondus.com (km 15.4)</desc>
+    <link href="http://www.hotel-les-escondus.com/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.516697" lon="6.750000">
+    <name>Maison d'Hôtes Les Zélés</name>
+    <desc>Hotel · Fr, Saint-Paul-sur-Ubaye · leszelesmaljasset@gmail.com (km 27.7)</desc>
+    <link href="http://www.leszeles.com/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.458759" lon="6.744246">
+    <name>La Condaminoise</name>
+    <desc>Alloggio · Rue du Serres, 04530 La Condamine-Châtelard · tel. +33615699092 · rovervirginie@gmail.com (km 36.8)</desc>
+    <link href="http://www.lacondaminoise.fr/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.413662" lon="6.728628">
+    <name>Le Sans Souci</name>
+    <desc>Hotel · 800 Avenue des Mexicains, 04850 Jausiers · tel. +33492810620 · info@le-sans-souci.com (km 42.6)</desc>
+    <link href="http://le-sans-souci.com/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
+  <wpt lat="44.386742" lon="6.651449">
+    <name>Hôtel de la Placette</name>
+    <desc>Hotel · 14 Rue Emile Donnadieu, 04400 Barcelonnette · tel. +33492810337 · contact@hotel-barcelonnette.fr (km 50.2)</desc>
+    <link href="http://www.hotel-barcelonnette.fr/"><text>Sito</text></link>
+    <sym>Lodging</sym>
+  </wpt>
   <rte>
     <name>Col de Vars (percorso)</name>
     <rtept lat="44.659720" lon="6.649347"><name>Guillestre</name></rtept>

@@ -57,11 +57,11 @@
     return u.toString();
   }
 
-  function buyButton(store, slug, title) {
+  function buyButton(store, slug, title, freeLabel = "Scarica gratis") {
     const p = product(store, slug);
     if (p.free) {
       return el("a", { class: "btn free", href: `${BASE}tracks/${slug}.gpx`, download: `${slug}.gpx`,
-        "aria-label": `Scarica gratis il GPX di ${title}` }, "Scarica gratis");
+        "aria-label": `Scarica gratis il GPX di ${title}` }, freeLabel);
     }
     return priceButton(p.price, p.checkout, title);
   }
@@ -150,6 +150,8 @@
           el("p", { class: "area" }, r.area),
           el("h3", {}, el("a", { href }, r.title)),
           el("p", { class: "sub" }, r.subtitle),
+          r.guide ? el("p", { class: "card-guide" }, el("b", {}, "GPX + guida PDF"),
+            ` · ${r.guide.spots.length} punti foto · ${r.guide.eat} ristoranti · ${r.guide.sleep} hotel`) : null,
           el("dl", { class: "stats" },
             el("div", {}, el("dt", {}, "Distanza"), el("dd", {}, km(r.km))),
             el("div", {}, el("dt", {}, "Salita"), el("dd", {}, metres(r.ascent))),
@@ -231,12 +233,16 @@
 
     const box = document.getElementById("buybox");
     if (box) {
-      box.replaceChildren(
+      // replaceChildren would print a null as text: build the list first.
+      box.replaceChildren(...[
         el("div", { class: "price" }, p.free ? "Gratis" : euro.format(p.price)),
-        buyButton(store, ride.slug, ride.title),
+        buyButton(store, ride.slug, ride.title, "Scarica il GPX"),
+        p.free && el("a", { class: "btn ghost", href: `${BASE}tracks/${ride.slug}-guida.pdf`, download: `${ride.slug}-guida.pdf` },
+          "Scarica la guida PDF"),
         el("p", { class: "note" }, p.free
-          ? "File GPX: traccia, percorso e waypoint dei passi."
-          : "Pagamento sicuro su Gumroad, con carta o PayPal. Il GPX arriva subito per email."));
+          ? "Traccia GPX e guida PDF con punti foto, ristoranti e hotel."
+          : "Pagamento sicuro su Gumroad, con carta o PayPal. Traccia GPX e guida PDF arrivano subito per email."),
+      ].filter(Boolean));
     }
 
     const hint = document.getElementById("bundle-hint");
