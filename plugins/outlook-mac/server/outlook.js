@@ -574,18 +574,35 @@ function createOutlook(getApp, env) {
 
   /* ---- azioni sui messaggi (reversibili) ---- */
 
+  /**
+   * Imposta una proprietà di un messaggio. Alcune proprietà di Outlook (es. la bandierina, che è un
+   * valore «enumerato») non si lasciano scrivere da JavaScript for Automation e danno
+   * «Impossibile convertire tipi» (-1700): in quel caso si usa AppleScript, che le gestisce nativamente.
+   */
+  function setMessageProperty(m, jsName, jsValue, asName, asValue) {
+    try {
+      m[jsName] = jsValue;
+      return;
+    } catch (e) {
+      rethrowIfFatal(e);
+      if (!env.applescript) throw e;
+    }
+    var id = Number(m.id());
+    env.applescript('tell application "Microsoft Outlook" to set ' + asName + ' of message id ' + id + ' to ' + asValue);
+  }
+
   function setFlag(a) {
     var m = findMessage(req(a, 'message_id'));
     var st = String(req(a, 'status'));
     if (!FLAG_IN[st]) throw new UserError('status deve essere flagged, completed oppure none');
-    m.todoFlag = FLAG_IN[st];
+    setMessageProperty(m, 'todoFlag', FLAG_IN[st], 'todo flag', FLAG_IN[st]);
     return { id: m.id(), subject: safe(function () { return m.subject(); }, ''), flag: flagOut(safe(function () { return m.todoFlag(); }, FLAG_IN[st])) };
   }
 
   function markRead(a) {
     var m = findMessage(req(a, 'message_id'));
     var v = a.read !== false;
-    m.isRead = v;
+    setMessageProperty(m, 'isRead', v, 'is read', v ? 'true' : 'false');
     return { id: m.id(), subject: safe(function () { return m.subject(); }, ''), unread: !v };
   }
 
@@ -1675,6 +1692,37 @@ function jxaSaveTasks(content) {
   return 'TASKS.md aggiornato in ~/' + TASKS_DIR + ' (versione precedente in TASKS.precedente.md)';
 }
 
+function shellQuote(s) {
+  return "'" + String(s).replace(/'/g, "'\\''") + "'";
+}
+
+/** Esegue un breve AppleScript: prima nel processo (NSAppleScript), altrimenti con osascript. */
+function jxaAppleScript(src) {
+  var bridgeOk = false;
+  try {
+    var script = $.NSAppleScript.alloc.initWithSource(src);
+    var err = Ref();
+    var res = script.executeAndReturnError(err);
+    bridgeOk = true;
+    if (res.isNil()) {
+      var info = {};
+      try {
+        info = ObjC.deepUnwrap(err[0]) || {};
+      } catch (e) {
+        /* dettagli non disponibili */
+      }
+      var e2 = new Error((info.NSAppleScriptErrorMessage || 'AppleScript non riuscito') + (info.NSAppleScriptErrorNumber ? ' (' + info.NSAppleScriptErrorNumber + ')' : ''));
+      if (info.NSAppleScriptErrorNumber) e2.errorNumber = info.NSAppleScriptErrorNumber;
+      throw e2;
+    }
+    return true;
+  } catch (e) {
+    if (bridgeOk) throw e;
+  }
+  jxaShell('osascript -e ' + shellQuote(src));
+  return true;
+}
+
 function jxaShell(cmd) {
   var cur = Application.currentApplication();
   cur.includeStandardAdditions = true;
@@ -1685,7 +1733,7 @@ function jxaShell(cmd) {
 function run(argv) {
   ObjC.import('Foundation');
   ObjC.import('stdlib');
-  var outlook = createOutlook(function () { return Application('Microsoft Outlook'); }, { shell: jxaShell });
+  var outlook = createOutlook(function () { return Application('Microsoft Outlook'); }, { shell: jxaShell, applescript: jxaAppleScript });
   if (argv[0] === 'mcp') {
     serve(jxaReader(), jxaWriteLine, outlook);
     $.exit(0);

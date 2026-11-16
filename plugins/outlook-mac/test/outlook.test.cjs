@@ -538,6 +538,36 @@ test('run: save_tasks aggiorna TASKS.md tramite io', () => {
   assert.match(S.cliMain(['run', JSON.stringify({ azioni: [{ tool: 'save_tasks', args: {} }] })], t.outlook, null, io).text, /manca "content"/);
 });
 
+test('flag e letto: se JXA rifiuta la scrittura (-1700) si passa ad AppleScript', () => {
+  const mock = makeMock();
+  // come Outlook reale: scrivere todoFlag/isRead da JXA fallisce con «Impossibile convertire tipi»
+  const realMsg = mock.app.messages;
+  const blockSet = (s) => new Proxy(s, { set(_t, key) { if (key === 'todoFlag' || key === 'isRead') throw aeError(-1700, 'Impossibile convertire tipi.'); return true; } });
+  mock.app.messages = new Proxy(realMsg, { get(t, k) { if (k === 'byId') return (id) => blockSet(t.byId(id)); return t[k]; } });
+  const scripts = [];
+  const applescript = (src) => {
+    scripts.push(src);
+    const m = /^tell application "Microsoft Outlook" to set (todo flag|is read) of message id (\d+) to (.+)$/.exec(src);
+    if (!m) throw new Error('script inatteso: ' + src);
+    const msg = mock.inbox.messages.concat(mock.drafts.messages).find((x) => x.id === Number(m[2]));
+    if (m[1] === 'todo flag') msg.todoFlag = m[3];
+    else msg.isRead = m[3] === 'true';
+  };
+  const ol = S.createOutlook(() => mock.app, { applescript });
+  const f = JSON.parse(S.callTool('outlook_set_flag', { message_id: mock.m1.id, status: 'flagged' }, ol).text);
+  assert.equal(f.flag, 'flagged');
+  assert.equal(mock.m1.todoFlag, 'incomplete');
+  assert.equal(scripts[0], 'tell application "Microsoft Outlook" to set todo flag of message id ' + mock.m1.id + ' to incomplete');
+  S.callTool('outlook_set_flag', { message_id: mock.m1.id, status: 'none' }, ol);
+  assert.equal(mock.m1.todoFlag, 'not flagged');
+  S.callTool('outlook_mark_read', { message_id: mock.m1.id }, ol);
+  assert.equal(mock.m1.isRead, true);
+  // senza AppleScript disponibile l'errore originale viene riportato
+  const noAs = S.callTool('outlook_set_flag', { message_id: mock.m1.id, status: 'flagged' }, S.createOutlook(() => mock.app, {}));
+  assert.equal(noAs.isError, true);
+  assert.match(noAs.text, /Impossibile convertire tipi/);
+});
+
 test('utilità: html, indirizzi, liste, date', () => {
   assert.equal(S.htmlToText('<div>Ciao&nbsp;<b>Mario</b></div><ul><li>uno</li><li>due</li></ul><style>x{}</style>'), 'Ciao Mario\n• uno\n• due');
   assert.deepEqual(S.parseAddr('"Rossi, Mario" <m@x.it>'), { name: 'Rossi, Mario', address: 'm@x.it' });
