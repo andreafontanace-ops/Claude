@@ -325,6 +325,62 @@ def cmd_inspect(args, cfg: Config) -> None:
             print(f"\n[{it.asin}]\n{compact_html(html, it.asin)}")
 
 
+# --------------------------------------------------------------------------- update
+
+UPDATE_URL = "https://github.com/andreafontanace-ops/Claude/archive/refs/heads/claude/bold-turing-uyee99.zip"
+
+
+def _download(url: str, dest: Path) -> None:
+    import shutil
+    import subprocess
+    import urllib.request
+
+    if shutil.which("curl"):
+        # curl usa i certificati del sistema (su Mac il Python di python.org a volte non li ha)
+        subprocess.run(["curl", "-fsSL", url, "-o", str(dest)], check=True)
+    else:
+        with urllib.request.urlopen(url, timeout=180) as resp:
+            dest.write_bytes(resp.read())
+
+
+def cmd_update(args, cfg) -> None:
+    """Scarica l'ultima versione da GitHub e sostituisce il codice (i dati in data/ e reports/ restano)."""
+    import tempfile
+    import zipfile
+
+    project = Path(args.target) if args.target else Path(__file__).resolve().parent.parent
+    print("Scarico l'ultima versione da GitHub…")
+    with tempfile.TemporaryDirectory() as tmp:
+        archive = Path(tmp) / "update.zip"
+        try:
+            _download(args.url, archive)
+        except Exception as exc:
+            raise SystemExit(f"Download non riuscito: {exc}")
+        with zipfile.ZipFile(archive) as zf:
+            names = zf.namelist()
+            init = next((n for n in names if n.endswith("amazon-sov/amazon_sov/__init__.py")), None)
+            if init is None:
+                raise SystemExit("Nello ZIP scaricato non c'è il programma: niente è stato cambiato.")
+            base = init[: -len("amazon_sov/__init__.py")]
+            count = 0
+            for name in names:
+                rel = name[len(base):]
+                if name.startswith(base + "amazon_sov/") and not name.endswith("/") and "__pycache__" not in rel:
+                    target = project / rel
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(zf.read(name))
+                    count += 1
+            new_cfg = zf.read(base + "config.toml") if base + "config.toml" in names else None
+    cfg_path = project / "config.toml"
+    if new_cfg is not None and (not cfg_path.exists() or cfg_path.read_bytes() != new_cfg):
+        if cfg_path.exists():
+            backup = project / "config.backup.toml"
+            backup.write_bytes(cfg_path.read_bytes())
+            print(f"Impostazioni aggiornate; le tue precedenti sono salvate in {backup.name}")
+        cfg_path.write_bytes(new_cfg)
+    print(f"Aggiornato ({count} file). Lancia `amazon-sov --help` per vedere i comandi.")
+
+
 # --------------------------------------------------------------------------- main
 
 
@@ -375,12 +431,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("runs", help="elenca le esecuzioni in archivio")
     p.set_defaults(func=cmd_runs)
+
+    p = sub.add_parser("update", aliases=["aggiorna"], help="scarica e installa l'ultima versione del programma")
+    p.add_argument("--url", default=UPDATE_URL, help=argparse.SUPPRESS)
+    p.add_argument("--target", help=argparse.SUPPRESS)
+    p.set_defaults(func=cmd_update, needs_config=False)
     return ap
 
 
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(levelname)s %(message)s")
+    if not getattr(args, "needs_config", True):
+        args.func(args, None)  # l'aggiornamento deve funzionare anche con una configurazione rotta
+        return
     try:
         cfg = load_config(args.config)
     except FileNotFoundError:

@@ -227,3 +227,33 @@ def test_inspect_latest_page_with_html(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "file: integratore-ferro__p1.html" in out
     assert "[B000SOLGAR]" in out and 'data-cy="title-recipe"' in out
+
+
+def test_update_command_replaces_code_and_backs_up_config(tmp_path, capsys):
+    import zipfile
+
+    # ZIP come quello di GitHub: <repo>-<branch>/amazon-sov/...
+    archive = tmp_path / "branch.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("Claude-x/README.md", "altro progetto")
+        zf.writestr("Claude-x/amazon-sov/amazon_sov/__init__.py", "__version__ = '9.9'\n")
+        zf.writestr("Claude-x/amazon-sov/amazon_sov/nuovo.py", "X = 1\n")
+        zf.writestr("Claude-x/amazon-sov/amazon_sov/__pycache__/cli.cpython-313.pyc", b"junk")
+        zf.writestr("Claude-x/amazon-sov/config.toml", "# nuova\n")
+    project = tmp_path / "amazon-sov"
+    (project / "amazon_sov").mkdir(parents=True)
+    (project / "amazon_sov" / "__init__.py").write_text("__version__ = '0.1'\n")
+    (project / "config.toml").write_text("# mia\n")
+    (project / "data").mkdir()
+    (project / "data" / "sov.sqlite").write_text("dati")
+
+    main(["update", "--url", archive.resolve().as_uri(), "--target", str(project)])
+
+    assert (project / "amazon_sov" / "__init__.py").read_text() == "__version__ = '9.9'\n"
+    assert (project / "amazon_sov" / "nuovo.py").exists()
+    assert not (project / "amazon_sov" / "__pycache__").exists()
+    assert (project / "config.toml").read_text() == "# nuova\n"
+    assert (project / "config.backup.toml").read_text() == "# mia\n"
+    assert (project / "data" / "sov.sqlite").read_text() == "dati"
+    assert not (project / "README.md").exists()
+    assert "Aggiornato (2 file)" in capsys.readouterr().out

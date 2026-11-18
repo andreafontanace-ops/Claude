@@ -104,6 +104,14 @@ Mac `amazon-sov inspect --html | pbcopy` lo copia negli appunti per mandarlo a c
 amazon-sov runs
 ```
 
+```bash
+amazon-sov update
+```
+
+Scarica da GitHub l'ultima versione del programma e la installa al posto di quella vecchia. Dati e
+report restano dove sono; se le impostazioni cambiano, le tue precedenti vengono salvate in
+`config.backup.toml`.
+
 ## Come si calcola la share of voice
 
 Per ogni keyword ogni risultato riceve un **peso per posizione** che scende man mano che si va giù
