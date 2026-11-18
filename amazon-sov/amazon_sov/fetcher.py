@@ -100,14 +100,16 @@ class BrowserFetcher:
         self._last_fetch = time.monotonic()
         self.pages_fetched += capped
         self._dismiss_cookie_banner()
+        found = False
         if wait_selector:
             try:
-                # la pagina di verifica di Amazon si risolve da sola in un browser normale: aspettiamo i risultati
+                # la pagina di verifica di Amazon si risolve da sola in un browser normale: aspettiamo il contenuto
                 self._page.wait_for_selector(wait_selector, timeout=20_000)
+                found = True
             except Exception:
                 pass
         html = self._page.content()
-        block = detect_block(html)
+        block = None if found else detect_block(html)
         if block:
             html = self._wait_for_human(block)
             if detect_block(html):

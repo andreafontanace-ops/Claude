@@ -115,11 +115,11 @@ def detect_block(html: str) -> str | None:
     low = html.lower()
     if "validatecaptcha" in low or "inserisci i caratteri" in low or "api-services-support@amazon.com" in low:
         return "captcha"
-    if 's-search-result' in low:
-        return None
+    if "s-search-result" in low or 'id="producttitle"' in low or "s-main-slot" in low:
+        return None  # pagina di risultati o pagina prodotto vera (possono contenere testi d'errore nascosti)
     if "bm-verify" in low or "/_sec/verify" in low:
         return "interstitial"
-    if "siamo spiacenti" in low and "amazon" in low and "s-main-slot" not in low:
+    if "siamo spiacenti" in low and "amazon" in low:
         return "error"
     return None
 

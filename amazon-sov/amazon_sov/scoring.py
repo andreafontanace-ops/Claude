@@ -19,10 +19,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from .config import ScoringConfig
+from .brands import UNKNOWN_BRAND
 from .pipeline import SerpRow
 
 NON_RELEVANT = "(non pertinenti)"
 NOT_STATED = "(non indicato)"
+UNRANKED = frozenset({NON_RELEVANT, NOT_STATED, UNKNOWN_BRAND})  # mostrati in fondo, senza posizione
 
 # raggruppamenti calcolati oltre ai singoli prodotti
 GROUPS = {
@@ -237,7 +239,7 @@ def compute_sov(
                     "brands": leaders(acc, "brand"),
                 }
             )
-        out.sort(key=lambda b: (b["brand"] == NON_RELEVANT, b["brand"] == NOT_STATED, -b["sov_total"], b["brand"]))
+        out.sort(key=lambda b: (b["brand"] in UNRANKED, b["brand"] == NON_RELEVANT, -b["sov_total"], b["brand"]))
         group_rows[g] = out
     brand_rows = group_rows["brands"]
 
@@ -250,6 +252,6 @@ def compute_sov(
         "weighting": describe_weighting(sc),
         "max_rank": sc.max_rank,
         "n_products": sum(1 for p in product_rows if p["relevant"]),
-        "n_brands": sum(1 for b in brand_rows if b["brand"] != NON_RELEVANT),
+        "n_brands": sum(1 for b in brand_rows if b["brand"] not in UNRANKED),
     }
     return SovResult(product_rows, group_rows, keyword_brand, scored, empty, meta)

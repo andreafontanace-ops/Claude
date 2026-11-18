@@ -6,7 +6,8 @@ from collections import defaultdict
 from html import escape
 
 from .config import Config
-from .scoring import NON_RELEVANT, NOT_STATED, SovResult
+from .brands import UNKNOWN_BRAND
+from .scoring import NON_RELEVANT, NOT_STATED, UNRANKED, SovResult
 
 MANU_SOURCE_LABELS = {
     "product_page": "pagina prodotto («Dettagli prodotto» → Produttore)",
@@ -73,7 +74,7 @@ def render_report(
     prev_run_id: str | None = None,
     top_products: int = 50,
 ) -> str:
-    brands = [b for b in result.brands if b["brand"] != NON_RELEVANT]
+    brands = [b for b in result.brands if b["brand"] not in UNRANKED]
     products = [p for p in result.products if p["relevant"]][:top_products]
     n_kw = len(result.keywords_scored)
     kw_total = len(keyword_weights)
@@ -171,7 +172,9 @@ def render_report(
         items = "".join(
             f'<li><a href="https://{escape(cfg.domain)}/dp/{escape(p["asin"])}" target="_blank" rel="noopener">{escape(p["asin"])}</a> '
             f'· {escape(_short(p["title"], 80))} → <b>{escape(p["brand"])}</b> '
-            f'<span class="muted">({"stimato dal titolo" if p["brand_source"] == "title_guess" else "sconosciuto"}, SoV {pct(p["sov_total"], 2)})</span></li>'
+            f'<span class="muted">({"stimato dal titolo" if p["brand_source"] == "title_guess" else "sconosciuto"}, '
+            f'{"pagina prodotto già letta senza marchio" if p.get("page_checked") else "pagina prodotto da leggere"}, '
+            f'SoV {pct(p["sov_total"], 2)})</span></li>'
             for p in unsure
         )
         verify_html = (
@@ -383,7 +386,7 @@ def _short(text: str | None, n: int) -> str:
 
 def _group_rows(items: list[dict], n_kw: int, prev_run_id: str | None, sub) -> str:
     """Righe della tabella marchi/produttori: classifica, poi «non indicato» e «non di ferro» in fondo."""
-    ranked = [b for b in items if b["brand"] not in (NON_RELEVANT, NOT_STATED)]
+    ranked = [b for b in items if b["brand"] not in UNRANKED]
     scale = max((b["sov_total"] for b in ranked), default=0.0)
     out = []
     for i, b in enumerate(ranked, 1):
@@ -404,6 +407,7 @@ def _group_rows(items: list[dict], n_kw: int, prev_run_id: str | None, sub) -> s
         )
     labels = {
         NOT_STATED: ("Produttore non indicato", "lancia <code>amazon-sov brands</code> per leggerlo dalle pagine prodotto"),
+        UNKNOWN_BRAND: ("Marchio non identificato", "il titolo non lo dice: lancia <code>amazon-sov brands</code> per leggerlo dalle pagine prodotto"),
         NON_RELEVANT: ("Prodotti non di ferro", "occupano spazio nella SERP ma non entrano nella classifica"),
     }
     for b in items:

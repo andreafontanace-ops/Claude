@@ -257,3 +257,60 @@ def test_update_command_replaces_code_and_backs_up_config(tmp_path, capsys):
     assert (project / "data" / "sov.sqlite").read_text() == "dati"
     assert not (project / "README.md").exists()
     assert "Aggiornato (2 file)" in capsys.readouterr().out
+
+
+import pytest
+
+
+@pytest.mark.parametrize(
+    "title, expected",
+    [
+        ("WeightWorld Ferro Bisglicinato 28mg", ("WeightWorld", "title_guess")),
+        ("Ferro WeightWorld 180 compresse", ("WeightWorld", "title_guess")),  # seconda parola
+        ("Ferrolip® Ferro Liposomiale", ("Ferrolip", "title_guess")),  # inizia con "ferr" ma è un marchio
+        ("Dr. Giorgini Ferro gocce", ("Dr Giorgini", "title_guess")),
+        ("Ferro Integratore - 400 Compresse - Vitamina C", (UNKNOWN_BRAND, "unknown")),
+        ("Ferro Alto Dosaggio 30 mg", (UNKNOWN_BRAND, "unknown")),
+        ("Integratore Ferro Bisglicinato Vegano", (UNKNOWN_BRAND, "unknown")),
+        ("Ferro 28mg Vegano", (UNKNOWN_BRAND, "unknown")),  # oltre la seconda parola non si cerca
+    ],
+)
+def test_brand_guess_first_or_second_word(title, expected):
+    assert BrandResolver(CFG).resolve("B0X", None, title) == expected
+
+
+def test_product_page_with_hidden_error_text_is_not_blocked():
+    from amazon_sov.parser import detect_block
+
+    product = '<span id="productTitle">Ferro</span><div style="display:none">Siamo spiacenti, si è verificato un errore. Amazon</div>'
+    assert detect_block(product) is None
+    dog = "<html><title>Amazon.it</title><body>Siamo spiacenti. Indirizzo non valido. Amazon</body></html>"
+    assert detect_block(dog) == "error"
+
+
+def test_unknown_brand_is_listed_last_without_rank(tmp_path):
+    html_dir = tmp_path / "pagine"
+    html_dir.mkdir()
+    shutil.copy(FIX / "integratore-ferro__p1.html", html_dir / "integratore-ferro__p1.html")
+    args = ["-c", str(ROOT / "config.toml"), "--data-dir", str(tmp_path / "data")]
+    main(args + ["parse", str(html_dir), "--out", str(tmp_path / "reports")])
+    run_id = Store(tmp_path / "data" / "sov.sqlite").latest_run_id()
+    with open(tmp_path / "reports" / run_id / "sov_marchi.csv", encoding="utf-8-sig") as fh:
+        brands = list(csv.DictReader(fh, delimiter=";"))
+    unknown = next(b for b in brands if b["marchio"] == UNKNOWN_BRAND)
+    assert unknown["posizione"] == ""
+    assert brands.index(unknown) > max(i for i, b in enumerate(brands) if b["posizione"])
+    html = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
+    assert "Marchio non identificato" in html and "pagina prodotto da leggere" in html
+
+
+def test_lookup_starts_with_products_without_brand(tmp_path):
+    from amazon_sov.cli import lookup_targets
+
+    store = Store(tmp_path / "s.sqlite")
+    resolver = BrandResolver(CFG)
+    rel = RelevanceFilter(CFG.relevance_include, CFG.relevance_exclude)
+    rows = build_rows("integratore ferro", [parsed("integratore-ferro__p1.html")], resolver, rel)
+    targets = lookup_targets(store, rows, CFG)
+    assert targets[:2] == ["B0GENERIC1", "B0FERROLIP"]  # senza marchio sicuro, dal più visibile
+    assert set(targets[2:]) == {"B07SIDERAL", "B08NUTRAV1", "B000SOLGAR", "B01FEROGLO"}

@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .pipeline import SerpRow
-from .scoring import NON_RELEVANT, NOT_STATED, SovResult
+from .scoring import NON_RELEVANT, UNRANKED, SovResult
 
 PCT_KEYS = {"sov_total", "sov_organic", "sov_paid", "ads_share", "shelf_top10", "delta_pp"}
 
@@ -148,7 +148,7 @@ def _ranked(items: list[dict]) -> list[dict]:
     """Numera la classifica; i gruppi «non pertinenti» e «non indicato» restano senza posizione."""
     out, n = [], 0
     for b in items:
-        ranked = b["brand"] not in (NON_RELEVANT, NOT_STATED)
+        ranked = b["brand"] not in UNRANKED
         n += ranked
         out.append(dict(b, rank=n if ranked else None))
     return out

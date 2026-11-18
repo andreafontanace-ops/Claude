@@ -9,6 +9,26 @@ from .config import Config
 
 UNKNOWN_BRAND = "(sconosciuto)"
 
+# Parole che nei titoli degli integratori non sono mai un marchio (si aggiungono a brands.generic_words).
+BUILTIN_GENERIC_WORDS = frozenset("""
+ferro ferri ferroso ferrosa ferrico ferrica ferritina ferrous iron eisen fer alto alta dose forte plus extra max
+puro pura bio per con senza di da del della dello e ed il lo la le gli i un una uomo donna donne uomini mese mesi
+giorni set kit pack nuovo nuova cpr cps stick spray gocce goccia fiale scorta energia difese anemia formula rapido
+gummies gummy vegan vegano vegana vegane vegani natural naturale naturali organic acido mg ml mcg ui zinco rame
+magnesio potassio calcio selenio
+""".split())
+# Inizi di parola (radici lunghe): "integrator" copre integratore e integratori.
+BUILTIN_GENERIC_PREFIXES = (
+    "integrator", "vitamin", "multivitamin", "multiminerale", "minerali", "compless", "complex", "compress",
+    "capsul", "bustin", "orosolubil", "sciropp", "liquid", "polver", "gommos", "masticabil", "flaconcin",
+    "tavolett", "tablet", "pastigli", "bisglicinat", "bisglycinat", "diglicinat", "liposom", "sucrosom",
+    "pirofosfat", "fumarat", "gluconat", "solfat", "chelat", "lattoferrin", "folic", "folat", "dosaggi",
+    "premium", "biologic", "vegetal", "biodisponibil", "assorbibil", "gastroprotett", "delicat", "supplement",
+    "alimentar", "bambin", "adult", "gravidanz", "allattament", "stanchezz", "immunitar", "confezion",
+)
+_JOIN_NEXT = {"dr", "dott", "doctor's", "doctors", "nature's", "natures", "the", "mr", "dottor"}
+_SEGMENT = re.compile(r"\s[-–—|:]\s|[,|(\[/]")
+
 _APOSTROPHES = str.maketrans({"’": "'", "‘": "'", "`": "'", "´": "'"})
 _NON_WORD = re.compile(r"[^0-9a-z'%]+")
 _TRADEMARKS = re.compile(r"[®™©]")
@@ -60,6 +80,7 @@ class BrandResolver:
         self._aliases = sorted(set(pairs), key=lambda p: (-len(p[0]), p[0]))
         self._exact = {norm: canonical for norm, canonical in pairs}
         self._generic = {normalize(w) for w in cfg.generic_words}
+        self._generic |= BUILTIN_GENERIC_WORDS
         self._overrides = {k.upper(): v for k, v in cfg.asin_overrides.items()}
         # un valore vuoto vuol dire "pagina già controllata, marchio non trovato"
         self._page_brands = {k.upper(): v for k, v in (product_page_brands or {}).items() if v}
@@ -95,12 +116,23 @@ class BrandResolver:
             return self.canonical(guess), "title_guess"
         return UNKNOWN_BRAND, "unknown"
 
+    def is_generic(self, word: str) -> bool:
+        norm = normalize(word)
+        if len(norm) < 2 or not re.search(r"[a-z]", norm) or re.match(r"\d", norm):
+            return True  # numeri, dosi ("28mg"), sigle di una lettera
+        if norm in self._generic:
+            return True
+        return norm.startswith(BUILTIN_GENERIC_PREFIXES)
+
     def _guess_from_title(self, title: str | None) -> str | None:
-        tokens = _TRADEMARKS.sub("", title or "").split()
-        if not tokens:
-            return None
-        first = tokens[0].strip(" ,;:-|()[]\"")
-        norm = normalize(first)
-        if len(norm) < 2 or norm in self._generic or not re.search(r"[a-z]", norm):
-            return None
-        return first
+        """Il marchio è di solito la prima o la seconda parola del titolo, prima di « - », «|» o «,»."""
+        segment = _SEGMENT.split(_TRADEMARKS.sub("", title or ""), maxsplit=1)[0]
+        tokens = [t.strip(" ,;:-|()[]\"'+&.") for t in segment.split()]
+        tokens = [t for t in tokens if t]
+        for i, tok in enumerate(tokens[:2]):
+            if self.is_generic(tok) and normalize(tok) not in _JOIN_NEXT:
+                continue
+            if normalize(tok) in _JOIN_NEXT and i + 1 < len(tokens):
+                return f"{tok} {tokens[i + 1]}"
+            return tok
+        return None

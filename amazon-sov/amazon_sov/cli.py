@@ -47,6 +47,8 @@ def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denomina
     attempted = json.loads(run.get("keywords") or "[]") or sorted({r.keyword for r in rows})
     weights = {kw: cfg.keyword_weights.get(kw, 1.0) for kw in attempted}
     result = compute_sov(rows, weights, cfg.scoring, denominator)
+    for p in result.products:
+        p["page_checked"] = bool((infos.get(p["asin"]) or {}).get("checked_at"))
 
     prev_id = store.previous_run_id(run_id)
     if prev_id:
@@ -140,7 +142,7 @@ def cmd_crawl(args, cfg: Config) -> None:
 
             lookup = cfg.crawl.product_pages if args.product_pages is None else args.product_pages
             if lookup > 0 and not stop:
-                _lookup_products(fetcher, store, all_rows, cfg, lookup)
+                _lookup_products(fetcher, store, all_rows, cfg, lookup, data_dir / "html" / "prodotti")
     except KeyboardInterrupt:
         print("\nInterrotto: calcolo la SoV su quanto già scaricato.")
     store.finish_run(run_id)
@@ -179,27 +181,52 @@ def lookup_targets(store: Store, rows: list[SerpRow], cfg: Config) -> list[str]:
         if brand == UNKNOWN_BRAND or normalize(brand) in known or misses[brand] >= 2 or asin in checked:
             continue  # dopo due pagine senza produttore per lo stesso marchio, lascia perdere
         per_brand.setdefault(brand, asin)
-    todo = (need_brand | set(per_brand.values())) - checked
-    return sorted(todo, key=lambda a: (best.get(a, 10**6), a))
+    # prima i prodotti senza marchio (cambiano la classifica), poi un prodotto per marchio senza produttore
+    first = sorted(need_brand - checked, key=lambda a: (best.get(a, 10**6), a))
+    then = sorted(set(per_brand.values()) - checked - need_brand, key=lambda a: (best.get(a, 10**6), a))
+    return first + then
 
 
-def _lookup_products(fetcher, store: Store, rows: list[SerpRow], cfg: Config, limit: int) -> int:
+def _lookup_products(
+    fetcher, store: Store, rows: list[SerpRow], cfg: Config, limit: int, debug_dir: Path | None = None
+) -> int:
     """Apre le pagine prodotto e salva marchio, produttore e forma."""
     from .fetcher import BlockedError
 
-    todo = lookup_targets(store, rows, cfg)[:limit]
+    targets = lookup_targets(store, rows, cfg)
+    todo = targets[:limit]
     if not todo:
         return 0
     print(f"\nLeggo marchio e produttore dalla pagina prodotto di {len(todo)} prodotti…")
+    done = brands = makers = 0
+    empty: list[str] = []
+    blocked = False
     for asin in todo:
         try:
-            info = parse_product_page(fetcher.fetch_product(asin))
+            html = fetcher.fetch_product(asin)
         except BlockedError as exc:
             log.warning("%s", exc)
+            blocked = True
             break
+        info = parse_product_page(html)
         store.set_product_info(asin, info.brand, info.manufacturer, info.item_form)
+        done += 1
+        brands += bool(info.brand)
+        makers += bool(info.manufacturer)
+        if not info.brand and not info.manufacturer:
+            empty.append(asin)
+            if debug_dir:
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                (debug_dir / f"{asin}.html").write_text(html, encoding="utf-8")
         print(f"  {asin}: marchio {info.brand or '–'} · produttore {info.manufacturer or '–'} · forma {info.item_form or '–'}")
-    return len(todo)
+    print(f"\nPagine prodotto lette: {done} · marchio trovato: {brands} · produttore trovato: {makers}")
+    if empty and debug_dir:
+        print(f"Senza marchio né produttore: {len(empty)} (pagine salvate in {debug_dir})")
+    if blocked:
+        print("Interrotto da una verifica di Amazon: rilancia più tardi `amazon-sov brands`.")
+    elif len(targets) > done:
+        print(f"Restano {len(targets) - done} pagine da controllare: rilancia `amazon-sov brands`.")
+    return done
 
 
 def cmd_brands(args, cfg: Config) -> None:
@@ -220,7 +247,7 @@ def cmd_brands(args, cfg: Config) -> None:
         print(f"{len(todo)} pagine prodotto da controllare: ne apro {min(len(todo), args.max)}.")
         try:
             with BrowserFetcher(cfg, data_dir / "browser-profile", headless=args.headless or None) as fetcher:
-                _lookup_products(fetcher, store, rows, cfg, args.max)
+                _lookup_products(fetcher, store, rows, cfg, args.max, data_dir / "html" / "prodotti")
         except KeyboardInterrupt:
             print("\nInterrotto: uso i marchi trovati finora.")
     make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
