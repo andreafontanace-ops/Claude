@@ -405,3 +405,15 @@ def test_report_reads_missing_brands_then_has_no_unknown(tmp_path, monkeypatch):
     calls.clear()
     main(args + ["report", "--out", str(tmp_path / "reports")])
     assert calls == []
+
+
+def test_latest_report_has_fixed_name_and_update_time(tmp_path):
+    html_dir = tmp_path / "pagine"
+    html_dir.mkdir()
+    shutil.copy(FIX / "integratore-ferro__p1.html", html_dir / "integratore-ferro__p1.html")
+    args = ["-c", str(ROOT / "config.toml"), "--data-dir", str(tmp_path / "data")]
+    main(args + ["parse", str(html_dir), "--out", str(tmp_path / "reports")])
+    run_id = Store(tmp_path / "data" / "sov.sqlite").latest_run_id()
+    latest = tmp_path / "reports" / "ultimo-report.html"
+    assert latest.read_text(encoding="utf-8") == (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
+    assert "Aggiornato il " in latest.read_text(encoding="utf-8")

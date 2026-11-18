@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from html import escape
 from urllib.parse import quote_plus
 
@@ -306,7 +307,7 @@ code {{ font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: v
 <body>
 <main>
 <h1>Share of voice degli integratori di ferro su Amazon.it</h1>
-<p class="lede">Esecuzione {escape(run.get("run_id", ""))} del {escape((run.get("started_at") or "")[:16].replace("T", " "))} · {n_kw} keyword su {kw_total} · peso per posizione: {escape(meta["weighting"])}{prev_note}</p>
+<p class="lede"><b>Aggiornato il {datetime.now().strftime("%d/%m/%Y alle %H:%M")}</b> · ricerche su Amazon del {escape(_it_date(run.get("started_at")))} (esecuzione {escape(run.get("run_id", ""))}) · {n_kw} keyword su {kw_total} · peso per posizione: {escape(meta["weighting"])}{prev_note}</p>
 
 <div class="kpis">
   <div class="kpi"><div class="v">{n_kw}</div><div class="l">keyword analizzate</div></div>
@@ -476,3 +477,11 @@ def _verify_badge(b: dict) -> str:
     if v == "diverso":
         return f' <span class="badge">≠ Google: {escape(b.get("web_manufacturer") or "")}</span>'
     return ""
+
+
+def _it_date(iso: str | None) -> str:
+    """'2026-11-18T09:45:49' -> '18/11/2026 alle 09:45'"""
+    try:
+        return datetime.fromisoformat(iso).strftime("%d/%m/%Y alle %H:%M") if iso else ""
+    except ValueError:
+        return iso or ""

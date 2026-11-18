@@ -216,7 +216,8 @@ Se restano prodotti sconosciuti, lancia `amazon-sov brands` oppure scrivi il mar
 data/sov.sqlite                       storico di tutte le esecuzioni
 data/html/<esecuzione>/*.html         pagine scaricate (per ricontrollare o rianalizzare)
 data/browser-profile/                 profilo del browser del crawler
-reports/<esecuzione>/report.html      report
+reports/ultimo-report.html            l'ultimo report generato (si apre da solo nel browser)
+reports/<esecuzione>/report.html      report di ogni esecuzione
 reports/<esecuzione>/sov_marchi.csv   classifica marchi
 reports/<esecuzione>/sov_prodotti.csv classifica prodotti (con produttore, forma e tipo di ferro)
 reports/<esecuzione>/sov_produttori.csv classifica produttori

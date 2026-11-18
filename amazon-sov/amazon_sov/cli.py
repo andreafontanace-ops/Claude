@@ -37,7 +37,9 @@ def _filters(cfg: Config, store: Store) -> tuple[BrandResolver, RelevanceFilter]
 # --------------------------------------------------------------------------- report
 
 
-def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denominator: str, top: int) -> Path:
+def make_report(
+    store: Store, cfg: Config, run_id: str, out_root: Path, denominator: str, top: int, open_browser: bool = False
+) -> Path:
     resolver, relevance = _filters(cfg, store)
     infos = store.product_info()
     web = store.brand_web()
@@ -69,9 +71,21 @@ def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denomina
     html = render_report(result, cfg, weights, run, store.pages(run_id), prev_id, top)
     report_path = out_dir / "report.html"
     report_path.write_text(html, encoding="utf-8")
+    # stesso report anche con un nome fisso, così si apre sempre l'ultimo
+    latest = out_root / "ultimo-report.html"
+    latest.write_text(html, encoding="utf-8")
     _print_summary(result)
-    print(f"\nReport: {report_path.resolve()}\nCSV:    {out_dir.resolve()}")
+    print(f"\nReport: {latest.resolve()}\nCSV:    {out_dir.resolve()}")
+    if open_browser:
+        import webbrowser
+
+        webbrowser.open(latest.resolve().as_uri())
     return report_path
+
+
+def _should_open(args) -> bool:
+    """Apre il report nel browser solo quando il comando è lanciato a mano dal Terminale."""
+    return sys.stdout.isatty() and not getattr(args, "non_aprire", False)
 
 
 def _print_summary(result) -> None:
@@ -151,7 +165,7 @@ def cmd_crawl(args, cfg: Config) -> None:
         print("\nInterrotto: calcolo la SoV su quanto già scaricato.")
     store.finish_run(run_id)
     if store.rows(run_id):
-        make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
+        make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
     else:
         print("Nessun risultato scaricato: controlla le pagine salvate in", html_dir)
 
@@ -314,7 +328,7 @@ def cmd_google(args, cfg: Config) -> None:
                 _web_lookup(fetcher, store, rows, cfg, args.max)
         except KeyboardInterrupt:
             print("\nInterrotto: uso i risultati trovati finora.")
-    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
+    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
 
 
 def cmd_brands(args, cfg: Config) -> None:
@@ -338,7 +352,7 @@ def cmd_brands(args, cfg: Config) -> None:
                 _lookup_products(fetcher, store, rows, cfg, args.max, data_dir / "html" / "prodotti")
         except KeyboardInterrupt:
             print("\nInterrotto: uso i marchi trovati finora.")
-    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
+    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
 
 
 # --------------------------------------------------------------------------- parse
@@ -379,7 +393,7 @@ def cmd_parse(args, cfg: Config) -> None:
             store.log_page(run_id, kw, page_no, "ok" if parsed.results else "empty", len(parsed.results), None)
         store.replace_rows(run_id, kw, build_rows(kw, list(pages.values()), resolver, relevance))
     store.finish_run(run_id)
-    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
+    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
 
 
 # --------------------------------------------------------------------------- report / inspect / runs
@@ -419,7 +433,7 @@ def cmd_report(args, cfg: Config) -> None:
                         _lookup_products(fetcher, store, rows, cfg, 0, data_dir / "html" / "prodotti")
                 except KeyboardInterrupt:
                     print("\nInterrotto: uso i marchi trovati finora.")
-    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
+    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
 
 
 def cmd_runs(args, cfg: Config) -> None:
@@ -533,6 +547,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("-c", "--config", default="config.toml", help="file di configurazione (default: config.toml)")
     ap.add_argument("--data-dir", default="data", help="archivio SQLite, HTML scaricati, profilo browser")
     ap.add_argument("-v", "--verbose", action="store_true")
+    ap.add_argument("--non-aprire", action="store_true", help="non apre il report nel browser alla fine")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def report_opts(p):
