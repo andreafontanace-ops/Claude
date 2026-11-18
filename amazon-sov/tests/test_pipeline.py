@@ -125,6 +125,13 @@ class FakeFetcher:
             raise BlockedError("Amazon ha mostrato una verifica (captcha)")
         return (FIX / f"integratore-ferro__p{page}.html").read_text(encoding="utf-8")
 
+    def fetch_google(self, query):
+        self.calls.append(("google", query))
+        brand = query.split('"')[1]
+        company = {"Sideral": "PharmaNutra S.p.A.", "Nutravita": "Nutravita Ltd", "Solgar": "Solgar Italia S.r.l."}.get(brand)
+        snippet = f"{brand} è un marchio di {company}. Prodotto da {company}." if company else "Nessuna azienda qui."
+        return f'<div id="search"><div id="rso"><div class="g">{snippet}</div></div></div>'
+
     def fetch_product(self, asin):
         self.calls.append(("dp", asin))
         if asin == "B0FERROLIP":
@@ -153,6 +160,11 @@ def test_crawl_command_with_fake_browser(tmp_path, monkeypatch):
     assert info["B0FERROLIP"]["manufacturer"] == "Ferrolip Pharma S.r.l."
     assert info["B0FERROLIP"]["item_form"] == "Liquido"
     assert info["B0GENERIC1"]["brand"] is None and info["B0GENERIC1"]["checked_at"]
+    # poi una ricerca Google per ogni marchio di ferro
+    web = store.brand_web()
+    assert web["sideral"]["manufacturer"] == "PharmaNutra S.p.A." and web["sideral"]["mentions"] == 2
+    assert web["floradix"]["manufacturer"] is None
+    assert UNKNOWN_BRAND not in {w["brand"] for w in web.values()}
 
     html = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
     assert "Pagine non lette" in html and "ferritina — pagina 1: blocked" in html
@@ -314,3 +326,28 @@ def test_lookup_starts_with_products_without_brand(tmp_path):
     targets = lookup_targets(store, rows, CFG)
     assert targets[:2] == ["B0GENERIC1", "B0FERROLIP"]  # senza marchio sicuro, dal più visibile
     assert set(targets[2:]) == {"B07SIDERAL", "B08NUTRAV1", "B000SOLGAR", "B01FEROGLO"}
+
+
+def test_google_command_fills_verification(tmp_path, monkeypatch, capsys):
+    import amazon_sov.fetcher as fetcher_mod
+
+    html_dir = tmp_path / "pagine"
+    html_dir.mkdir()
+    shutil.copy(FIX / "integratore-ferro__p1.html", html_dir / "integratore-ferro__p1.html")
+    args = ["-c", str(ROOT / "config.toml"), "--data-dir", str(tmp_path / "data")]
+    main(args + ["parse", str(html_dir), "--out", str(tmp_path / "reports")])
+    monkeypatch.setattr(fetcher_mod, "BrowserFetcher", BrandFetcher)
+    main(args + ["brands", "--out", str(tmp_path / "reports")])
+    main(args + ["google", "--out", str(tmp_path / "reports")])
+
+    run_id = Store(tmp_path / "data" / "sov.sqlite").latest_run_id()
+    with open(tmp_path / "reports" / run_id / "sov_marchi.csv", encoding="utf-8-sig") as fh:
+        brands = {r["marchio"]: r for r in csv.DictReader(fh, delimiter=";")}
+    assert brands["Sideral"]["produttore_google"] == "PharmaNutra S.p.A."
+    assert brands["Sideral"]["verifica_google"] == "confermato"
+    assert brands["Feroglobin"]["verifica_google"] == "solo Amazon"
+    html = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
+    assert "Verifica dei produttori" in html and "✓ Google" in html
+
+    main(args + ["google", "--out", str(tmp_path / "reports")])
+    assert "già stati cercati" in capsys.readouterr().out

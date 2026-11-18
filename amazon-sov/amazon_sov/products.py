@@ -56,12 +56,13 @@ def manufacturer_key(name: str) -> str:
 
 
 class ManufacturerResolver:
-    """Ordine: correzione per ASIN > marchio→produttore in config > pagina prodotto > stesso marchio."""
+    """Ordine: correzione per ASIN > marchio→produttore in config > pagina prodotto > stesso marchio > Google."""
 
-    def __init__(self, cfg: Config, infos: dict[str, dict]):
+    def __init__(self, cfg: Config, infos: dict[str, dict], web: dict[str, dict] | None = None):
         self.overrides = {k.upper(): v for k, v in cfg.manufacturer_overrides.items()}
         self.by_brand = {normalize(k): v for k, v in cfg.manufacturer_by_brand.items()}
         self.page = {a: i["manufacturer"] for a, i in infos.items() if i.get("manufacturer")}
+        self.web = {k: w["manufacturer"] for k, w in (web or {}).items() if w.get("manufacturer")}
         self._display: dict[str, str] = {}
 
     def display(self, name: str) -> str:
@@ -85,14 +86,53 @@ class ManufacturerResolver:
             if r.manufacturer is None and r.brand != UNKNOWN_BRAND and votes.get(r.brand):
                 r.manufacturer = votes[r.brand].most_common(1)[0][0]
                 r.manufacturer_source = "same_brand"
+            elif r.manufacturer is None and r.brand != UNKNOWN_BRAND and normalize(r.brand) in self.web:
+                r.manufacturer = self.display(self.web[normalize(r.brand)])
+                r.manufacturer_source = "google"
 
 
-def annotate_products(rows: list[SerpRow], cfg: Config, infos: dict[str, dict]) -> list[SerpRow]:
+def annotate_products(
+    rows: list[SerpRow], cfg: Config, infos: dict[str, dict], web: dict[str, dict] | None = None
+) -> list[SerpRow]:
     """Aggiunge forma, tipo di ferro e produttore (le righe devono avere già il marchio)."""
     clf = FormulationClassifier.from_config(cfg)
     for r in rows:
         info = infos.get(r.asin.upper()) or {}
         r.form = clf.form(r.title, info.get("item_form"))
         r.iron_type = clf.iron_type(r.title)
-    ManufacturerResolver(cfg, infos).apply(rows)
+    ManufacturerResolver(cfg, infos, web).apply(rows)
     return rows
+
+
+AMAZON_SOURCES = ("product_page", "same_brand", "config", "override")
+
+
+def same_company(a: str, b: str) -> bool:
+    """Stessa azienda anche se scritta diversamente: "PharmaNutra S.p.A." / "PHARMANUTRA GROUP"."""
+    ka, kb = manufacturer_key(a), manufacturer_key(b)
+    if not ka or not kb:
+        return False
+    return ka == kb or f" {ka} " in f" {kb} " or f" {kb} " in f" {ka} "
+
+
+def verify_brands(brand_rows: list[dict], rows: list[SerpRow], web: dict[str, dict]) -> None:
+    """Confronta per ogni marchio il produttore letto su Amazon con quello trovato su Google."""
+    votes: dict[str, Counter] = defaultdict(Counter)
+    for r in rows:
+        if r.relevant and r.manufacturer and r.manufacturer_source in AMAZON_SOURCES:
+            votes[r.brand][r.manufacturer] += 1
+    for b in brand_rows:
+        amazon = votes[b["brand"]].most_common(1)[0][0] if votes.get(b["brand"]) else None
+        w = web.get(normalize(b["brand"]))
+        google = w.get("manufacturer") if w else None
+        b["amazon_manufacturer"] = amazon
+        b["web_manufacturer"] = google
+        b["web_mentions"] = w.get("mentions") if w else None
+        if amazon and google:
+            b["verification"] = "confermato" if same_company(amazon, google) else "diverso"
+        elif google:
+            b["verification"] = "solo Google"
+        elif amazon:
+            b["verification"] = "solo Amazon" if w else "da cercare su Google"
+        else:
+            b["verification"] = "non trovato" if w else "da cercare su Google"

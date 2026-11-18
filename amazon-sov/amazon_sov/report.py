@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from html import escape
+from urllib.parse import quote_plus
 
 from .config import Config
 from .brands import UNKNOWN_BRAND
@@ -14,6 +15,7 @@ MANU_SOURCE_LABELS = {
     "same_brand": "altro prodotto dello stesso marchio",
     "config": "configurazione (marchio → produttore)",
     "override": "correzione manuale",
+    "google": "ricerca Google (nessun dato su Amazon)",
     None: "non indicato",
 }
 
@@ -93,7 +95,7 @@ def render_report(
     # ---- marchi e produttori
     brand_rows = _group_rows(
         result.groups["brands"], n_kw, prev_run_id,
-        lambda b: f'{escape(b["manufacturer"] or "produttore non indicato")} · {escape(_short(b["top_title"], 50))}',
+        lambda b: f'{escape(b["manufacturer"] or "produttore non indicato")}{_verify_badge(b)} · {escape(_short(b["top_title"], 50))}',
     )
     manu_rows = _group_rows(
         result.groups["manufacturers"], n_kw, prev_run_id,
@@ -164,6 +166,18 @@ def render_report(
             tip = escape(f"{kw} · {labels[j]}: {pct(v)}")
             tds.append(f'<td class="num heat {cls}" data-tip="{tip}">{pct(v, 0) if v > 0 else "–"}</td>')
         heat_rows.append(f'<tr><th class="kw">{escape(kw)}</th>{"".join(tds)}</tr>')
+
+    # ---- verifica produttori con Google
+    verify_rows = []
+    for b in [b for b in result.groups["brands"] if b["brand"] not in UNRANKED][:40]:
+        q = cfg.websearch.query.format(brand=b["brand"])
+        verify_rows.append(
+            f"""<tr><td><b>{escape(b["brand"])}</b></td>
+<td>{escape(b.get("amazon_manufacturer") or "–")}</td>
+<td>{escape(b.get("web_manufacturer") or "–")}{f' <span class="muted">({b["web_mentions"]} citazioni)</span>' if b.get("web_mentions") else ""}</td>
+<td class="verdict v-{escape((b.get("verification") or "").split()[0])}">{escape(b.get("verification") or "–")}</td>
+<td><a href="https://www.google.com/search?q={quote_plus(q)}" target="_blank" rel="noopener">cerca</a></td></tr>"""
+        )
 
     # ---- marchi da verificare
     unsure = [p for p in result.products if p["relevant"] and p["brand_source"] in ("unknown", "title_guess")][:15]
@@ -254,6 +268,9 @@ tbody tr:last-child td, tbody tr:last-child th {{ border-bottom: 0; }}
 .prod a:hover {{ text-decoration: underline; }}
 .prod {{ min-width: 280px; }}
 .form {{ white-space: nowrap; }}
+.verdict {{ white-space: nowrap; font-weight: 600; }}
+.v-diverso {{ text-decoration: underline wavy; text-underline-offset: 3px; }}
+.v-da, .v-non {{ color: var(--ink-3); font-weight: 400; }}
 .products th, .products td {{ padding: 8px 7px; }}
 .products .barcell {{ min-width: 100px; width: 12%; }}
 .products .prod {{ min-width: 230px; }}
@@ -338,6 +355,13 @@ code {{ font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: v
 <div class="scroll"><table>
 <thead><tr><th>Keyword</th>{heat_head}</tr></thead>
 <tbody>{"".join(heat_rows)}</tbody>
+</table></div>
+
+<h2>Verifica dei produttori</h2>
+<p class="note">Per ogni marchio: il produttore letto su Amazon (pagina prodotto) e l'azienda più citata nei risultati di una ricerca Google. «Confermato» = coincidono; «diverso» = da controllare a mano con il link. Lancia <code>amazon-sov google</code> per cercare i marchi mancanti.</p>
+<div class="scroll"><table>
+<thead><tr><th>Marchio</th><th>Produttore su Amazon</th><th>Produttore da Google</th><th>Esito</th><th>Verifica</th></tr></thead>
+<tbody>{"".join(verify_rows)}</tbody>
 </table></div>
 
 {verify_html}
@@ -441,3 +465,12 @@ def _mix_rows(items: list[dict]) -> str:
 <td class="num strong">{pct(share)}</td><td class="num">{pct(b["ads_share"], 0)}</td><td class="num">{b["n_products"]}</td></tr>"""
         )
     return "".join(out)
+
+
+def _verify_badge(b: dict) -> str:
+    v = b.get("verification")
+    if v == "confermato":
+        return ' <span class="badge">✓ Google</span>'
+    if v == "diverso":
+        return f' <span class="badge">≠ Google: {escape(b.get("web_manufacturer") or "")}</span>'
+    return ""

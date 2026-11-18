@@ -36,6 +36,7 @@ class BrowserFetcher:
         self._page = None
         self._last_fetch = 0.0
         self.pages_fetched = 0
+        self._google_ready = False
 
     # -- ciclo di vita
     def __enter__(self) -> "BrowserFetcher":
@@ -91,7 +92,9 @@ class BrowserFetcher:
         )
         return self._page.content()
 
-    def _get(self, url: str, wait_selector: str | None, capped: bool = True) -> str:
+    def _get(self, url: str, wait_selector: str | None, capped: bool = True, detector=None) -> str:
+        """Apre `url`; se manca il contenuto atteso controlla se è una verifica anti-robot (`detector`)."""
+        detector = detector or (lambda html, page_url: detect_block(html))
         if capped and self.pages_fetched >= self.cfg.crawl.max_pages_total:
             raise BlockedError(f"Raggiunto il tetto di {self.cfg.crawl.max_pages_total} pagine (crawl.max_pages_total)")
         self._pause()
@@ -109,10 +112,10 @@ class BrowserFetcher:
             except Exception:
                 pass
         html = self._page.content()
-        block = None if found else detect_block(html)
+        block = None if found else detector(html, self._page.url)
         if block:
             html = self._wait_for_human(block)
-            if detect_block(html):
+            if detector(html, self._page.url):
                 raise BlockedError(f"Pagina ancora bloccata ({block}): {url}")
         return html
 
@@ -123,6 +126,33 @@ class BrowserFetcher:
 
     def fetch_search(self, keyword: str, page: int) -> str:
         return self._get(self.search_url(keyword, page), RESULT_SELECTOR)
+
+    def _dismiss_google_consent(self) -> None:
+        """Banner dei cookie di Google (solo la prima volta: la scelta resta nel profilo del browser)."""
+        for label in ("Rifiuta tutto", "Reject all", "Accetta tutto", "Accept all"):
+            try:
+                button = self._page.get_by_role("button", name=label)
+                if button.count() and button.first.is_visible():
+                    button.first.click()
+                    self._page.wait_for_load_state("domcontentloaded")
+                    return
+            except Exception:
+                return
+
+    def fetch_google(self, query: str) -> str:
+        from .websearch import GOOGLE_RESULTS_SELECTOR, detect_google_block, google_url
+
+        if not self._google_ready:
+            # prima ricerca della sessione: home di Google e banner dei cookie
+            self._page.goto("https://www.google.com/?hl=it", wait_until="domcontentloaded", timeout=60_000)
+            self._dismiss_google_consent()
+            self._google_ready = True
+        log.info("Google: %s", query)
+        html = self._get(google_url(query), GOOGLE_RESULTS_SELECTOR, capped=False, detector=detect_google_block)
+        if "consent.google" in self._page.url:
+            self._dismiss_google_consent()
+            html = self._get(google_url(query), GOOGLE_RESULTS_SELECTOR, capped=False, detector=detect_google_block)
+        return html
 
     def fetch_product(self, asin: str) -> str:
         # le pagine prodotto hanno il loro limite (crawl.product_pages / --max), non il tetto delle ricerche

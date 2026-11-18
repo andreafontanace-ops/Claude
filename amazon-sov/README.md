@@ -91,6 +91,18 @@ che servono (al massimo 80, `--max N`) e rigenera il report. Si può lanciare pi
 dove era rimasto.
 
 ```bash
+amazon-sov google
+```
+
+Cerca su Google il produttore di ogni marchio (una ricerca per marchio, nel browser visibile, con le
+solite pause) e rigenera il report. Dai risultati prende i nomi di azienda con forma giuridica
+(S.p.A., S.r.l., GmbH, Ltd…) o scritti come «Produttore: …», scarta negozi e piattaforme e tiene
+l'azienda più citata. Ogni marchio si cerca una volta sola (`--again` per rifare). Se Google chiede
+di dimostrare che non sei un robot, risolvi la verifica nel browser e premi Invio. La ricerca parte
+anche da sola alla fine di ogni crawl, per i marchi nuovi (al massimo 30, `[websearch]` in
+`config.toml`).
+
+```bash
 amazon-sov inspect
 ```
 
@@ -147,7 +159,12 @@ prodotto» → Produttore (l'indirizzo viene tolto). Ordine di priorità:
 1. la correzione per ASIN in `[manufacturers.asin_overrides]`;
 2. il produttore del marchio in `[manufacturers.by_brand]`;
 3. la pagina prodotto;
-4. un altro prodotto dello stesso marchio di cui si conosce il produttore.
+4. un altro prodotto dello stesso marchio di cui si conosce il produttore;
+5. la ricerca su Google, se Amazon non dice niente.
+
+La sezione «Verifica dei produttori» del report mette a confronto, per ogni marchio, il produttore
+letto su Amazon e quello trovato su Google: **confermato**, **diverso** (da controllare a mano con il
+link), **solo Google**, **solo Amazon**.
 
 Lo stesso produttore scritto in modi diversi («PharmaNutra S.p.A.», «PHARMANUTRA SPA») viene unito.
 
@@ -181,6 +198,7 @@ Se restano prodotti sconosciuti, lancia `amazon-sov brands` oppure scrivi il mar
 - `[brands]`: alias dei marchi e correzioni per ASIN.
 - `[manufacturers]`: produttore per marchio e correzioni per ASIN.
 - `[formulation]`: regole per forma e tipo di ferro.
+- `[websearch]`: testo della ricerca Google, ricerche per esecuzione, aziende da ignorare.
 - `[output] csv_dialect`: `excel-it` usa `;` e la virgola decimale, `standard` usa `,` e il punto.
 
 ## File prodotti
@@ -206,6 +224,8 @@ reports/<esecuzione>/serp.csv         ogni risultato letto, riga per riga
   monitoraggio continuo conviene una fonte autorizzata: le API di Amazon per gli affiliati, oppure
   servizi di dati SERP Amazon come DataForSEO, Traject Data (Rainforest API) o Keepa. Il calcolo della
   SoV di questo progetto si può applicare anche a quei dati.
+- **Termini di Google.** Anche Google vieta le ricerche automatiche: il programma ne fa poche (una per
+  marchio, salvata in archivio) e a ritmo umano. Per volumi maggiori serve un'API di ricerca a pagamento.
 - **Risultati personalizzati.** Annunci e ordine dei risultati cambiano con l'ora, la località di
   consegna e l'account. Non fare login su Amazon nel browser del crawler e confronta esecuzioni fatte
   nelle stesse condizioni.

@@ -36,6 +36,15 @@ CREATE TABLE IF NOT EXISTS serp (
     {", ".join(_ROW_FIELDS)}
 );
 CREATE INDEX IF NOT EXISTS serp_run ON serp(run_id, keyword);
+CREATE TABLE IF NOT EXISTS brand_web (
+    brand_key TEXT PRIMARY KEY,
+    brand TEXT,
+    query TEXT,
+    manufacturer TEXT,
+    mentions INTEGER,
+    candidates TEXT,
+    checked_at TEXT
+);
 CREATE TABLE IF NOT EXISTS product_info (
     asin TEXT PRIMARY KEY,
     brand TEXT,
@@ -173,4 +182,17 @@ class Store:
             self.conn.execute(
                 "INSERT OR REPLACE INTO product_info VALUES (?, ?, ?, ?, ?)",
                 (asin, brand or None, manufacturer or None, item_form or None, now()),
+            )
+
+    # -- ricerche Google per marchio
+    def brand_web(self) -> dict[str, dict]:
+        return {r["brand_key"]: dict(r) for r in self.conn.execute("SELECT * FROM brand_web")}
+
+    def set_brand_web(
+        self, brand_key: str, brand: str, query: str, manufacturer: str | None, mentions: int, candidates: list[dict]
+    ) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT OR REPLACE INTO brand_web VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (brand_key, brand, query, manufacturer, mentions, json.dumps(candidates, ensure_ascii=False), now()),
             )

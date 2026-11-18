@@ -55,6 +55,10 @@ BRAND_COLUMNS = [
     ("n_products", "n_prodotti"),
     ("top_asin", "asin_di_punta"),
     ("top_title", "prodotto_di_punta"),
+    ("amazon_manufacturer", "produttore_amazon"),
+    ("web_manufacturer", "produttore_google"),
+    ("web_mentions", "citazioni_google"),
+    ("verification", "verifica_google"),
     ("delta_pp", "delta_vs_precedente_pp"),
 ]
 
@@ -63,7 +67,8 @@ MANUFACTURER_COLUMNS = [
     ("rank", "posizione"),
     ("brand", "produttore"),
     ("brands", "marchi"),
-] + [c for c in BRAND_COLUMNS if c[0] not in ("rank", "brand", "manufacturer")]
+] + [c for c in BRAND_COLUMNS if c[0] not in ("rank", "brand", "manufacturer", "amazon_manufacturer",
+                                                  "web_manufacturer", "web_mentions", "verification")]
 
 MIX_COLUMNS = [
     ("rank", "posizione"),

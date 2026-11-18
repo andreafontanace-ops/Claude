@@ -34,6 +34,22 @@ class ScoringConfig:
 
 
 @dataclass
+class WebSearchConfig:
+    # {brand} viene sostituito dal nome del marchio
+    query: str = '"{brand}" integratori azienda produttrice'
+    max_per_run: int = 30  # ricerche Google per esecuzione (ogni marchio si cerca una volta sola)
+    in_crawl: bool = True  # cerca i marchi nuovi alla fine di ogni crawl
+    exclude: list[str] = field(default_factory=lambda: list(DEFAULT_WEB_EXCLUDE))
+
+
+DEFAULT_WEB_EXCLUDE = [
+    "amazon", "google", "ebay", "paypal", "facebook", "meta platforms", "instagram", "youtube", "trustpilot",
+    "farmaci", "parafarmac", "farmacosmo", "efarma", "drmax", "redcare", "shop", "store", "idealo", "trovaprezzi",
+    "glovo", "zalando", "microsoft", "apple", "wikipedia", "linkedin",
+]
+
+
+@dataclass
 class Config:
     domain: str
     keywords: list[Keyword]
@@ -49,6 +65,7 @@ class Config:
     manufacturer_overrides: dict[str, str] = field(default_factory=dict)
     forms: dict[str, list[str]] = field(default_factory=lambda: dict(DEFAULT_FORMS))
     iron_types: dict[str, list[str]] = field(default_factory=lambda: dict(DEFAULT_IRON_TYPES))
+    websearch: WebSearchConfig = field(default_factory=WebSearchConfig)
 
     @property
     def keyword_weights(self) -> dict[str, float]:
@@ -157,6 +174,20 @@ def config_from_dict(raw: dict) -> Config:
         },
         forms=_rules(raw.get("formulation", {}).get("forms"), DEFAULT_FORMS),
         iron_types=_rules(raw.get("formulation", {}).get("iron_types"), DEFAULT_IRON_TYPES),
+        websearch=_websearch(raw.get("websearch", {})),
+    )
+
+
+def _websearch(raw: dict) -> WebSearchConfig:
+    default = WebSearchConfig()
+    query = str(raw.get("query", default.query))
+    if "{brand}" not in query:
+        raise ValueError("websearch.query deve contenere {brand}")
+    return WebSearchConfig(
+        query=query,
+        max_per_run=int(raw.get("max_per_run", default.max_per_run)),
+        in_crawl=bool(raw.get("in_crawl", default.in_crawl)),
+        exclude=[str(x) for x in raw.get("exclude", default.exclude)],
     )
 
 

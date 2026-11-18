@@ -15,7 +15,7 @@ from .brands import UNKNOWN_BRAND, BrandResolver, RelevanceFilter, normalize
 from .config import Config, load_config
 from .parser import ParsedPage, compact_html, parse_product_page, parse_search_page
 from .pipeline import SerpRow, build_rows, reclassify
-from .products import annotate_products
+from .products import annotate_products, verify_brands
 from .report import pct, render_report
 from .scoring import NON_RELEVANT, compute_sov
 from .storage import Store
@@ -40,7 +40,8 @@ def _filters(cfg: Config, store: Store) -> tuple[BrandResolver, RelevanceFilter]
 def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denominator: str, top: int) -> Path:
     resolver, relevance = _filters(cfg, store)
     infos = store.product_info()
-    rows = annotate_products(reclassify(store.rows(run_id), resolver, relevance), cfg, infos)
+    web = store.brand_web()
+    rows = annotate_products(reclassify(store.rows(run_id), resolver, relevance), cfg, infos, web)
     if not rows:
         raise SystemExit(f"L'esecuzione {run_id} non ha risultati: niente da calcolare.")
     run = store.run_info(run_id) or {"run_id": run_id}
@@ -49,10 +50,11 @@ def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denomina
     result = compute_sov(rows, weights, cfg.scoring, denominator)
     for p in result.products:
         p["page_checked"] = bool((infos.get(p["asin"]) or {}).get("checked_at"))
+    verify_brands(result.groups["brands"], rows, web)
 
     prev_id = store.previous_run_id(run_id)
     if prev_id:
-        prev_rows = annotate_products(reclassify(store.rows(prev_id), resolver, relevance), cfg, infos)
+        prev_rows = annotate_products(reclassify(store.rows(prev_id), resolver, relevance), cfg, infos, web)
         prev = compute_sov(prev_rows, weights, cfg.scoring, denominator)
         prev_p = {p["asin"]: p["sov_total"] for p in prev.products}
         for p in result.products:
@@ -143,6 +145,8 @@ def cmd_crawl(args, cfg: Config) -> None:
             lookup = cfg.crawl.product_pages if args.product_pages is None else args.product_pages
             if lookup > 0 and not stop:
                 _lookup_products(fetcher, store, all_rows, cfg, lookup, data_dir / "html" / "prodotti")
+            if cfg.websearch.in_crawl and cfg.websearch.max_per_run > 0 and not stop:
+                _web_lookup(fetcher, store, reclassify(all_rows, *_filters(cfg, store)), cfg, cfg.websearch.max_per_run)
     except KeyboardInterrupt:
         print("\nInterrotto: calcolo la SoV su quanto già scaricato.")
     store.finish_run(run_id)
@@ -227,6 +231,81 @@ def _lookup_products(
     elif len(targets) > done:
         print(f"Restano {len(targets) - done} pagine da controllare: rilancia `amazon-sov brands`.")
     return done
+
+
+def web_targets(store: Store, rows: list[SerpRow]) -> list[str]:
+    """Marchi di prodotti di ferro mai cercati su Google, dal più visibile."""
+    done = set(store.brand_web())
+    best: dict[str, int] = {}
+    for r in rows:
+        if r.relevant and r.brand != UNKNOWN_BRAND and normalize(r.brand) not in done:
+            best[r.brand] = min(best.get(r.brand, 10**6), r.rank or 10**5)
+    return sorted(best, key=lambda b: (best[b], b))
+
+
+def _web_lookup(fetcher, store: Store, rows: list[SerpRow], cfg: Config, limit: int) -> int:
+    """Cerca su Google il produttore di ogni marchio e salva l'azienda più citata."""
+    from .fetcher import BlockedError
+    from .websearch import extract_companies, results_text
+
+    targets = web_targets(store, rows)
+    todo = targets[:limit]
+    if not todo:
+        return 0
+    print(f"\nCerco su Google il produttore di {len(todo)} marchi…")
+    done = found = 0
+    blocked = False
+    for brand in todo:
+        query = cfg.websearch.query.format(brand=brand)
+        try:
+            html = fetcher.fetch_google(query)
+        except BlockedError as exc:
+            log.warning("%s", exc)
+            blocked = True
+            break
+        candidates = extract_companies(results_text(html), brand, cfg.websearch.exclude)
+        top = candidates[0] if candidates else None
+        store.set_brand_web(
+            normalize(brand), brand, query, top.name if top else None, top.mentions if top else 0,
+            [{"name": c.name, "score": c.score, "mentions": c.mentions} for c in candidates[:5]],
+        )
+        done += 1
+        found += bool(top)
+        others = ", ".join(c.name for c in candidates[1:3])
+        print(f"  {brand}: {top.name + f' ({top.mentions} citazioni)' if top else 'nessuna azienda trovata'}"
+              + (f" · altre: {others}" if others else ""))
+    print(f"\nRicerche Google: {done} · produttore trovato: {found}")
+    if blocked:
+        print("Interrotto da una verifica di Google: rilancia più tardi `amazon-sov google`.")
+    elif len(targets) > done:
+        print(f"Restano {len(targets) - done} marchi da cercare: rilancia `amazon-sov google`.")
+    return done
+
+
+def cmd_google(args, cfg: Config) -> None:
+    """Cerca su Google il produttore dei marchi dell'ultima esecuzione e rigenera il report."""
+    from .fetcher import BrowserFetcher
+
+    data_dir = Path(args.data_dir)
+    store = Store(data_dir / "sov.sqlite")
+    run_id = args.run or store.latest_run_id()
+    if not run_id:
+        raise SystemExit("Nessuna esecuzione nell'archivio: lancia prima `crawl` o `parse`.")
+    resolver, relevance = _filters(cfg, store)
+    rows = reclassify(store.rows(run_id), resolver, relevance)
+    if args.again:
+        with store.conn:
+            store.conn.execute("DELETE FROM brand_web")
+    todo = web_targets(store, rows)
+    if not todo:
+        print("Tutti i marchi sono già stati cercati su Google (usa --again per rifare le ricerche).")
+    else:
+        try:
+            with BrowserFetcher(cfg, data_dir / "browser-profile", headless=args.headless or None) as fetcher:
+                _web_lookup(fetcher, store, rows, cfg, args.max)
+        except KeyboardInterrupt:
+            print("\nInterrotto: uso i risultati trovati finora.")
+    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
 
 
 def cmd_brands(args, cfg: Config) -> None:
@@ -440,6 +519,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--headless", action="store_true")
     report_opts(p)
     p.set_defaults(func=cmd_brands)
+
+    p = sub.add_parser("google", aliases=["produttori"],
+                       help="cerca su Google il produttore di ogni marchio e rigenera il report")
+    p.add_argument("--run", help="esecuzione da usare (default: l'ultima)")
+    p.add_argument("--max", type=int, default=40, help="ricerche Google al massimo (default 40)")
+    p.add_argument("--again", action="store_true", help="rifà anche le ricerche già fatte")
+    p.add_argument("--headless", action="store_true")
+    report_opts(p)
+    p.set_defaults(func=cmd_google)
 
     p = sub.add_parser("parse", help="calcola la SoV da pagine HTML salvate a mano")
     p.add_argument("html_dir")
