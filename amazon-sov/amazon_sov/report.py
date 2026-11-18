@@ -7,7 +7,7 @@ from html import escape
 from urllib.parse import quote_plus
 
 from .config import Config
-from .brands import UNKNOWN_BRAND
+from .brands import GENERIC_BRAND, UNKNOWN_BRAND
 from .scoring import NON_RELEVANT, NOT_STATED, UNRANKED, SovResult
 
 MANU_SOURCE_LABELS = {
@@ -22,6 +22,7 @@ MANU_SOURCE_LABELS = {
 SOURCE_LABELS = {
     "serp": "riga del marchio nella SERP",
     "product_page": "pagina prodotto",
+    "product_page_maker": "produttore indicato nella pagina prodotto",
     "override": "correzione manuale",
     "alias": "alias trovato nel titolo",
     "title_guess": "prima parola del titolo (stima)",
@@ -431,7 +432,8 @@ def _group_rows(items: list[dict], n_kw: int, prev_run_id: str | None, sub) -> s
         )
     labels = {
         NOT_STATED: ("Produttore non indicato", "lancia <code>amazon-sov brands</code> per leggerlo dalle pagine prodotto"),
-        UNKNOWN_BRAND: ("Marchio non identificato", "il titolo non lo dice: lancia <code>amazon-sov brands</code> per leggerlo dalle pagine prodotto"),
+        UNKNOWN_BRAND: ("Marchio da verificare", "pagina prodotto non ancora letta: lancia <code>amazon-sov report</code> e rispondi sì"),
+        GENERIC_BRAND: ("Prodotti senza marchio", "Amazon non indica il marchio o scrive «Generico»"),
         NON_RELEVANT: ("Prodotti non di ferro", "occupano spazio nella SERP ma non entrano nella classifica"),
     }
     for b in items:

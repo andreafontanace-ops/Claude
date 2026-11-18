@@ -160,3 +160,22 @@ def test_compact_html_keeps_structure_only():
     out = compact_html(html, "B0GENERIC1")
     assert 'data-cy="title-recipe"' in out and "Ferro Liposomiale" in out
     assert "<img" not in out and compact_html(html, "B0NOTHERE0") == ""
+
+
+def test_brand_recovered_from_full_title_in_image():
+    html = _card(
+        '<img class="s-image" alt="WeightWorld Ferro Integratore - 400 Compresse - Vitamina C">'
+        '<div data-cy="title-recipe"><a class="a-link-normal a-text-normal" href="/dp/B0TEST0001">'
+        '<h2><span>Ferro Integratore - 400 Compresse - Vitamina C</span></h2></a></div>'
+    )
+    item = parse_search_page(html).results[0]
+    assert item.brand_raw == "WeightWorld"
+    assert item.title == "WeightWorld Ferro Integratore - 400 Compresse - Vitamina C"
+
+
+def test_same_title_in_image_gives_no_brand():
+    html = _card(
+        '<img class="s-image" alt="Ferro Integratore - 400 Compresse">'
+        '<a class="a-text-normal" href="/dp/B0TEST0001"><h2><span>Ferro Integratore - 400 Compresse</span></h2></a>'
+    )
+    assert parse_search_page(html).results[0].brand_raw is None

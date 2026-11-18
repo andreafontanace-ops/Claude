@@ -7,7 +7,37 @@ import unicodedata
 
 from .config import Config
 
-UNKNOWN_BRAND = "(sconosciuto)"
+UNKNOWN_BRAND = "(marchio da verificare)"  # pagina prodotto non ancora letta
+GENERIC_BRAND = "(senza marchio)"  # Amazon non indica il marchio o scrive «Generico»
+
+# valori che su Amazon vogliono dire "nessun marchio"
+_NO_BRAND = {
+    "generico", "generica", "generic", "senza marca", "senza marchio", "unbranded", "no brand", "nessuna marca",
+    "non applicabile", "n a", "na", "sconosciuto", "sconosciuta", "unknown", "marca sconosciuta",
+}
+# forma giuridica in fondo al nome di un'azienda: "WeightWorld Ltd" -> marchio "WeightWorld"
+_COMPANY_SUFFIX = re.compile(
+    r"[\s,]+(?:S\.?\s?p\.?\s?A\.?|S\.?\s?r\.?\s?l\.?\s?s?\.?|S\.?\s?a\.?\s?s\.?|S\.?\s?n\.?\s?c\.?|"
+    r"GmbH(?:\s?&\s?Co\.?\s?KG)?|Ltd\.?|Limited|Inc\.?|LLC|B\.?\s?V\.?|AG|S\.?\s?A\.?|S\.?\s?L\.?|SARL)\s*$",
+    re.I,
+)
+
+
+def brand_from_company(name: str | None) -> str | None:
+    """Marchio ricavato dal nome del produttore, senza forma giuridica."""
+    if not name:
+        return None
+    brand = name.strip()
+    while True:
+        stripped = _COMPANY_SUFFIX.sub("", brand).strip(" ,.-")
+        if stripped == brand:
+            break
+        brand = stripped
+    return brand or None
+
+
+def is_no_brand(value: str | None) -> bool:
+    return normalize(value) in _NO_BRAND
 
 # Parole che nei titoli degli integratori non sono mai un marchio (si aggiungono a brands.generic_words).
 BUILTIN_GENERIC_WORDS = frozenset("""
@@ -26,6 +56,15 @@ BUILTIN_GENERIC_PREFIXES = (
     "premium", "biologic", "vegetal", "biodisponibil", "assorbibil", "gastroprotett", "delicat", "supplement",
     "alimentar", "bambin", "adult", "gravidanz", "allattament", "stanchezz", "immunitar", "confezion",
 )
+# Parole descrittive che possono stare dentro il nome di un marchio solo come prima parola
+# ("Bio Nutrition", "Forte Pharma", "Pura Vida"), mai come seconda ("Solgar Gentle").
+_WEAK_FIRST = {"bio", "natural", "naturale", "pura", "puro", "forte", "plus", "premium", "vegan", "extra", "max",
+               "alta", "alto", "nuova", "nuovo"}
+_NOT_SECOND = {
+    "gentle", "high", "strength", "active", "complete", "daily", "advanced", "ultra", "super", "mega", "maxi",
+    "gold", "quality", "kids", "junior", "baby", "women", "men", "woman", "man", "chewable", "softgels", "tablets",
+    "capsules", "drops", "energy", "fe", "ferrum", "original", "classic", "new", "zero", "light", "family",
+}
 _JOIN_NEXT = {"dr", "dott", "doctor's", "doctors", "nature's", "natures", "the", "mr", "dottor"}
 _SEGMENT = re.compile(r"\s[-–—|:]\s|[,|(\[/]")
 
@@ -65,11 +104,17 @@ class RelevanceFilter:
 class BrandResolver:
     """Assegna a ogni prodotto un marchio canonico e dice da dove l'ha preso.
 
-    Ordine: correzione manuale per ASIN > riga del marchio nella SERP > marchio letto
-    dalla pagina prodotto (cache) > alias trovato nel titolo > prima parola del titolo.
+    Ordine: correzione manuale per ASIN > riga del marchio nella SERP > marchio letto dalla pagina
+    prodotto > alias trovato nel titolo > produttore della pagina prodotto > prima o seconda parola
+    del titolo > «senza marchio» se la pagina prodotto è stata letta e non lo indica.
     """
 
-    def __init__(self, cfg: Config, product_page_brands: dict[str, str] | None = None):
+    def __init__(
+        self,
+        cfg: Config,
+        product_page_brands: dict[str, str] | None = None,
+        product_info: dict[str, dict] | None = None,
+    ):
         pairs = []
         for canonical, aliases in cfg.brand_aliases.items():
             for alias in [canonical, *aliases]:
@@ -84,6 +129,16 @@ class BrandResolver:
         self._overrides = {k.upper(): v for k, v in cfg.asin_overrides.items()}
         # un valore vuoto vuol dire "pagina già controllata, marchio non trovato"
         self._page_brands = {k.upper(): v for k, v in (product_page_brands or {}).items() if v}
+        self._page_makers: dict[str, str] = {}
+        self._checked: set[str] = set()
+        for asin, info in (product_info or {}).items():
+            asin = asin.upper()
+            if info.get("brand"):
+                self._page_brands[asin] = info["brand"]
+            if info.get("manufacturer"):
+                self._page_makers[asin] = info["manufacturer"]
+            if info.get("checked_at"):
+                self._checked.add(asin)
         self._display: dict[str, str] = {}
 
     def canonical(self, raw_brand: str) -> str:
@@ -104,16 +159,22 @@ class BrandResolver:
         if asin in self._overrides:
             return self._overrides[asin], "override"
         if raw_brand and normalize(raw_brand):
-            return self.canonical(raw_brand), "serp"
-        if asin in self._page_brands:
-            return self.canonical(self._page_brands[asin]), "product_page"
+            return (GENERIC_BRAND if is_no_brand(raw_brand) else self.canonical(raw_brand)), "serp"
+        page_brand = self._page_brands.get(asin)
+        if page_brand and not is_no_brand(page_brand):
+            return self.canonical(page_brand), "product_page"
         title_norm = normalize(title)
         for alias, canonical in self._aliases:
             if contains_phrase(title_norm, alias):
                 return canonical, "alias"
+        maker_brand = brand_from_company(self._page_makers.get(asin))
+        if maker_brand and not is_no_brand(maker_brand):
+            return self.canonical(maker_brand), "product_page_maker"
         guess = self._guess_from_title(title)
-        if guess:
+        if guess and not page_brand:  # se Amazon dice «Generico», non inventiamo un marchio dal titolo
             return self.canonical(guess), "title_guess"
+        if page_brand or asin in self._checked:
+            return GENERIC_BRAND, "product_page"
         return UNKNOWN_BRAND, "unknown"
 
     def is_generic(self, word: str) -> bool:
@@ -124,15 +185,27 @@ class BrandResolver:
             return True
         return norm.startswith(BUILTIN_GENERIC_PREFIXES)
 
+    def _second_word_of_brand(self, word: str | None) -> bool:
+        return bool(
+            word and word[0].isupper() and not self.is_generic(word) and normalize(word) not in _NOT_SECOND
+        )
+
     def _guess_from_title(self, title: str | None) -> str | None:
-        """Il marchio è di solito la prima o la seconda parola del titolo, prima di « - », «|» o «,»."""
+        """Il marchio è di solito la prima parola del titolo, a volte le prime due."""
         segment = _SEGMENT.split(_TRADEMARKS.sub("", title or ""), maxsplit=1)[0]
         tokens = [t.strip(" ,;:-|()[]\"'+&.") for t in segment.split()]
         tokens = [t for t in tokens if t]
-        for i, tok in enumerate(tokens[:2]):
-            if self.is_generic(tok) and normalize(tok) not in _JOIN_NEXT:
-                continue
-            if normalize(tok) in _JOIN_NEXT and i + 1 < len(tokens):
-                return f"{tok} {tokens[i + 1]}"
-            return tok
+        if not tokens:
+            return None
+        first = tokens[0]
+        second = tokens[1] if len(tokens) > 1 else None
+        if normalize(first) in _JOIN_NEXT and second:
+            return f"{first} {second}"  # "Dr. Giorgini", "Nature's Bounty"
+        if not self.is_generic(first):
+            # prima parola; anche la seconda se fa parte del nome ("Pharma Nord", "Named Sport")
+            return f"{first} {second}" if self._second_word_of_brand(second) else first
+        if normalize(first) in _WEAK_FIRST and self._second_word_of_brand(second):
+            return f"{first} {second}"  # "Bio Nutrition", "Forte Pharma"
+        if second and not self.is_generic(second):
+            return second  # "Ferro WeightWorld …"
         return None

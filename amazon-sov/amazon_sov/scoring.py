@@ -19,12 +19,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from .config import ScoringConfig
-from .brands import UNKNOWN_BRAND
+from .brands import GENERIC_BRAND, UNKNOWN_BRAND
 from .pipeline import SerpRow
 
 NON_RELEVANT = "(non pertinenti)"
 NOT_STATED = "(non indicato)"
-UNRANKED = frozenset({NON_RELEVANT, NOT_STATED, UNKNOWN_BRAND})  # mostrati in fondo, senza posizione
+UNRANKED = frozenset({NON_RELEVANT, NOT_STATED, UNKNOWN_BRAND, GENERIC_BRAND})  # mostrati in fondo, senza posizione
 
 # raggruppamenti calcolati oltre ai singoli prodotti
 GROUPS = {

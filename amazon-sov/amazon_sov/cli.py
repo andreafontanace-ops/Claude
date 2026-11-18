@@ -11,7 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from . import export
-from .brands import UNKNOWN_BRAND, BrandResolver, RelevanceFilter, normalize
+from .brands import GENERIC_BRAND, UNKNOWN_BRAND, BrandResolver, RelevanceFilter, normalize
 from .config import Config, load_config
 from .parser import ParsedPage, compact_html, parse_product_page, parse_search_page
 from .pipeline import SerpRow, build_rows, reclassify
@@ -29,7 +29,7 @@ def slug(text: str) -> str:
 
 def _filters(cfg: Config, store: Store) -> tuple[BrandResolver, RelevanceFilter]:
     return (
-        BrandResolver(cfg, store.product_brands()),
+        BrandResolver(cfg, product_info=store.product_info()),
         RelevanceFilter(cfg.relevance_include, cfg.relevance_exclude),
     )
 
@@ -157,6 +157,11 @@ def cmd_crawl(args, cfg: Config) -> None:
 
 
 def lookup_targets(store: Store, rows: list[SerpRow], cfg: Config) -> list[str]:
+    first, then = _lookup_plan(store, rows, cfg)
+    return first + then
+
+
+def _lookup_plan(store: Store, rows: list[SerpRow], cfg: Config) -> tuple[list[str], list[str]]:
     """Pagine prodotto da aprire, dal prodotto più visibile:
     - prodotti di ferro con marchio sconosciuto o stimato dal titolo;
     - per ogni marchio senza produttore noto, il suo prodotto più visibile (il produttore vale per tutto il marchio).
@@ -182,23 +187,27 @@ def lookup_targets(store: Store, rows: list[SerpRow], cfg: Config) -> list[str]:
     per_brand: dict[str, str] = {}
     for asin in sorted(best, key=lambda a: (best[a], a)):
         brand = brand_of[asin]
-        if brand == UNKNOWN_BRAND or normalize(brand) in known or misses[brand] >= 2 or asin in checked:
+        if brand in (UNKNOWN_BRAND, GENERIC_BRAND) or normalize(brand) in known or misses[brand] >= 2 or asin in checked:
             continue  # dopo due pagine senza produttore per lo stesso marchio, lascia perdere
         per_brand.setdefault(brand, asin)
     # prima i prodotti senza marchio (cambiano la classifica), poi un prodotto per marchio senza produttore
     first = sorted(need_brand - checked, key=lambda a: (best.get(a, 10**6), a))
     then = sorted(set(per_brand.values()) - checked - need_brand, key=lambda a: (best.get(a, 10**6), a))
-    return first + then
+    return first, then
 
 
 def _lookup_products(
     fetcher, store: Store, rows: list[SerpRow], cfg: Config, limit: int, debug_dir: Path | None = None
 ) -> int:
-    """Apre le pagine prodotto e salva marchio, produttore e forma."""
+    """Apre le pagine prodotto e salva marchio, produttore e forma.
+
+    I prodotti senza marchio si leggono sempre tutti; `limit` vale per le pagine aperte solo per il produttore.
+    """
     from .fetcher import BlockedError
 
-    targets = lookup_targets(store, rows, cfg)
-    todo = targets[:limit]
+    first, then = _lookup_plan(store, rows, cfg)
+    targets = first + then
+    todo = first + then[: max(limit, 0)]
     if not todo:
         return 0
     print(f"\nLeggo marchio e produttore dalla pagina prodotto di {len(todo)} prodotti…")
@@ -238,7 +247,7 @@ def web_targets(store: Store, rows: list[SerpRow]) -> list[str]:
     done = set(store.brand_web())
     best: dict[str, int] = {}
     for r in rows:
-        if r.relevant and r.brand != UNKNOWN_BRAND and normalize(r.brand) not in done:
+        if r.relevant and r.brand not in (UNKNOWN_BRAND, GENERIC_BRAND) and normalize(r.brand) not in done:
             best[r.brand] = min(best.get(r.brand, 10**6), r.rank or 10**5)
     return sorted(best, key=lambda b: (best[b], b))
 
@@ -376,11 +385,40 @@ def cmd_parse(args, cfg: Config) -> None:
 # --------------------------------------------------------------------------- report / inspect / runs
 
 
+def _ask(question: str) -> bool:
+    if not sys.stdin.isatty():
+        return False
+    try:
+        answer = input(question).strip().lower()
+    except EOFError:
+        return False
+    return answer in ("", "s", "si", "sì", "y", "yes")
+
+
 def cmd_report(args, cfg: Config) -> None:
-    store = Store(Path(args.data_dir) / "sov.sqlite")
+    data_dir = Path(args.data_dir)
+    store = Store(data_dir / "sov.sqlite")
     run_id = args.run or store.latest_run_id()
     if not run_id:
         raise SystemExit("Nessuna esecuzione nell'archivio: lancia prima `crawl` o `parse`.")
+    if not args.senza_browser:
+        resolver, relevance = _filters(cfg, store)
+        rows = reclassify(store.rows(run_id), resolver, relevance)
+        missing, _ = _lookup_plan(store, rows, cfg)
+        if missing:
+            minutes = max(1, round(len(missing) * sum(cfg.crawl.delay_seconds) / 2 / 60))
+            question = (
+                f"{len(missing)} prodotti di ferro non hanno ancora un marchio sicuro.\n"
+                f"Li leggo ora dalle pagine prodotto di Amazon (circa {minutes} minuti)? [S/n] "
+            )
+            if args.completa or _ask(question):
+                from .fetcher import BrowserFetcher
+
+                try:
+                    with BrowserFetcher(cfg, data_dir / "browser-profile") as fetcher:
+                        _lookup_products(fetcher, store, rows, cfg, 0, data_dir / "html" / "prodotti")
+                except KeyboardInterrupt:
+                    print("\nInterrotto: uso i marchi trovati finora.")
     make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
 
 
@@ -536,6 +574,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("report", help="rigenera report e CSV di un'esecuzione (default: l'ultima)")
     p.add_argument("--run")
+    p.add_argument("--completa", action="store_true",
+                   help="legge subito dalle pagine prodotto i marchi mancanti, senza chiedere")
+    p.add_argument("--senza-browser", action="store_true", help="non apre il browser: usa solo i dati già raccolti")
     report_opts(p)
     p.set_defaults(func=cmd_report)
 

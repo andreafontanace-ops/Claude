@@ -80,7 +80,9 @@ amazon-sov report
 ```
 
 Rigenera report e CSV dell'ultima esecuzione (o di `--run ID`) con la configurazione attuale: utile dopo
-aver aggiunto alias di marchio o correzioni.
+aver aggiunto alias di marchio o correzioni. Se ci sono prodotti di cui non conosce ancora il marchio,
+chiede se leggerli subito dalle pagine prodotto (Invio = sì); `--completa` lo fa senza chiedere,
+`--senza-browser` non apre mai il browser.
 
 ```bash
 amazon-sov brands
@@ -179,10 +181,17 @@ si possono cambiare e ampliare in `config.toml`.
 Per ogni prodotto il marchio viene preso, in ordine di priorità, da:
 
 1. la correzione manuale in `[brands.asin_overrides]`;
-2. la riga del marchio sopra il titolo nei risultati;
-3. la pagina prodotto (letta in automatico alla fine del crawl o con `amazon-sov brands`);
+2. la riga del marchio sopra il titolo nei risultati, oppure le parole in più all'inizio del titolo
+   completo (testo dell'immagine) rispetto al titolo visibile;
+3. la pagina prodotto (letta alla fine del crawl, con `amazon-sov brands` o dal comando `report`);
 4. un alias di `[brands.aliases]` trovato nel titolo;
-5. la prima parola del titolo, se non è una parola generica come «Integratore» o «Ferro».
+5. il produttore indicato nella pagina prodotto, senza forma giuridica («WeightWorld Ltd» → WeightWorld);
+6. la prima parola del titolo, o le prime due quando la seconda fa parte del nome («Pharma Nord»),
+   saltando le parole di prodotto come «Ferro» o «Integratore».
+
+Se la pagina prodotto è stata letta e Amazon non indica un marchio (o scrive «Generico»), il prodotto
+va in «Prodotti senza marchio». «Marchio da verificare» resta solo per i prodotti la cui pagina non è
+ancora stata letta. Entrambi compaiono in fondo alle classifiche, senza posizione.
 
 In fondo al report vedi quanta visibilità viene da ciascuna fonte e l'elenco «Marchi da verificare».
 Se restano prodotti sconosciuti, lancia `amazon-sov brands` oppure scrivi il marchio in

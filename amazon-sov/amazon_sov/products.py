@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict
 
-from .brands import UNKNOWN_BRAND, normalize
+from .brands import GENERIC_BRAND, UNKNOWN_BRAND, normalize
 from .config import Config
 from .pipeline import SerpRow
 
@@ -83,10 +83,10 @@ class ManufacturerResolver:
             else:
                 r.manufacturer, r.manufacturer_source = None, None
         for r in rows:
-            if r.manufacturer is None and r.brand != UNKNOWN_BRAND and votes.get(r.brand):
+            if r.manufacturer is None and r.brand not in (UNKNOWN_BRAND, GENERIC_BRAND) and votes.get(r.brand):
                 r.manufacturer = votes[r.brand].most_common(1)[0][0]
                 r.manufacturer_source = "same_brand"
-            elif r.manufacturer is None and r.brand != UNKNOWN_BRAND and normalize(r.brand) in self.web:
+            elif r.manufacturer is None and r.brand not in (UNKNOWN_BRAND, GENERIC_BRAND) and normalize(r.brand) in self.web:
                 r.manufacturer = self.display(self.web[normalize(r.brand)])
                 r.manufacturer_source = "google"
 

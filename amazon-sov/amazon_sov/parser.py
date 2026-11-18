@@ -246,7 +246,35 @@ def _title_and_brand(el: Tag) -> tuple[str, str | None]:
     title = _strip_sponsored_prefix(title or "")
     if brand and (brand.lower() in SPONSORED_WORDS or len(brand) > 60 or brand == title):
         brand = None
+    if not brand and title:
+        # Il titolo visibile a volte è senza marchio, mentre quello completo (aria-label del titolo o testo
+        # dell'immagine) ha il marchio davanti: "WeightWorld Ferro…" contro "Ferro…".
+        h2 = scope.find("h2", attrs={"aria-label": True})
+        img = el.select_one("img.s-image[alt]")
+        for full in (h2.get("aria-label") if h2 else None, img.get("alt") if img else None):
+            full = _strip_sponsored_prefix(_clean(full))
+            prefix = _brand_prefix(full, title)
+            if prefix:
+                return full, prefix
     return title, brand
+
+
+def _norm_words(text: str) -> list[str]:
+    return re.sub(r"[^\w]+", " ", text.lower()).split()
+
+
+def _brand_prefix(full: str, short: str) -> str | None:
+    """Parole in più all'inizio del titolo completo rispetto a quello visibile (1-4 parole)."""
+    full_words, short_words = _norm_words(full), _norm_words(short)
+    if not full_words or not short_words or len(full_words) <= len(short_words):
+        return None
+    head = short_words[: min(6, len(short_words))]
+    for k in range(1, 5):
+        if full_words[k : k + len(head)] == head:
+            raw = full.split()[:k] if len(full.split()) >= k else []
+            prefix = " ".join(raw).strip(" -–|,:")
+            return prefix if prefix and _looks_like_brand(prefix) else None
+    return None
 
 
 def _looks_like_brand(text: str) -> bool:

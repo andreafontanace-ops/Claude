@@ -285,6 +285,10 @@ import pytest
         ("Ferro Alto Dosaggio 30 mg", (UNKNOWN_BRAND, "unknown")),
         ("Integratore Ferro Bisglicinato Vegano", (UNKNOWN_BRAND, "unknown")),
         ("Ferro 28mg Vegano", (UNKNOWN_BRAND, "unknown")),  # oltre la seconda parola non si cerca
+        ("Pharma Nord Bio-Ferro 30 compresse", ("Pharma Nord", "title_guess")),  # prime due parole
+        ("Named Sport Iron 30 cpr", ("Named Sport", "title_guess")),
+        ("Bio Nutrition Ferro", ("Bio Nutrition", "title_guess")),
+        ("BrandX Gentle Iron", ("BrandX", "title_guess")),  # «Gentle» descrive il prodotto
     ],
 )
 def test_brand_guess_first_or_second_word(title, expected):
@@ -313,7 +317,7 @@ def test_unknown_brand_is_listed_last_without_rank(tmp_path):
     assert unknown["posizione"] == ""
     assert brands.index(unknown) > max(i for i, b in enumerate(brands) if b["posizione"])
     html = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
-    assert "Marchio non identificato" in html and "pagina prodotto da leggere" in html
+    assert "Marchio da verificare" in html and "pagina prodotto da leggere" in html
 
 
 def test_lookup_starts_with_products_without_brand(tmp_path):
@@ -351,3 +355,53 @@ def test_google_command_fills_verification(tmp_path, monkeypatch, capsys):
 
     main(args + ["google", "--out", str(tmp_path / "reports")])
     assert "già stati cercati" in capsys.readouterr().out
+
+
+def test_brand_from_product_page_maker_or_none():
+    from amazon_sov.brands import GENERIC_BRAND, brand_from_company
+
+    assert brand_from_company("WeightWorld Ltd") == "WeightWorld"
+    assert brand_from_company("Salus Haus GmbH & Co. KG") == "Salus Haus"
+    assert brand_from_company("PharmaNutra S.p.A.") == "PharmaNutra"
+    infos = {
+        "B0GENERICO": {"brand": "Generico", "checked_at": "x"},
+        "B0MAKER001": {"brand": None, "manufacturer": "Acme Labs S.r.l.", "checked_at": "x"},
+        "B0NOTHING1": {"brand": None, "manufacturer": None, "checked_at": "x"},
+    }
+    res = BrandResolver(CFG, product_info=infos)
+    assert res.resolve("B0GENERICO", None, "WeightWorld Ferro") == (GENERIC_BRAND, "product_page")
+    assert res.resolve("B0MAKER001", None, "Ferro Integratore 400 compresse") == ("Acme Labs", "product_page_maker")
+    assert res.resolve("B0NOTHING1", None, "Ferro Integratore 400 compresse") == (GENERIC_BRAND, "product_page")
+    assert res.resolve("B0NOTHING1", None, "Zenement Ferro") == ("Zenement", "title_guess")
+    assert res.resolve("B0NEVER001", None, "Ferro Integratore 400 compresse") == (UNKNOWN_BRAND, "unknown")
+
+
+def test_report_reads_missing_brands_then_has_no_unknown(tmp_path, monkeypatch):
+    import amazon_sov.fetcher as fetcher_mod
+
+    html_dir = tmp_path / "pagine"
+    html_dir.mkdir()
+    shutil.copy(FIX / "integratore-ferro__p1.html", html_dir / "integratore-ferro__p1.html")
+    args = ["-c", str(ROOT / "config.toml"), "--data-dir", str(tmp_path / "data")]
+    main(args + ["parse", str(html_dir), "--out", str(tmp_path / "reports")])
+
+    calls = []
+
+    class GenericFetcher(FakeFetcher):
+        def fetch_product(self, asin):
+            calls.append(asin)
+            return '<span id="productTitle">x</span><a id="bylineInfo">Marca: Generico</a>'
+
+    monkeypatch.setattr(fetcher_mod, "BrowserFetcher", GenericFetcher)
+    main(args + ["report", "--completa", "--out", str(tmp_path / "reports")])
+    assert sorted(calls) == ["B0FERROLIP", "B0GENERIC1"]  # solo i prodotti senza marchio sicuro
+
+    run_id = Store(tmp_path / "data" / "sov.sqlite").latest_run_id()
+    with open(tmp_path / "reports" / run_id / "sov_marchi.csv", encoding="utf-8-sig") as fh:
+        names = [r["marchio"] for r in csv.DictReader(fh, delimiter=";")]
+    assert UNKNOWN_BRAND not in names and "(senza marchio)" in names
+
+    # senza --completa e senza terminale non apre il browser
+    calls.clear()
+    main(args + ["report", "--out", str(tmp_path / "reports")])
+    assert calls == []
