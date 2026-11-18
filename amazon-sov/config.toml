@@ -1,0 +1,138 @@
+# Configurazione del crawler di share of voice per gli integratori di ferro su Amazon.it
+
+[marketplace]
+domain = "www.amazon.it"
+
+[crawl]
+# Pagine di risultati da leggere per ogni keyword (la pagina 1 è quella che conta di più)
+pages = 2
+# Pausa casuale tra una pagina e l'altra, in secondi [min, max]
+delay_seconds = [8, 15]
+# Tetto di sicurezza sul numero totale di pagine per esecuzione
+max_pages_total = 60
+# false = browser visibile: se compare un captcha lo risolvi tu e il crawl riprende
+headless = false
+# "chromium" (quello di Playwright) oppure "chrome" per usare Chrome installato sul computer
+browser_channel = "chromium"
+
+[scoring]
+# Peso di ogni posizione nella pagina dei risultati:
+#   zipf  = 1 / rank^esponente (default: approssima la curva dei clic)
+#   dcg   = 1 / log2(rank + 1) (decade più lentamente)
+#   flat  = ogni slot vale 1 ("share of shelf" semplice)
+#   table = pesi espliciti in `table`, poi decadimento geometrico
+weighting = "zipf"
+zipf_exponent = 1.0
+table = [1.0, 0.75, 0.6, 0.5, 0.42, 0.36, 0.31, 0.27, 0.24, 0.21]
+table_decay = 0.93
+# Considera solo i primi N risultati di ogni keyword (0 = tutti quelli letti)
+max_rank = 0
+# Peso fisso dei prodotti nei widget (Sponsored Brands, caroselli). 0 = registrati ma esclusi dal punteggio
+widget_weight = 0.0
+
+# Keyword da monitorare. `weight` è il peso della keyword nel totale:
+# se hai i volumi di ricerca mensili (Helium 10, Sellics, ecc.) mettili qui.
+[[keywords]]
+term = "integratore ferro"
+weight = 1.0
+
+[[keywords]]
+term = "ferro integratore"
+weight = 1.0
+
+[[keywords]]
+term = "integratore ferritina"
+weight = 1.0
+
+[[keywords]]
+term = "ferritina"
+weight = 1.0
+
+[[keywords]]
+term = "ferro bisglicinato"
+weight = 1.0
+
+[[keywords]]
+term = "ferro liposomiale"
+weight = 1.0
+
+[[keywords]]
+term = "ferro sucrosomiale"
+weight = 1.0
+
+[[keywords]]
+term = "ferro e vitamina c"
+weight = 1.0
+
+[[keywords]]
+term = "ferro e acido folico"
+weight = 1.0
+
+[[keywords]]
+term = "ferro gravidanza"
+weight = 1.0
+
+[[keywords]]
+term = "ferro bambini"
+weight = 1.0
+
+[[keywords]]
+term = "ferro gocce"
+weight = 1.0
+
+[[keywords]]
+term = "integratore anemia"
+weight = 1.0
+
+[relevance]
+# Un prodotto è "pertinente" (integratore di ferro) se il titolo contiene uno di questi termini
+# e nessuno dei termini di esclusione. Confronto senza maiuscole né accenti, a parole intere.
+include = [
+    "ferro", "ferritina", "ferroso", "ferrosa", "ferrico", "ferrica",
+    "iron", "eisen", "bisglicinato di ferro", "ferro bisglicinato",
+    "sideral", "ferrograd", "feroglobin", "floradix",
+]
+exclude = [
+    "senza ferro", "iron free", "ferro da stiro", "piastra", "arricciacapelli",
+]
+
+[brands]
+# Parole che non sono mai un marchio: servono a scartare la stima del marchio dalla prima parola del titolo
+generic_words = [
+    "integratore", "integratori", "ferro", "ferritina", "vitamina", "vitamine",
+    "compresse", "capsule", "gocce", "iron", "multivitaminico", "complesso",
+    "bisglicinato", "liposomiale", "sucrosomiale", "acido", "folico", "per",
+    "con", "di", "il", "la", "le", "nuovo", "confezione", "pack", "100%",
+    "vitamin", "vitamins", "supplement", "alimentare", "naturale", "naturali",
+    "biologico", "bio", "vegan", "vegano", "premium", "extra", "forte", "plus",
+]
+
+# Marchio canonico = varianti con cui compare nel titolo o nella riga del marchio.
+# È un punto di partenza: aggiungi i marchi che vedi nei report alla voce "(sconosciuto)".
+[brands.aliases]
+"Sideral" = ["sideral", "sideral forte", "sideral folico"]
+"Ferrograd" = ["ferrograd", "ferro-grad", "ferro grad"]
+"Feroglobin" = ["feroglobin", "vitabiotics feroglobin"]
+"Floradix" = ["floradix", "salus floradix"]
+"Solgar" = ["solgar"]
+"Nature's Bounty" = ["nature's bounty", "natures bounty"]
+"Nutravita" = ["nutravita"]
+"Natural Point" = ["natural point"]
+"Swisse" = ["swisse"]
+"Vitamaze" = ["vitamaze"]
+"Gloryfeel" = ["gloryfeel"]
+"Nature Love" = ["nature love"]
+"Sunday Natural" = ["sunday natural"]
+"Natural Elements" = ["natural elements"]
+"Doppelherz" = ["doppelherz"]
+"ESI" = ["esi"]
+"Vitabiotics" = ["vitabiotics"]
+"Amazon Basics" = ["amazon basics"]
+
+# Correzioni manuali ASIN -> marchio (hanno la precedenza su tutto il resto)
+[brands.asin_overrides]
+# "B000000000" = "Marchio"
+
+[output]
+# "excel-it" = separatore ';' e virgola decimale (si apre bene in Excel italiano); "standard" = ',' e punto
+csv_dialect = "excel-it"
