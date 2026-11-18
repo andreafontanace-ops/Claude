@@ -1,9 +1,10 @@
 # amazon-sov · share of voice degli integratori di ferro su Amazon.it
 
 Cerca su Amazon.it una lista di keyword (integratore ferro, ferritina, ferro bisglicinato, …), legge le
-pagine dei risultati e classifica **prodotti** e **marchi** per *share of voice* (SoV): quanta parte
-della visibilità nei risultati occupano, pesando di più le prime posizioni e separando posizioni
-organiche e annunci.
+pagine dei risultati e classifica **prodotti**, **marchi** e **produttori** per *share of voice* (SoV):
+quanta parte della visibilità nei risultati occupano, pesando di più le prime posizioni e separando
+posizioni organiche e annunci. Per ogni prodotto indica anche la **formulazione**: la forma (compresse,
+capsule, gocce, bustine…) e il tipo di ferro (bisglicinato, liposomiale, sucrosomiale…).
 
 Produce un report HTML, quattro CSV pronti per Excel e uno storico SQLite per confrontare un'esecuzione
 con la precedente.
@@ -53,11 +54,12 @@ amazon-sov crawl --keyword "ferritina" --keyword "ferro bisglicinato" --pages 1
 amazon-sov crawl --enrich-brands 20
 ```
 
-Alla fine del crawl, per i prodotti di ferro il cui marchio non si legge nei risultati, il programma
-apre la pagina prodotto e lo legge da lì («Visita lo Store di …», «Marca: …»). Ne apre al massimo 30
-per esecuzione: il numero si cambia con `brand_lookup` in `config.toml` o con `--enrich-brands N`
-(`0` = mai). I marchi trovati restano in archivio, quindi dalla seconda esecuzione le pagine da aprire
-sono poche.
+Alla fine del crawl il programma apre alcune pagine prodotto per leggere marchio, produttore e forma:
+quelle dei prodotti di ferro il cui marchio non si legge nei risultati e, per ogni marchio di cui non
+conosce ancora il produttore, quella del suo prodotto più visibile (il produttore trovato vale per
+tutto il marchio). Ne apre al massimo 40 per esecuzione: il numero si cambia con `product_pages` in
+`config.toml` o con `--product-pages N` (`0` = mai). Quello che trova resta in archivio, quindi dalla
+seconda esecuzione le pagine da aprire sono poche.
 
 ### 2. Pagine salvate a mano (senza automazione)
 
@@ -84,8 +86,9 @@ aver aggiunto alias di marchio o correzioni.
 amazon-sov brands
 ```
 
-Completa i marchi dell'ultima esecuzione senza rifare le ricerche: apre le pagine prodotto dei prodotti
-con marchio sconosciuto o stimato (al massimo 50, `--max N`) e rigenera il report.
+Completa marchi e produttori dell'ultima esecuzione senza rifare le ricerche: apre le pagine prodotto
+che servono (al massimo 80, `--max N`) e rigenera il report. Si può lanciare più volte: riprende da
+dove era rimasto.
 
 ```bash
 amazon-sov inspect
@@ -111,7 +114,8 @@ che approssima la distribuzione dei clic.
   di tutte le posizioni lette per quella keyword.
 - **SoV complessiva** = media delle SoV per keyword, pesata con il `weight` di ciascuna keyword. Se
   metti i volumi di ricerca mensili come pesi, le keyword più cercate contano di più.
-- **SoV di un marchio** = somma delle SoV dei suoi prodotti.
+- **SoV di un marchio** = somma delle SoV dei suoi prodotti. Lo stesso vale per **produttore**, **forma**
+  e **tipo di ferro**. Per forme e tipi di ferro il report mostra la quota tra i soli prodotti di ferro.
 
 | Colonna | Significato |
 |---|---|
@@ -126,6 +130,24 @@ I prodotti che non sono integratori di ferro (per esempio vitamina D o multivita
 restano nel denominatore, perché occupano spazio reale nella pagina. Sono raggruppati alla voce
 «Prodotti non di ferro» e non entrano nella classifica. Con `--denominator relevant` la SoV è invece
 calcolata sui soli integratori di ferro. L'ordine della classifica non cambia, cambia solo la scala.
+
+### Produttore
+
+Amazon non mostra il produttore nei risultati di ricerca: si legge nella pagina prodotto, in «Dettagli
+prodotto» → Produttore (l'indirizzo viene tolto). Ordine di priorità:
+
+1. la correzione per ASIN in `[manufacturers.asin_overrides]`;
+2. il produttore del marchio in `[manufacturers.by_brand]`;
+3. la pagina prodotto;
+4. un altro prodotto dello stesso marchio di cui si conosce il produttore.
+
+Lo stesso produttore scritto in modi diversi («PharmaNutra S.p.A.», «PHARMANUTRA SPA») viene unito.
+
+### Formulazione
+
+Si ricava dal titolo con le regole di `[formulation.forms]` e `[formulation.iron_types]`. Se il titolo
+non dice la forma, si usa la «Forma del prodotto» della pagina prodotto, quando è stata letta. Le regole
+si possono cambiare e ampliare in `config.toml`.
 
 ### Marchio
 
@@ -149,6 +171,8 @@ Se restano prodotti sconosciuti, lancia `amazon-sov brands` oppure scrivi il mar
   widget Sponsored Brands (di default sono registrati ma esclusi dal punteggio).
 - `[relevance]`: termini che rendono un prodotto «integratore di ferro» e termini che lo escludono.
 - `[brands]`: alias dei marchi e correzioni per ASIN.
+- `[manufacturers]`: produttore per marchio e correzioni per ASIN.
+- `[formulation]`: regole per forma e tipo di ferro.
 - `[output] csv_dialect`: `excel-it` usa `;` e la virgola decimale, `standard` usa `,` e il punto.
 
 ## File prodotti
@@ -159,7 +183,10 @@ data/html/<esecuzione>/*.html         pagine scaricate (per ricontrollare o rian
 data/browser-profile/                 profilo del browser del crawler
 reports/<esecuzione>/report.html      report
 reports/<esecuzione>/sov_marchi.csv   classifica marchi
-reports/<esecuzione>/sov_prodotti.csv classifica prodotti
+reports/<esecuzione>/sov_prodotti.csv classifica prodotti (con produttore, forma e tipo di ferro)
+reports/<esecuzione>/sov_produttori.csv classifica produttori
+reports/<esecuzione>/sov_forme.csv    quota per forma
+reports/<esecuzione>/sov_tipi_ferro.csv quota per tipo di ferro
 reports/<esecuzione>/sov_keyword_marchi.csv  SoV di ogni marchio per keyword
 reports/<esecuzione>/serp.csv         ogni risultato letto, riga per riga
 ```

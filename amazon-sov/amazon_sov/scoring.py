@@ -22,6 +22,15 @@ from .config import ScoringConfig
 from .pipeline import SerpRow
 
 NON_RELEVANT = "(non pertinenti)"
+NOT_STATED = "(non indicato)"
+
+# raggruppamenti calcolati oltre ai singoli prodotti
+GROUPS = {
+    "brands": lambda r: r.brand,
+    "manufacturers": lambda r: r.manufacturer or NOT_STATED,
+    "forms": lambda r: r.form or NOT_STATED,
+    "iron_types": lambda r: r.iron_type or NOT_STATED,
+}
 
 
 def position_weight(rank: int, sc: ScoringConfig) -> float:
@@ -66,11 +75,15 @@ class _Acc:
 @dataclass
 class SovResult:
     products: list[dict]
-    brands: list[dict]
+    groups: dict[str, list[dict]]  # "brands", "manufacturers", "forms", "iron_types"
     keyword_brand: dict[str, dict[str, float]]
     keywords_scored: list[str]
     keywords_empty: list[str]
     meta: dict
+
+    @property
+    def brands(self) -> list[dict]:
+        return self.groups["brands"]
 
 
 def compute_sov(
@@ -85,7 +98,7 @@ def compute_sov(
         by_kw[r.keyword].append(r)
 
     products: dict[str, _Acc] = defaultdict(_Acc)
-    brands: dict[str, _Acc] = defaultdict(_Acc)
+    groups: dict[str, dict[str, _Acc]] = {g: defaultdict(_Acc) for g in GROUPS}
     keyword_brand: dict[str, dict[str, float]] = {}
     sample: dict[str, SerpRow] = {}
     v_total = v_org = v_paid = v_top10 = 0.0
@@ -134,7 +147,8 @@ def compute_sov(
             kb[bucket] += weight[id(r)] / w_all
             if r.asin not in sample or (sample[r.asin].price is None and r.price is not None):
                 sample[r.asin] = r
-            for acc in (products[r.asin], brands[bucket]):
+            accs = [products[r.asin]] + [groups[g][fn(r) if r.relevant else NON_RELEVANT] for g, fn in GROUPS.items()]
+            for acc in accs:
                 acc.total += share
                 acc.keywords.add(kw)
                 acc.asins.add(r.asin)
@@ -190,23 +204,42 @@ def compute_sov(
                 "reviews": s.reviews,
                 "bought_last_month": s.bought_last_month,
                 "badges": s.badges,
+                "manufacturer": s.manufacturer,
+                "manufacturer_source": s.manufacturer_source,
+                "form": s.form,
+                "iron_type": s.iron_type,
             }
         )
     product_rows.sort(key=lambda p: (-p["sov_total"], p["asin"]))
 
-    brand_rows = []
-    for name, acc in brands.items():
-        top_asin = max(acc.by_asin_total, key=acc.by_asin_total.get)
-        brand_rows.append(
-            {
-                "brand": name,
-                **finish(acc),
-                "n_products": len(acc.asins),
-                "top_asin": top_asin,
-                "top_title": sample[top_asin].title,
-            }
-        )
-    brand_rows.sort(key=lambda b: (b["brand"] == NON_RELEVANT, -b["sov_total"], b["brand"]))
+    def leaders(acc: _Acc, attr: str) -> list[str]:
+        """Valori di `attr` (marchio, produttore) dei prodotti del gruppo, dal più visibile."""
+        weight: dict[str, float] = defaultdict(float)
+        for asin, w in acc.by_asin_total.items():
+            value = getattr(sample[asin], attr)
+            if value:
+                weight[value] += w
+        return sorted(weight, key=lambda k: (-weight[k], k))
+
+    group_rows: dict[str, list[dict]] = {}
+    for g, accs_by_name in groups.items():
+        out = []
+        for name, acc in accs_by_name.items():
+            top_asin = max(acc.by_asin_total, key=acc.by_asin_total.get)
+            out.append(
+                {
+                    "brand": name,  # nome del gruppo (marchio, produttore, forma o tipo di ferro)
+                    **finish(acc),
+                    "n_products": len(acc.asins),
+                    "top_asin": top_asin,
+                    "top_title": sample[top_asin].title,
+                    "manufacturer": (leaders(acc, "manufacturer") or [None])[0],
+                    "brands": leaders(acc, "brand"),
+                }
+            )
+        out.sort(key=lambda b: (b["brand"] == NON_RELEVANT, b["brand"] == NOT_STATED, -b["sov_total"], b["brand"]))
+        group_rows[g] = out
+    brand_rows = group_rows["brands"]
 
     meta = {
         "keywords_scored": len(scored),
@@ -219,4 +252,4 @@ def compute_sov(
         "n_products": sum(1 for p in product_rows if p["relevant"]),
         "n_brands": sum(1 for b in brand_rows if b["brand"] != NON_RELEVANT),
     }
-    return SovResult(product_rows, brand_rows, keyword_brand, scored, empty, meta)
+    return SovResult(product_rows, group_rows, keyword_brand, scored, empty, meta)

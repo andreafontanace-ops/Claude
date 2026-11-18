@@ -20,7 +20,7 @@ class CrawlConfig:
     max_pages_total: int = 60
     headless: bool = False
     browser_channel: str = "chromium"
-    brand_lookup: int = 30
+    product_pages: int = 40  # pagine prodotto da aprire per esecuzione (marchio, produttore, forma)
 
 
 @dataclass
@@ -45,6 +45,10 @@ class Config:
     generic_words: list[str]
     asin_overrides: dict[str, str]
     csv_dialect: str = "excel-it"
+    manufacturer_by_brand: dict[str, str] = field(default_factory=dict)
+    manufacturer_overrides: dict[str, str] = field(default_factory=dict)
+    forms: dict[str, list[str]] = field(default_factory=lambda: dict(DEFAULT_FORMS))
+    iron_types: dict[str, list[str]] = field(default_factory=lambda: dict(DEFAULT_IRON_TYPES))
 
     @property
     def keyword_weights(self) -> dict[str, float]:
@@ -52,6 +56,36 @@ class Config:
 
 
 WEIGHTINGS = {"zipf", "dcg", "flat", "table"}
+
+# Forma del prodotto: la prima regola che corrisponde vince (l'ordine conta).
+# Ogni termine è l'inizio di una parola nel titolo, senza maiuscole né accenti.
+DEFAULT_FORMS: dict[str, list[str]] = {
+    "Gommose/masticabili": ["gommos", "gummies", "gummy", "masticabil", "caramell"],
+    "Flaconcini/fiale": ["flaconcin", "fiala", "fiale", "monodose"],
+    "Bustine/stick": ["bustin", "stick", "orosolubil"],
+    "Spray": ["spray"],
+    "Gocce": ["gocce", "goccia", "drops"],
+    "Liquido/sciroppo": ["sciropp", "liquid", "soluzione orale", "succo"],
+    "Capsule": ["capsul", "cps", "softgel", "perle", "opercol"],
+    "Compresse": ["compress", "cpr", "tavolett", "tablet", "pastigli"],
+    "Polvere": ["polver", "powder"],
+}
+
+# Tipo di ferro: si riportano tutte le corrispondenze (al massimo due), nell'ordine qui sotto.
+DEFAULT_IRON_TYPES: dict[str, list[str]] = {
+    "Sucrosomiale": ["sucrosomial"],
+    "Liposomiale": ["liposom"],
+    "Bisglicinato": ["bisglicinat", "bisglycinat", "diglicinat"],
+    "Pirofosfato": ["pirofosfat", "pyrophosphat"],
+    "Fumarato": ["fumarat"],
+    "Gluconato": ["gluconat"],
+    "Solfato": ["solfat", "sulfat", "sulphat"],
+    "Citrato": ["citrato di ferro", "ferro citrato", "ferric citrate"],
+    "Carbonile": ["carbonil"],
+    "Eme": ["ferro eme", "heme iron", "ferro emico"],
+    "Lattoferrina": ["lattoferrin", "lactoferrin"],
+    "Chelato": ["chelat"],
+}
 
 
 def load_config(path: str | Path) -> Config:
@@ -71,7 +105,7 @@ def config_from_dict(raw: dict) -> Config:
         max_pages_total=int(crawl_raw.get("max_pages_total", 60)),
         headless=bool(crawl_raw.get("headless", False)),
         browser_channel=str(crawl_raw.get("browser_channel", "chromium")),
-        brand_lookup=int(crawl_raw.get("brand_lookup", 30)),
+        product_pages=int(crawl_raw.get("product_pages", crawl_raw.get("brand_lookup", 40))),
     )
     if crawl.pages < 1:
         raise ValueError("crawl.pages deve essere almeno 1")
@@ -117,4 +151,16 @@ def config_from_dict(raw: dict) -> Config:
         generic_words=list(brands.get("generic_words", [])),
         asin_overrides={str(k).upper(): str(v) for k, v in brands.get("asin_overrides", {}).items()},
         csv_dialect=str(raw.get("output", {}).get("csv_dialect", "excel-it")),
+        manufacturer_by_brand={str(k): str(v) for k, v in raw.get("manufacturers", {}).get("by_brand", {}).items()},
+        manufacturer_overrides={
+            str(k).upper(): str(v) for k, v in raw.get("manufacturers", {}).get("asin_overrides", {}).items()
+        },
+        forms=_rules(raw.get("formulation", {}).get("forms"), DEFAULT_FORMS),
+        iron_types=_rules(raw.get("formulation", {}).get("iron_types"), DEFAULT_IRON_TYPES),
     )
+
+
+def _rules(raw: dict | None, default: dict[str, list[str]]) -> dict[str, list[str]]:
+    if not raw:
+        return dict(default)
+    return {str(label): [str(t) for t in terms] for label, terms in raw.items()}

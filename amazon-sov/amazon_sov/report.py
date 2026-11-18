@@ -6,7 +6,15 @@ from collections import defaultdict
 from html import escape
 
 from .config import Config
-from .scoring import NON_RELEVANT, SovResult
+from .scoring import NON_RELEVANT, NOT_STATED, SovResult
+
+MANU_SOURCE_LABELS = {
+    "product_page": "pagina prodotto («Dettagli prodotto» → Produttore)",
+    "same_brand": "altro prodotto dello stesso marchio",
+    "config": "configurazione (marchio → produttore)",
+    "override": "correzione manuale",
+    None: "non indicato",
+}
 
 SOURCE_LABELS = {
     "serp": "riga del marchio nella SERP",
@@ -66,7 +74,6 @@ def render_report(
     top_products: int = 50,
 ) -> str:
     brands = [b for b in result.brands if b["brand"] != NON_RELEVANT]
-    non_rel = next((b for b in result.brands if b["brand"] == NON_RELEVANT), None)
     products = [p for p in result.products if p["relevant"]][:top_products]
     n_kw = len(result.keywords_scored)
     kw_total = len(keyword_weights)
@@ -82,35 +89,29 @@ def render_report(
         for s, v in sorted(by_source.items(), key=lambda kv: -kv[1])
     )
 
-    # ---- marchi
-    scale_b = max((b["sov_total"] for b in brands), default=0.0)
-    brand_rows = []
-    for i, b in enumerate(brands, 1):
-        brand_rows.append(
-            f"""<tr>
-<td class="num muted">{i}</td>
-<td><b>{escape(b["brand"])}</b><div class="sub">{escape(_short(b["top_title"], 60))}</div></td>
-<td class="barcell">{_bar(b["sov_total"], b["ads_share"], scale_b)}</td>
-<td class="num strong">{pct(b["sov_total"])}</td>
-<td class="num">{pct(b["sov_organic"])}</td>
-<td class="num">{pct(b["sov_paid"])}</td>
-<td class="num">{pct(b["ads_share"], 0)}</td>
-<td class="num">{pct(b["shelf_top10"])}</td>
-<td class="num">{b["keywords_present"]}/{n_kw}</td>
-<td class="num">{b["n_products"]}</td>
-{f'<td class="num delta">{delta(b.get("delta_pp"))}</td>' if prev_run_id else ""}
-</tr>"""
-        )
-    if non_rel:
-        brand_rows.append(
-            f"""<tr class="nonrel">
-<td></td><td><i>Prodotti non di ferro</i><div class="sub">occupano spazio nella SERP ma non entrano nella classifica</div></td>
-<td class="barcell"></td><td class="num">{pct(non_rel["sov_total"])}</td><td class="num">{pct(non_rel["sov_organic"])}</td>
-<td class="num">{pct(non_rel["sov_paid"])}</td><td class="num">{pct(non_rel["ads_share"], 0)}</td>
-<td class="num">{pct(non_rel["shelf_top10"])}</td><td class="num">{non_rel["keywords_present"]}/{n_kw}</td>
-<td class="num">{non_rel["n_products"]}</td>{'<td></td>' if prev_run_id else ""}
-</tr>"""
-        )
+    # ---- marchi e produttori
+    brand_rows = _group_rows(
+        result.groups["brands"], n_kw, prev_run_id,
+        lambda b: f'{escape(b["manufacturer"] or "produttore non indicato")} · {escape(_short(b["top_title"], 50))}',
+    )
+    manu_rows = _group_rows(
+        result.groups["manufacturers"], n_kw, prev_run_id,
+        lambda b: escape(", ".join(b["brands"][:4]) + (" …" if len(b["brands"]) > 4 else "")),
+    )
+
+    # ---- formulazioni
+    form_rows = _mix_rows(result.groups["forms"])
+    iron_rows = _mix_rows(result.groups["iron_types"])
+
+    # ---- qualità del dato sui produttori
+    by_manu_source: dict[str | None, float] = defaultdict(float)
+    for p in result.products:
+        if p["relevant"]:
+            by_manu_source[p["manufacturer_source"]] += p["sov_total"] / rel_total
+    manu_source_items = "".join(
+        f"<li>{escape(MANU_SOURCE_LABELS.get(s, s or 'non indicato'))}: <b>{pct(v)}</b></li>"
+        for s, v in sorted(by_manu_source.items(), key=lambda kv: -kv[1])
+    )
 
     # ---- prodotti
     scale_p = max((p["sov_total"] for p in products), default=0.0)
@@ -126,7 +127,8 @@ def render_report(
             f"""<tr>
 <td class="num muted">{i}</td>
 <td class="prod"><a href="https://{escape(cfg.domain)}/dp/{escape(p["asin"])}" target="_blank" rel="noopener">{escape(_short(p["title"], 90))}</a>
-<div class="sub">{escape(p["brand"])} · {escape(p["asin"])} {badges}</div></td>
+<div class="sub">{escape(p["brand"])} · {escape(p["manufacturer"] or "produttore non indicato")} · {escape(p["asin"])} {badges}</div></td>
+<td class="form">{escape(p["form"] or "–")}<div class="sub">{escape(p["iron_type"] or "")}</div></td>
 <td class="barcell">{_bar(p["sov_total"], p["ads_share"], scale_p)}</td>
 <td class="num strong">{pct(p["sov_total"], 2)}</td>
 <td class="num">{pct(p["sov_organic"], 2)}</td>
@@ -248,6 +250,12 @@ tbody tr:last-child td, tbody tr:last-child th {{ border-bottom: 0; }}
 .prod a {{ color: var(--ink); text-decoration: none; }}
 .prod a:hover {{ text-decoration: underline; }}
 .prod {{ min-width: 280px; }}
+.form {{ white-space: nowrap; }}
+.products th, .products td {{ padding: 8px 7px; }}
+.products .barcell {{ min-width: 100px; width: 12%; }}
+.products .prod {{ min-width: 230px; }}
+h3 {{ font-size: 15px; margin: 16px 0 8px; }}
+.two {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; }}
 .badge {{ display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink-2); margin-left: 4px; }}
 .barcell {{ min-width: 160px; width: 22%; }}
 .bar {{ display: flex; gap: 2px; height: 12px; align-items: stretch; }}
@@ -292,14 +300,33 @@ code {{ font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: v
 <div class="legend"><span><i style="background:var(--org)"></i>organica</span><span><i style="background:var(--paid)"></i>da annunci</span></div>
 <div class="scroll"><table>
 <thead><tr><th class="num">#</th><th>Marchio · prodotto di punta</th><th>SoV totale</th><th class="num">SoV tot.</th><th class="num">SoV organica</th><th class="num">SoV ads</th><th class="num">% da ads</th><th class="num">Top 10</th><th class="num">Keyword</th><th class="num">Prodotti</th>{delta_th}</tr></thead>
-<tbody>{"".join(brand_rows)}</tbody>
+<tbody>{brand_rows}</tbody>
 </table></div>
+
+<h2>Produttori per share of voice</h2>
+<p class="note">Come i marchi, ma sommando tutti i marchi della stessa azienda. Il produttore si legge nella pagina prodotto («Dettagli prodotto» → Produttore); per gli altri prodotti dello stesso marchio si usa lo stesso produttore.</p>
+<div class="legend"><span><i style="background:var(--org)"></i>organica</span><span><i style="background:var(--paid)"></i>da annunci</span></div>
+<div class="scroll"><table>
+<thead><tr><th class="num">#</th><th>Produttore · marchi</th><th>SoV totale</th><th class="num">SoV tot.</th><th class="num">SoV organica</th><th class="num">SoV ads</th><th class="num">% da ads</th><th class="num">Top 10</th><th class="num">Keyword</th><th class="num">Prodotti</th>{delta_th}</tr></thead>
+<tbody>{manu_rows}</tbody>
+</table></div>
+
+<h2>Formulazioni</h2>
+<p class="note">Come si divide la visibilità dei soli prodotti di ferro per forma e per tipo di ferro. Entrambi sono ricavati dal titolo; la forma, se nel titolo manca, dalla pagina prodotto.</p>
+<div class="two">
+<div><h3>Forma</h3><div class="scroll"><table>
+<thead><tr><th>Forma</th><th>Quota</th><th class="num">Quota</th><th class="num">% da ads</th><th class="num">Prodotti</th></tr></thead>
+<tbody>{form_rows}</tbody></table></div></div>
+<div><h3>Tipo di ferro</h3><div class="scroll"><table>
+<thead><tr><th>Tipo di ferro</th><th>Quota</th><th class="num">Quota</th><th class="num">% da ads</th><th class="num">Prodotti</th></tr></thead>
+<tbody>{iron_rows}</tbody></table></div></div>
+</div>
 
 <h2>Prodotti per share of voice</h2>
 <p class="note">Primi {len(products)} integratori di ferro. «Miglior pos.» è la posizione organica più alta su tutte le keyword; «Top 10» conta le keyword in cui il prodotto è nei primi 10 organici.</p>
 <div class="legend"><span><i style="background:var(--org)"></i>organica</span><span><i style="background:var(--paid)"></i>da annunci</span></div>
-<div class="scroll"><table>
-<thead><tr><th class="num">#</th><th>Prodotto</th><th>SoV totale</th><th class="num">SoV tot.</th><th class="num">SoV organica</th><th class="num">Miglior pos.</th><th class="num">Top 10</th><th class="num">Prezzo</th><th class="num">Valutazione</th><th class="num">Acquisti/mese</th>{delta_th}</tr></thead>
+<div class="scroll"><table class="products">
+<thead><tr><th class="num">#</th><th>Prodotto</th><th>Formulazione</th><th>SoV totale</th><th class="num">SoV tot.</th><th class="num">SoV organica</th><th class="num">Miglior pos.</th><th class="num">Top 10</th><th class="num">Prezzo</th><th class="num">Valutazione</th><th class="num">Acquisti/mese</th>{delta_th}</tr></thead>
 <tbody>{"".join(product_rows)}</tbody>
 </table></div>
 
@@ -319,6 +346,8 @@ code {{ font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: v
 <p class="note">Per ogni keyword ogni risultato riceve un peso che scende con la posizione ({escape(meta["weighting"])}). La SoV di un prodotto è la somma dei pesi dei suoi risultati diviso il totale della keyword; la SoV complessiva è la media sulle keyword, pesata con il peso di ciascuna. Il denominatore è {denom}. «SoV organica» usa solo i risultati organici e la loro posizione organica; «SoV ads» solo i risultati sponsorizzati. «Top 10» è la quota dei primi dieci slot occupati.</p>
 <p class="note">Da dove viene il marchio (quota della visibilità dei prodotti di ferro):</p>
 <ul>{source_items}</ul>
+<p class="note">Da dove viene il produttore:</p>
+<ul>{manu_source_items}</ul>
 <p class="note">Keyword e pesi:</p>
 <ul>{kw_list}</ul>
 <p class="note">I risultati dipendono da quando e da dove si cerca (annunci, località di consegna, personalizzazione): confronta esecuzioni fatte nelle stesse condizioni.</p>
@@ -350,3 +379,61 @@ code {{ font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: v
 def _short(text: str | None, n: int) -> str:
     text = text or ""
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+
+
+def _group_rows(items: list[dict], n_kw: int, prev_run_id: str | None, sub) -> str:
+    """Righe della tabella marchi/produttori: classifica, poi «non indicato» e «non di ferro» in fondo."""
+    ranked = [b for b in items if b["brand"] not in (NON_RELEVANT, NOT_STATED)]
+    scale = max((b["sov_total"] for b in ranked), default=0.0)
+    out = []
+    for i, b in enumerate(ranked, 1):
+        out.append(
+            f"""<tr>
+<td class="num muted">{i}</td>
+<td><b>{escape(b["brand"])}</b><div class="sub">{sub(b)}</div></td>
+<td class="barcell">{_bar(b["sov_total"], b["ads_share"], scale)}</td>
+<td class="num strong">{pct(b["sov_total"])}</td>
+<td class="num">{pct(b["sov_organic"])}</td>
+<td class="num">{pct(b["sov_paid"])}</td>
+<td class="num">{pct(b["ads_share"], 0)}</td>
+<td class="num">{pct(b["shelf_top10"])}</td>
+<td class="num">{b["keywords_present"]}/{n_kw}</td>
+<td class="num">{b["n_products"]}</td>
+{f'<td class="num delta">{delta(b.get("delta_pp"))}</td>' if prev_run_id else ""}
+</tr>"""
+        )
+    labels = {
+        NOT_STATED: ("Produttore non indicato", "lancia <code>amazon-sov brands</code> per leggerlo dalle pagine prodotto"),
+        NON_RELEVANT: ("Prodotti non di ferro", "occupano spazio nella SERP ma non entrano nella classifica"),
+    }
+    for b in items:
+        if b["brand"] in labels:
+            title, note = labels[b["brand"]]
+            out.append(
+                f"""<tr class="nonrel">
+<td></td><td><i>{title}</i><div class="sub">{note}</div></td>
+<td class="barcell"></td><td class="num">{pct(b["sov_total"])}</td><td class="num">{pct(b["sov_organic"])}</td>
+<td class="num">{pct(b["sov_paid"])}</td><td class="num">{pct(b["ads_share"], 0)}</td>
+<td class="num">{pct(b["shelf_top10"])}</td><td class="num">{b["keywords_present"]}/{n_kw}</td>
+<td class="num">{b["n_products"]}</td>{'<td></td>' if prev_run_id else ""}
+</tr>"""
+            )
+    return "".join(out)
+
+
+def _mix_rows(items: list[dict]) -> str:
+    """Quota tra i soli prodotti di ferro, per forma o tipo di ferro."""
+    rel = [b for b in items if b["brand"] != NON_RELEVANT]
+    total = sum(b["sov_total"] for b in rel) or 1.0
+    scale = max((b["sov_total"] for b in rel if b["brand"] != NOT_STATED), default=0.0)
+    out = []
+    for b in rel:
+        share = b["sov_total"] / total
+        muted = b["brand"] == NOT_STATED
+        name = "<i>non indicato nel titolo</i>" if muted else f"<b>{escape(b['brand'])}</b>"
+        bar = "" if muted else _bar(b["sov_total"], b["ads_share"], scale)
+        out.append(
+            f"""<tr{' class="nonrel"' if muted else ""}><td>{name}</td><td class="barcell">{bar}</td>
+<td class="num strong">{pct(share)}</td><td class="num">{pct(b["ads_share"], 0)}</td><td class="num">{b["n_products"]}</td></tr>"""
+        )
+    return "".join(out)

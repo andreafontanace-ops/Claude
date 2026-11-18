@@ -146,8 +146,13 @@ def test_crawl_command_with_fake_browser(tmp_path, monkeypatch):
     assert pages == {("integratore ferro", 1): "ok", ("integratore ferro", 2): "ok", ("ferritina", 1): "blocked"}
     assert (tmp_path / "data" / "html" / run_id / "integratore-ferro__p2.html").exists()
     assert len([r for r in store.rows(run_id) if r.placement != "widget"]) == 11
-    # marchi mancanti letti dalla pagina prodotto; "" = controllato ma non trovato
-    assert store.product_brands() == {"B0GENERIC1": "", "B0FERROLIP": "Ferrolip"}
+    # pagine prodotto: i due senza marchio sicuro + il prodotto più visibile di ogni marchio
+    info = store.product_info()
+    assert set(info) == {"B0GENERIC1", "B0FERROLIP", "B07SIDERAL", "B08NUTRAV1", "B000SOLGAR", "B01FEROGLO", "B0FLORADIX"}
+    assert info["B0FERROLIP"]["brand"] == "Ferrolip"
+    assert info["B0FERROLIP"]["manufacturer"] == "Ferrolip Pharma S.r.l."
+    assert info["B0FERROLIP"]["item_form"] == "Liquido"
+    assert info["B0GENERIC1"]["brand"] is None and info["B0GENERIC1"]["checked_at"]
 
     html = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
     assert "Pagine non lette" in html and "ferritina — pagina 1: blocked" in html
@@ -159,11 +164,18 @@ def test_resolver_ignores_pages_without_brand():
     assert res.resolve("B0GENERIC1", None, "Ferro Liposomiale 30 mg") == (UNKNOWN_BRAND, "unknown")
 
 
+MAKERS = {"B07SIDERAL": "PharmaNutra S.p.A.", "B08NUTRAV1": "Nutravita Ltd", "B000SOLGAR": "Solgar Italia Srl",
+          "B01FEROGLO": "Vitabiotics Ltd", "B0FLORADIX": "Salus Haus GmbH", "B0GENERIC1": "Pharma Uno S.r.l."}
+
+
 class BrandFetcher(FakeFetcher):
     def fetch_product(self, asin):
         self.calls.append(("dp", asin))
-        return {"B0GENERIC1": '<div id="bylineInfo">Marca: Pharma Uno</div>',
-                "B0FERROLIP": (FIX / "product_ferrolip.html").read_text(encoding="utf-8")}.get(asin, "<html></html>")
+        if asin == "B0FERROLIP":
+            return (FIX / "product_ferrolip.html").read_text(encoding="utf-8")
+        byline = '<div id="bylineInfo">Marca: Pharma Uno</div>' if asin == "B0GENERIC1" else ""
+        maker = MAKERS.get(asin, "")
+        return f'{byline}<div id="detailBullets_feature_div"><ul><li>Produttore \u200f : \u200e {maker}</li></ul></div>'
 
 
 def test_brands_command_fills_unknown_brands(tmp_path, monkeypatch, capsys):
@@ -182,15 +194,28 @@ def test_brands_command_fills_unknown_brands(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(fetcher_mod, "BrowserFetcher", BrandFetcher)
     main(args + ["brands", "--out", str(tmp_path / "reports")])
 
-    with open(tmp_path / "reports" / run_id / "sov_marchi.csv", encoding="utf-8-sig") as fh:
+    out = tmp_path / "reports" / run_id
+    with open(out / "sov_marchi.csv", encoding="utf-8-sig") as fh:
         brands = {r["marchio"]: r for r in csv.DictReader(fh, delimiter=";")}
     assert "Pharma Uno" in brands and "(sconosciuto)" not in brands
-    after = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
+    assert brands["Sideral"]["produttore"] == "PharmaNutra S.p.A."
+    with open(out / "sov_produttori.csv", encoding="utf-8-sig") as fh:
+        makers = {r["produttore"]: r for r in csv.DictReader(fh, delimiter=";")}
+    assert {"PharmaNutra S.p.A.", "Nutravita Ltd", "Ferrolip Pharma S.r.l.", "Pharma Uno S.r.l."} <= set(makers)
+    assert makers["Nutravita Ltd"]["n_prodotti"] == "2"  # il secondo prodotto Nutravita eredita il produttore
+    with open(out / "sov_prodotti.csv", encoding="utf-8-sig") as fh:
+        products = {r["asin"]: r for r in csv.DictReader(fh, delimiter=";")}
+    assert (products["B0FERROLIP"]["forma"], products["B0FERROLIP"]["tipo_ferro"]) == ("Gocce", "Liposomiale")
+    assert products["B08NUTRAV9"]["fonte_produttore"] == "same_brand"
+    for name in ("sov_forme.csv", "sov_tipi_ferro.csv"):
+        assert (out / name).exists()
+    after = (out / "report.html").read_text(encoding="utf-8")
     assert "Marchi da verificare" not in after
+    assert "Produttori per share of voice" in after and "Tipo di ferro" in after
 
     # seconda volta: niente da controllare, nessuna pagina riaperta
     main(args + ["brands", "--out", str(tmp_path / "reports")])
-    assert "hanno già un marchio" in capsys.readouterr().out
+    assert "Niente da controllare" in capsys.readouterr().out
 
 
 def test_inspect_latest_page_with_html(tmp_path, capsys):

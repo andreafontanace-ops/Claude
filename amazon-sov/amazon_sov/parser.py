@@ -375,10 +375,71 @@ def _parse_widgets(soup: BeautifulSoup) -> list[SerpItem]:
 
 # --------------------------------------------------------------------------- pagina prodotto
 
+_MARKS = "\u200e\u200f\u200b\ufeff"
+_ADDRESS = re.compile(
+    # dopo una virgola o un punto e virgola: parola tipica di indirizzo, oppure un pezzo con un numero civico/CAP
+    r"[,;]\s*(?:(?:via|viale|piazza|piazzale|corso|largo|strada|localit\w*|zona|contrada|tel|e-?mail)\b|loc\.|c\.da|www\."
+    r"|[^,;]*\d).*$",
+    re.I,
+)
 
-def parse_product_brand(html: str) -> str | None:
-    """Marchio dalla pagina prodotto (/dp/ASIN): riga 'Visita lo Store di X' o tabella 'Marca'."""
+
+@dataclass
+class ProductInfo:
+    brand: str | None = None
+    manufacturer: str | None = None
+    item_form: str | None = None
+
+
+def _label(text: str) -> str:
+    return " ".join(text.translate({ord(c): None for c in _MARKS}).strip().rstrip(":").split()).lower()
+
+
+def _value(text: str) -> str:
+    return _clean(text.translate({ord(c): None for c in _MARKS})).strip(" :")
+
+
+def _product_facts(soup: BeautifulSoup) -> dict[str, str]:
+    """Etichetta -> valore da tabella panoramica, dettagli tecnici e «Dettagli prodotto»."""
+    facts: dict[str, str] = {}
+    rows = soup.select(
+        "#productOverview_feature_div tr, tr.po-brand, table.prodDetTable tr, "
+        "#productDetails_techSpec_section_1 tr, #productDetails_detailBullets_sections1 tr"
+    )
+    for row in rows:
+        cells = row.find_all(["th", "td"])
+        if len(cells) >= 2:
+            value = _value(cells[1].get_text(" "))
+            if value:
+                facts.setdefault(_label(cells[0].get_text(" ")), value)
+    for li in soup.select("#detailBullets_feature_div li, #detailBulletsWrapper_feature_div li"):
+        text = _clean(li.get_text(" "))
+        m = re.match(rf"^(.{{2,60}}?)[\s{_MARKS}]*:[\s{_MARKS}]*(.+)$", text)
+        if m and _value(m.group(2)):
+            facts.setdefault(_label(m.group(1)), _value(m.group(2)))
+    return facts
+
+
+def _fact(facts: dict[str, str], *labels: str) -> str | None:
+    for label in labels:
+        if facts.get(label):
+            return facts[label]
+    return None
+
+
+def clean_manufacturer(text: str | None) -> str | None:
+    """Toglie l'indirizzo: 'Pharma Srl, Via Roma 1, Milano' -> 'Pharma Srl'."""
+    if not text:
+        return None
+    name = _ADDRESS.sub("", _value(text)).strip(" ,;-")
+    return name or None
+
+
+def parse_product_page(html: str) -> ProductInfo:
+    """Marchio, produttore e forma dalla pagina prodotto (/dp/ASIN)."""
     soup = BeautifulSoup(html, "lxml")
+    facts = _product_facts(soup)
+    brand = None
     byline = soup.select_one("#bylineInfo")
     if byline:
         text = _clean(byline.get_text(" "))
@@ -390,15 +451,15 @@ def parse_product_brand(html: str) -> str | None:
         ):
             m = re.match(pattern, text, re.I)
             if m:
-                return m.group(1).strip()
-    for row in soup.select("tr.po-brand, #productOverview_feature_div tr, table.prodDetTable tr, #productDetails_techSpec_section_1 tr"):
-        cells = row.find_all(["th", "td"])
-        if len(cells) >= 2 and re.fullmatch(r"\s*(marca|brand)\s*:?\s*", cells[0].get_text(), re.I):
-            value = _clean(cells[1].get_text(" ")).lstrip("‎‏")
-            if value:
-                return value
-    for li in soup.select("#detailBullets_feature_div li"):
-        m = re.match(r"^(?:Marca|Brand)\s*[:‎‏\s]+(.+)$", _clean(li.get_text(" ")), re.I)
-        if m:
-            return m.group(1).strip("‎‏ ")
-    return None
+                brand = m.group(1).strip()
+                break
+    brand = brand or _fact(facts, "marca", "brand")
+    manufacturer = clean_manufacturer(
+        _fact(facts, "produttore", "nome del produttore", "fabbricante", "manufacturer")
+    )
+    item_form = _fact(facts, "forma del prodotto", "forma dell'articolo", "forma dell’articolo", "forma", "item form")
+    return ProductInfo(brand=brand, manufacturer=manufacturer, item_form=item_form)
+
+
+def parse_product_brand(html: str) -> str | None:
+    return parse_product_page(html).brand

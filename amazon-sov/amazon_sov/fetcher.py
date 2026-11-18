@@ -123,5 +123,5 @@ class BrowserFetcher:
         return self._get(self.search_url(keyword, page), RESULT_SELECTOR)
 
     def fetch_product(self, asin: str) -> str:
-        # le pagine prodotto hanno il loro limite (crawl.brand_lookup / --max), non il tetto delle ricerche
+        # le pagine prodotto hanno il loro limite (crawl.product_pages / --max), non il tetto delle ricerche
         return self._get(f"https://{self.cfg.domain}/dp/{asin}", "#bylineInfo, #productTitle", capped=False)

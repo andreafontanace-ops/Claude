@@ -33,6 +33,11 @@ class SerpRow:
     bought_last_month: int | None
     badges: str
     relevant: bool
+    # calcolati al momento del report (vedi products.annotate_products)
+    manufacturer: str | None = None
+    manufacturer_source: str | None = None
+    form: str | None = None
+    iron_type: str | None = None
 
 
 def consecutive_pages(pages: list[ParsedPage]) -> list[ParsedPage]:

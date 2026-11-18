@@ -36,10 +36,12 @@ CREATE TABLE IF NOT EXISTS serp (
     {", ".join(_ROW_FIELDS)}
 );
 CREATE INDEX IF NOT EXISTS serp_run ON serp(run_id, keyword);
-CREATE TABLE IF NOT EXISTS product_brands (
+CREATE TABLE IF NOT EXISTS product_info (
     asin TEXT PRIMARY KEY,
-    brand TEXT NOT NULL,
-    updated_at TEXT
+    brand TEXT,
+    manufacturer TEXT,
+    item_form TEXT,
+    checked_at TEXT
 );
 """
 
@@ -58,6 +60,22 @@ class Store:
         self.conn = sqlite3.connect(str(path))
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Archivi creati da versioni precedenti: colonne nuove e vecchia tabella dei marchi."""
+        have = {r["name"] for r in self.conn.execute("PRAGMA table_info(serp)")}
+        with self.conn:
+            for name in _ROW_FIELDS:
+                if name not in have:
+                    self.conn.execute(f"ALTER TABLE serp ADD COLUMN {name}")
+            old = self.conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='product_brands'").fetchone()
+            if old:
+                # pagine lette solo per il marchio: senza checked_at verranno riaperte per il produttore
+                self.conn.execute(
+                    "INSERT OR IGNORE INTO product_info(asin, brand) SELECT asin, NULLIF(brand, '') FROM product_brands"
+                )
+                self.conn.execute("DROP TABLE product_brands")
 
     def close(self) -> None:
         self.conn.close()
@@ -142,10 +160,17 @@ class Store:
             out.append(SerpRow(**d))
         return out
 
-    # -- marchi dalle pagine prodotto
-    def product_brands(self) -> dict[str, str]:
-        return {r["asin"]: r["brand"] for r in self.conn.execute("SELECT asin, brand FROM product_brands")}
+    # -- dati letti dalle pagine prodotto
+    def product_info(self) -> dict[str, dict]:
+        cur = self.conn.execute("SELECT * FROM product_info")
+        return {r["asin"]: dict(r) for r in cur}
 
-    def set_product_brand(self, asin: str, brand: str) -> None:
+    def product_brands(self) -> dict[str, str]:
+        return {a: i["brand"] for a, i in self.product_info().items() if i["brand"]}
+
+    def set_product_info(self, asin: str, brand: str | None, manufacturer: str | None, item_form: str | None) -> None:
         with self.conn:
-            self.conn.execute("INSERT OR REPLACE INTO product_brands VALUES (?, ?, ?)", (asin, brand, now()))
+            self.conn.execute(
+                "INSERT OR REPLACE INTO product_info VALUES (?, ?, ?, ?, ?)",
+                (asin, brand or None, manufacturer or None, item_form or None, now()),
+            )

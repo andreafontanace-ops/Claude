@@ -7,7 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .pipeline import SerpRow
-from .scoring import NON_RELEVANT, SovResult
+from .scoring import NON_RELEVANT, NOT_STATED, SovResult
 
 PCT_KEYS = {"sov_total", "sov_organic", "sov_paid", "ads_share", "shelf_top10", "delta_pp"}
 
@@ -15,7 +15,10 @@ PRODUCT_COLUMNS = [
     ("rank", "posizione"),
     ("asin", "asin"),
     ("brand", "marchio"),
+    ("manufacturer", "produttore"),
     ("title", "titolo"),
+    ("form", "forma"),
+    ("iron_type", "tipo_ferro"),
     ("sov_total", "sov_totale_%"),
     ("sov_organic", "sov_organica_%"),
     ("sov_paid", "sov_ads_%"),
@@ -33,12 +36,14 @@ PRODUCT_COLUMNS = [
     ("bought_last_month", "acquisti_mese_scorso"),
     ("badges", "badge"),
     ("brand_source", "fonte_marchio"),
+    ("manufacturer_source", "fonte_produttore"),
     ("delta_pp", "delta_vs_precedente_pp"),
 ]
 
 BRAND_COLUMNS = [
     ("rank", "posizione"),
     ("brand", "marchio"),
+    ("manufacturer", "produttore"),
     ("sov_total", "sov_totale_%"),
     ("sov_organic", "sov_organica_%"),
     ("sov_paid", "sov_ads_%"),
@@ -54,9 +59,31 @@ BRAND_COLUMNS = [
 ]
 
 
+MANUFACTURER_COLUMNS = [
+    ("rank", "posizione"),
+    ("brand", "produttore"),
+    ("brands", "marchi"),
+] + [c for c in BRAND_COLUMNS if c[0] not in ("rank", "brand", "manufacturer")]
+
+MIX_COLUMNS = [
+    ("rank", "posizione"),
+    ("brand", "nome"),
+    ("share_relevant", "quota_tra_prodotti_ferro_%"),
+    ("sov_total", "sov_totale_%"),
+    ("sov_organic", "sov_organica_%"),
+    ("ads_share", "quota_da_ads_%"),
+    ("n_products", "n_prodotti"),
+    ("top_asin", "asin_di_punta"),
+    ("top_title", "prodotto_di_punta"),
+]
+PCT_KEYS = PCT_KEYS | {"share_relevant"}
+
+
 def _fmt(value, key: str, dialect: str) -> str:
     if value is None:
         return ""
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
     if isinstance(value, bool):
         return "1" if value else "0"
     if key in PCT_KEYS and isinstance(value, (int, float)):
@@ -83,6 +110,9 @@ def write_all(out_dir: Path, rows: list[SerpRow], result: SovResult, dialect: st
         "serp": out_dir / "serp.csv",
         "prodotti": out_dir / "sov_prodotti.csv",
         "marchi": out_dir / "sov_marchi.csv",
+        "produttori": out_dir / "sov_produttori.csv",
+        "forme": out_dir / "sov_forme.csv",
+        "tipi_ferro": out_dir / "sov_tipi_ferro.csv",
         "keyword_marchi": out_dir / "sov_keyword_marchi.csv",
     }
     serp_dicts = [asdict(r) for r in rows]
@@ -92,11 +122,13 @@ def write_all(out_dir: Path, rows: list[SerpRow], result: SovResult, dialect: st
     products = [dict(p, rank=i) for i, p in enumerate((p for p in result.products if p["relevant"]), 1)]
     write_table(paths["prodotti"], products, PRODUCT_COLUMNS, dialect)
 
-    brands, n = [], 0
-    for b in result.brands:
-        n += b["brand"] != NON_RELEVANT
-        brands.append(dict(b, rank=n if b["brand"] != NON_RELEVANT else None))
-    write_table(paths["marchi"], brands, BRAND_COLUMNS, dialect)
+    write_table(paths["marchi"], _ranked(result.groups["brands"]), BRAND_COLUMNS, dialect)
+    write_table(paths["produttori"], _ranked(result.groups["manufacturers"]), MANUFACTURER_COLUMNS, dialect)
+    for key, group in (("forme", "forms"), ("tipi_ferro", "iron_types")):
+        items = [b for b in result.groups[group] if b["brand"] != NON_RELEVANT]
+        total = sum(b["sov_total"] for b in items) or 1.0
+        rows_mix = [dict(b, share_relevant=b["sov_total"] / total) for b in _ranked(items)]
+        write_table(paths[key], rows_mix, MIX_COLUMNS, dialect)
 
     brand_names = [b["brand"] for b in result.brands]
     matrix = [
@@ -110,3 +142,13 @@ def write_all(out_dir: Path, rows: list[SerpRow], result: SovResult, dialect: st
         dialect,
     )
     return paths
+
+
+def _ranked(items: list[dict]) -> list[dict]:
+    """Numera la classifica; i gruppi «non pertinenti» e «non indicato» restano senza posizione."""
+    out, n = [], 0
+    for b in items:
+        ranked = b["brand"] not in (NON_RELEVANT, NOT_STATED)
+        n += ranked
+        out.append(dict(b, rank=n if ranked else None))
+    return out

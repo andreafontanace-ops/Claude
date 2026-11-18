@@ -11,10 +11,11 @@ from collections import defaultdict
 from pathlib import Path
 
 from . import export
-from .brands import BrandResolver, RelevanceFilter, normalize
+from .brands import UNKNOWN_BRAND, BrandResolver, RelevanceFilter, normalize
 from .config import Config, load_config
-from .parser import ParsedPage, compact_html, parse_product_brand, parse_search_page
+from .parser import ParsedPage, compact_html, parse_product_page, parse_search_page
 from .pipeline import SerpRow, build_rows, reclassify
+from .products import annotate_products
 from .report import pct, render_report
 from .scoring import NON_RELEVANT, compute_sov
 from .storage import Store
@@ -38,7 +39,8 @@ def _filters(cfg: Config, store: Store) -> tuple[BrandResolver, RelevanceFilter]
 
 def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denominator: str, top: int) -> Path:
     resolver, relevance = _filters(cfg, store)
-    rows = reclassify(store.rows(run_id), resolver, relevance)
+    infos = store.product_info()
+    rows = annotate_products(reclassify(store.rows(run_id), resolver, relevance), cfg, infos)
     if not rows:
         raise SystemExit(f"L'esecuzione {run_id} non ha risultati: niente da calcolare.")
     run = store.run_info(run_id) or {"run_id": run_id}
@@ -48,14 +50,15 @@ def make_report(store: Store, cfg: Config, run_id: str, out_root: Path, denomina
 
     prev_id = store.previous_run_id(run_id)
     if prev_id:
-        prev_rows = reclassify(store.rows(prev_id), resolver, relevance)
+        prev_rows = annotate_products(reclassify(store.rows(prev_id), resolver, relevance), cfg, infos)
         prev = compute_sov(prev_rows, weights, cfg.scoring, denominator)
         prev_p = {p["asin"]: p["sov_total"] for p in prev.products}
-        prev_b = {b["brand"]: b["sov_total"] for b in prev.brands}
         for p in result.products:
             p["delta_pp"] = p["sov_total"] - prev_p[p["asin"]] if p["asin"] in prev_p else None
-        for b in result.brands:
-            b["delta_pp"] = b["sov_total"] - prev_b[b["brand"]] if b["brand"] in prev_b else None
+        for g, items in result.groups.items():
+            prev_g = {b["brand"]: b["sov_total"] for b in prev.groups[g]}
+            for b in items:
+                b["delta_pp"] = b["sov_total"] - prev_g[b["brand"]] if b["brand"] in prev_g else None
 
     out_dir = out_root / run_id
     export.write_all(out_dir, rows, result, cfg.csv_dialect)
@@ -135,9 +138,9 @@ def cmd_crawl(args, cfg: Config) -> None:
                 n_res = sum(1 for r in rows if r.placement != "widget")
                 print(f"  {kw.term:<28} {n_res:>3} risultati ({n_sp} sponsorizzati)")
 
-            lookup = cfg.crawl.brand_lookup if args.enrich_brands is None else args.enrich_brands
+            lookup = cfg.crawl.product_pages if args.product_pages is None else args.product_pages
             if lookup > 0 and not stop:
-                _enrich_brands(fetcher, store, all_rows, lookup)
+                _lookup_products(fetcher, store, all_rows, cfg, lookup)
     except KeyboardInterrupt:
         print("\nInterrotto: calcolo la SoV su quanto già scaricato.")
     store.finish_run(run_id)
@@ -147,35 +150,56 @@ def cmd_crawl(args, cfg: Config) -> None:
         print("Nessun risultato scaricato: controlla le pagine salvate in", html_dir)
 
 
-def brand_lookup_targets(store: Store, rows: list[SerpRow]) -> list[str]:
-    """Prodotti di ferro con marchio sconosciuto o stimato dal titolo, mai controllati, dal più visibile."""
-    checked = store.product_brands()
+def lookup_targets(store: Store, rows: list[SerpRow], cfg: Config) -> list[str]:
+    """Pagine prodotto da aprire, dal prodotto più visibile:
+    - prodotti di ferro con marchio sconosciuto o stimato dal titolo;
+    - per ogni marchio senza produttore noto, il suo prodotto più visibile (il produttore vale per tutto il marchio).
+    """
+    infos = store.product_info()
+    checked = {a for a, i in infos.items() if i.get("checked_at")}
     best: dict[str, int] = {}
+    brand_of: dict[str, str] = {}
     for r in rows:
-        if r.relevant and r.brand_source in ("title_guess", "unknown") and r.asin not in checked:
+        if r.relevant:
             best[r.asin] = min(best.get(r.asin, 10**6), r.rank or 10**5)
-    return sorted(best, key=lambda a: (best[a], a))
+            brand_of[r.asin] = r.brand
+    need_brand = {r.asin for r in rows if r.relevant and r.brand_source in ("title_guess", "unknown")}
+
+    known = {normalize(b) for b in cfg.manufacturer_by_brand}
+    misses: dict[str, int] = defaultdict(int)
+    for asin, brand in brand_of.items():
+        info = infos.get(asin) or {}
+        if info.get("manufacturer"):
+            known.add(normalize(brand))
+        elif asin in checked:
+            misses[brand] += 1
+    per_brand: dict[str, str] = {}
+    for asin in sorted(best, key=lambda a: (best[a], a)):
+        brand = brand_of[asin]
+        if brand == UNKNOWN_BRAND or normalize(brand) in known or misses[brand] >= 2 or asin in checked:
+            continue  # dopo due pagine senza produttore per lo stesso marchio, lascia perdere
+        per_brand.setdefault(brand, asin)
+    todo = (need_brand | set(per_brand.values())) - checked
+    return sorted(todo, key=lambda a: (best.get(a, 10**6), a))
 
 
-def _enrich_brands(fetcher, store: Store, rows: list[SerpRow], limit: int) -> int:
-    """Legge il marchio dalla pagina prodotto («Visita lo Store di …», «Marca: …»)."""
+def _lookup_products(fetcher, store: Store, rows: list[SerpRow], cfg: Config, limit: int) -> int:
+    """Apre le pagine prodotto e salva marchio, produttore e forma."""
     from .fetcher import BlockedError
 
-    todo = brand_lookup_targets(store, rows)[:limit]
+    todo = lookup_targets(store, rows, cfg)[:limit]
     if not todo:
         return 0
-    print(f"\nLeggo il marchio dalla pagina prodotto per {len(todo)} prodotti…")
-    found = 0
+    print(f"\nLeggo marchio e produttore dalla pagina prodotto di {len(todo)} prodotti…")
     for asin in todo:
         try:
-            brand = parse_product_brand(fetcher.fetch_product(asin))
+            info = parse_product_page(fetcher.fetch_product(asin))
         except BlockedError as exc:
             log.warning("%s", exc)
             break
-        store.set_product_brand(asin, brand or "")  # "" = controllato, marchio non trovato
-        found += bool(brand)
-        print(f"  {asin}: {brand or 'marchio non trovato'}")
-    return found
+        store.set_product_info(asin, info.brand, info.manufacturer, info.item_form)
+        print(f"  {asin}: marchio {info.brand or '–'} · produttore {info.manufacturer or '–'} · forma {info.item_form or '–'}")
+    return len(todo)
 
 
 def cmd_brands(args, cfg: Config) -> None:
@@ -189,14 +213,14 @@ def cmd_brands(args, cfg: Config) -> None:
         raise SystemExit("Nessuna esecuzione nell'archivio: lancia prima `crawl` o `parse`.")
     resolver, relevance = _filters(cfg, store)
     rows = reclassify(store.rows(run_id), resolver, relevance)
-    todo = brand_lookup_targets(store, rows)
+    todo = lookup_targets(store, rows, cfg)
     if not todo:
-        print("Tutti i prodotti di ferro hanno già un marchio letto da Amazon.")
+        print("Niente da controllare: marchi e produttori sono già noti.")
     else:
-        print(f"{len(todo)} prodotti senza marchio sicuro: ne controllo {min(len(todo), args.max)}.")
+        print(f"{len(todo)} pagine prodotto da controllare: ne apro {min(len(todo), args.max)}.")
         try:
             with BrowserFetcher(cfg, data_dir / "browser-profile", headless=args.headless or None) as fetcher:
-                _enrich_brands(fetcher, store, rows, args.max)
+                _lookup_products(fetcher, store, rows, cfg, args.max)
         except KeyboardInterrupt:
             print("\nInterrotto: uso i marchi trovati finora.")
     make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
@@ -321,14 +345,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pages", type=int, help="pagine per keyword (sovrascrive la configurazione)")
     p.add_argument("--keyword", action="append", help="limita a questa keyword (ripetibile)")
     p.add_argument("--headless", action="store_true", help="browser invisibile (i captcha fermano il crawl)")
-    p.add_argument("--enrich-brands", type=int, default=None, metavar="N",
-                   help="pagine prodotto da aprire per leggere i marchi mancanti (default: crawl.brand_lookup)")
+    p.add_argument("--product-pages", "--enrich-brands", dest="product_pages", type=int, default=None, metavar="N",
+                   help="pagine prodotto da aprire per marchi e produttori (default: crawl.product_pages)")
     report_opts(p)
     p.set_defaults(func=cmd_crawl)
 
-    p = sub.add_parser("brands", help="legge dalle pagine prodotto i marchi mancanti e rigenera il report")
+    p = sub.add_parser("brands", aliases=["prodotti"],
+                       help="legge marchi e produttori dalle pagine prodotto e rigenera il report")
     p.add_argument("--run", help="esecuzione da completare (default: l'ultima)")
-    p.add_argument("--max", type=int, default=50, help="pagine prodotto da aprire al massimo (default 50)")
+    p.add_argument("--max", type=int, default=80, help="pagine prodotto da aprire al massimo (default 80)")
     p.add_argument("--headless", action="store_true")
     report_opts(p)
     p.set_defaults(func=cmd_brands)

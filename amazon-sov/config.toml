@@ -14,9 +14,10 @@ max_pages_total = 60
 headless = false
 # "chromium" (quello di Playwright) oppure "chrome" per usare Chrome installato sul computer
 browser_channel = "chromium"
-# Prodotti di ferro senza marchio leggibile nei risultati: quante pagine prodotto aprire
-# per leggerlo («Visita lo Store di …»). Il marchio trovato resta in archivio. 0 = mai.
-brand_lookup = 30
+# Pagine prodotto da aprire a fine crawl per leggere marchio, produttore e forma:
+# i prodotti senza marchio nei risultati e un prodotto per ogni marchio senza produttore noto.
+# Quello che trova resta in archivio, quindi le volte successive ne servono poche. 0 = mai.
+product_pages = 40
 
 [scoring]
 # Peso di ogni posizione nella pagina dei risultati:
@@ -135,6 +136,43 @@ generic_words = [
 # Correzioni manuali ASIN -> marchio (hanno la precedenza su tutto il resto)
 [brands.asin_overrides]
 # "B000000000" = "Marchio"
+
+# Produttore: di solito si legge dalla pagina prodotto («Dettagli prodotto» → Produttore)
+# e vale per tutti i prodotti dello stesso marchio. Qui puoi fissarlo tu: ha la precedenza.
+[manufacturers.by_brand]
+# "Sideral" = "PharmaNutra S.p.A."
+
+# Correzioni per singolo prodotto (ASIN -> produttore)
+[manufacturers.asin_overrides]
+# "B000000000" = "Produttore"
+
+# Formulazione, ricavata dal titolo. Ogni termine è l'inizio di una parola, senza maiuscole né accenti.
+# Forma: vince la prima regola che corrisponde, quindi l'ordine conta.
+[formulation.forms]
+"Gommose/masticabili" = ["gommos", "gummies", "gummy", "masticabil", "caramell"]
+"Flaconcini/fiale" = ["flaconcin", "fiala", "fiale", "monodose"]
+"Bustine/stick" = ["bustin", "stick", "orosolubil"]
+"Spray" = ["spray"]
+"Gocce" = ["gocce", "goccia", "drops"]
+"Liquido/sciroppo" = ["sciropp", "liquid", "soluzione orale", "succo"]
+"Capsule" = ["capsul", "cps", "softgel", "perle", "opercol"]
+"Compresse" = ["compress", "cpr", "tavolett", "tablet", "pastigli"]
+"Polvere" = ["polver", "powder"]
+
+# Tipo di ferro: si riportano fino a due corrispondenze (es. "Bisglicinato + Lattoferrina").
+[formulation.iron_types]
+"Sucrosomiale" = ["sucrosomial"]
+"Liposomiale" = ["liposom"]
+"Bisglicinato" = ["bisglicinat", "bisglycinat", "diglicinat"]
+"Pirofosfato" = ["pirofosfat", "pyrophosphat"]
+"Fumarato" = ["fumarat"]
+"Gluconato" = ["gluconat"]
+"Solfato" = ["solfat", "sulfat", "sulphat"]
+"Citrato" = ["citrato di ferro", "ferro citrato", "ferric citrate"]
+"Carbonile" = ["carbonil"]
+"Eme" = ["ferro eme", "heme iron", "ferro emico"]
+"Lattoferrina" = ["lattoferrin", "lactoferrin"]
+"Chelato" = ["chelat"]
 
 [output]
 # "excel-it" = separatore ';' e virgola decimale (si apre bene in Excel italiano); "standard" = ',' e punto
