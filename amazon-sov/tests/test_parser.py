@@ -119,3 +119,44 @@ def test_product_brand():
     table_only = '<table><tr class="po-brand"><td>Marca</td><td><span>Acme</span></td></tr></table>'
     assert parse_product_brand(table_only) == "Acme"
     assert parse_product_brand("<html></html>") is None
+
+
+def _card(inner):
+    return (
+        '<div class="s-main-slot"><div data-asin="B0TEST0001" data-component-type="s-search-result">'
+        f"{inner}</div></div>"
+    )
+
+
+def test_brand_row_without_heading():
+    html = _card(
+        '<div data-cy="title-recipe"><div class="a-row a-color-secondary">'
+        '<span class="a-size-base-plus a-color-base">Pharma Uno</span></div>'
+        '<a class="a-link-normal a-text-normal" href="/dp/B0TEST0001"><h2><span>Ferro Bisglicinato 30 mg</span></h2></a></div>'
+    )
+    assert parse_search_page(html).results[0].brand_raw == "Pharma Uno"
+
+
+def test_brand_from_di_row():
+    html = _card(
+        '<h2><a class="a-text-normal" href="/dp/B0TEST0001"><span>Ferro gocce 30 ml</span></a></h2>'
+        '<div class="a-row"><span>di</span> <span>Laboratori Rossi</span></div>'
+        '<div class="a-row"><span>di 4,5 stelle</span></div>'
+    )
+    assert parse_search_page(html).results[0].brand_raw == "Laboratori Rossi"
+
+
+def test_product_brand_from_detail_tables():
+    bullets = '<div id="detailBullets_feature_div"><ul><li><span>Marca ‏ : ‎ Pharma Uno</span></li></ul></div>'
+    assert parse_product_brand(bullets) == "Pharma Uno"
+    table = '<table class="prodDetTable"><tr><th>Marca</th><td>‎Acme</td></tr></table>'
+    assert parse_product_brand(table) == "Acme"
+
+
+def test_compact_html_keeps_structure_only():
+    from amazon_sov.parser import compact_html
+
+    html = (FIX / "integratore-ferro__p1.html").read_text(encoding="utf-8")
+    out = compact_html(html, "B0GENERIC1")
+    assert 'data-cy="title-recipe"' in out and "Ferro Liposomiale" in out
+    assert "<img" not in out and compact_html(html, "B0NOTHERE0") == ""

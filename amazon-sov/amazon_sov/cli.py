@@ -13,7 +13,7 @@ from pathlib import Path
 from . import export
 from .brands import BrandResolver, RelevanceFilter, normalize
 from .config import Config, load_config
-from .parser import ParsedPage, parse_product_brand, parse_search_page
+from .parser import ParsedPage, compact_html, parse_product_brand, parse_search_page
 from .pipeline import SerpRow, build_rows, reclassify
 from .report import pct, render_report
 from .scoring import NON_RELEVANT, compute_sov
@@ -135,8 +135,9 @@ def cmd_crawl(args, cfg: Config) -> None:
                 n_res = sum(1 for r in rows if r.placement != "widget")
                 print(f"  {kw.term:<28} {n_res:>3} risultati ({n_sp} sponsorizzati)")
 
-            if args.enrich_brands and not stop:
-                _enrich_brands(fetcher, store, all_rows, args.enrich_brands)
+            lookup = cfg.crawl.brand_lookup if args.enrich_brands is None else args.enrich_brands
+            if lookup > 0 and not stop:
+                _enrich_brands(fetcher, store, all_rows, lookup)
     except KeyboardInterrupt:
         print("\nInterrotto: calcolo la SoV su quanto già scaricato.")
     store.finish_run(run_id)
@@ -146,28 +147,59 @@ def cmd_crawl(args, cfg: Config) -> None:
         print("Nessun risultato scaricato: controlla le pagine salvate in", html_dir)
 
 
-def _enrich_brands(fetcher, store: Store, rows: list[SerpRow], limit: int) -> None:
-    """Legge il marchio dalla pagina prodotto per i prodotti di ferro più visibili senza marchio affidabile."""
-    from .fetcher import BlockedError
-
-    known = store.product_brands()
+def brand_lookup_targets(store: Store, rows: list[SerpRow]) -> list[str]:
+    """Prodotti di ferro con marchio sconosciuto o stimato dal titolo, mai controllati, dal più visibile."""
+    checked = store.product_brands()
     best: dict[str, int] = {}
     for r in rows:
-        if r.relevant and r.brand_source in ("title_guess", "unknown") and r.asin not in known and r.rank:
-            best[r.asin] = min(best.get(r.asin, 10**6), r.rank)
-    todo = sorted(best, key=best.get)[:limit]
+        if r.relevant and r.brand_source in ("title_guess", "unknown") and r.asin not in checked:
+            best[r.asin] = min(best.get(r.asin, 10**6), r.rank or 10**5)
+    return sorted(best, key=lambda a: (best[a], a))
+
+
+def _enrich_brands(fetcher, store: Store, rows: list[SerpRow], limit: int) -> int:
+    """Legge il marchio dalla pagina prodotto («Visita lo Store di …», «Marca: …»)."""
+    from .fetcher import BlockedError
+
+    todo = brand_lookup_targets(store, rows)[:limit]
     if not todo:
-        return
+        return 0
     print(f"\nLeggo il marchio dalla pagina prodotto per {len(todo)} prodotti…")
+    found = 0
     for asin in todo:
         try:
             brand = parse_product_brand(fetcher.fetch_product(asin))
         except BlockedError as exc:
             log.warning("%s", exc)
-            return
-        if brand:
-            store.set_product_brand(asin, brand)
-            print(f"  {asin}: {brand}")
+            break
+        store.set_product_brand(asin, brand or "")  # "" = controllato, marchio non trovato
+        found += bool(brand)
+        print(f"  {asin}: {brand or 'marchio non trovato'}")
+    return found
+
+
+def cmd_brands(args, cfg: Config) -> None:
+    """Completa i marchi mancanti di un'esecuzione già fatta e rigenera il report."""
+    from .fetcher import BrowserFetcher
+
+    data_dir = Path(args.data_dir)
+    store = Store(data_dir / "sov.sqlite")
+    run_id = args.run or store.latest_run_id()
+    if not run_id:
+        raise SystemExit("Nessuna esecuzione nell'archivio: lancia prima `crawl` o `parse`.")
+    resolver, relevance = _filters(cfg, store)
+    rows = reclassify(store.rows(run_id), resolver, relevance)
+    todo = brand_lookup_targets(store, rows)
+    if not todo:
+        print("Tutti i prodotti di ferro hanno già un marchio letto da Amazon.")
+    else:
+        print(f"{len(todo)} prodotti senza marchio sicuro: ne controllo {min(len(todo), args.max)}.")
+        try:
+            with BrowserFetcher(cfg, data_dir / "browser-profile", headless=args.headless or None) as fetcher:
+                _enrich_brands(fetcher, store, rows, args.max)
+        except KeyboardInterrupt:
+            print("\nInterrotto: uso i marchi trovati finora.")
+    make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top)
 
 
 # --------------------------------------------------------------------------- parse
@@ -231,9 +263,22 @@ def cmd_runs(args, cfg: Config) -> None:
         print(f"{r['run_id']}  {r['source']:<5}  {r['n_rows']:>5} righe  {r['n_failed']} pagine non lette")
 
 
+def latest_html(data_dir: Path) -> Path | None:
+    """Prima pagina di risultati dell'ultima esecuzione scaricata."""
+    runs = sorted(d for d in (data_dir / "html").glob("*") if d.is_dir() and any(d.glob("*.html")))
+    if not runs:
+        return None
+    files = sorted(runs[-1].glob("*.html"), key=lambda p: (not p.stem.endswith("__p1"), p.name))
+    return files[0]
+
+
 def cmd_inspect(args, cfg: Config) -> None:
-    html = Path(args.file).read_text(encoding="utf-8", errors="replace")
+    path = Path(args.file) if args.file else latest_html(Path(args.data_dir))
+    if path is None:
+        raise SystemExit("Nessuna pagina scaricata: indica un file .html")
+    html = path.read_text(encoding="utf-8", errors="replace")
     parsed = parse_search_page(html)
+    print(f"file: {path.name}")
     resolver = BrandResolver(cfg)
     relevance = RelevanceFilter(cfg.relevance_include, cfg.relevance_exclude)
     print(f"keyword: {parsed.keyword!r}  pagina: {parsed.page}  blocco: {parsed.blocked}  {parsed.result_count_text or ''}")
@@ -249,6 +294,11 @@ def cmd_inspect(args, cfg: Config) -> None:
             f"{it.bought_last_month if it.bought_last_month is not None else '–':>6}  "
             f"{('[' + ', '.join(it.badges) + '] ') if it.badges else ''}{it.title[:70]}"
         )
+    if args.html:
+        missing = [it for it in parsed.results if not it.brand_raw and relevance(it.title)][:3]
+        print(f"\n--- HTML dei primi {len(missing)} risultati senza riga del marchio ---")
+        for it in missing:
+            print(f"\n[{it.asin}]\n{compact_html(html, it.asin)}")
 
 
 # --------------------------------------------------------------------------- main
@@ -271,10 +321,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pages", type=int, help="pagine per keyword (sovrascrive la configurazione)")
     p.add_argument("--keyword", action="append", help="limita a questa keyword (ripetibile)")
     p.add_argument("--headless", action="store_true", help="browser invisibile (i captcha fermano il crawl)")
-    p.add_argument("--enrich-brands", type=int, default=0, metavar="N",
-                   help="legge il marchio dalla pagina prodotto per i primi N prodotti senza marchio")
+    p.add_argument("--enrich-brands", type=int, default=None, metavar="N",
+                   help="pagine prodotto da aprire per leggere i marchi mancanti (default: crawl.brand_lookup)")
     report_opts(p)
     p.set_defaults(func=cmd_crawl)
+
+    p = sub.add_parser("brands", help="legge dalle pagine prodotto i marchi mancanti e rigenera il report")
+    p.add_argument("--run", help="esecuzione da completare (default: l'ultima)")
+    p.add_argument("--max", type=int, default=50, help="pagine prodotto da aprire al massimo (default 50)")
+    p.add_argument("--headless", action="store_true")
+    report_opts(p)
+    p.set_defaults(func=cmd_brands)
 
     p = sub.add_parser("parse", help="calcola la SoV da pagine HTML salvate a mano")
     p.add_argument("html_dir")
@@ -286,8 +343,9 @@ def build_parser() -> argparse.ArgumentParser:
     report_opts(p)
     p.set_defaults(func=cmd_report)
 
-    p = sub.add_parser("inspect", help="mostra cosa viene estratto da una pagina HTML")
-    p.add_argument("file")
+    p = sub.add_parser("inspect", help="mostra cosa viene estratto da una pagina HTML (default: l'ultima scaricata)")
+    p.add_argument("file", nargs="?")
+    p.add_argument("--html", action="store_true", help="aggiunge l'HTML ridotto dei risultati senza marchio, per la diagnosi")
     p.set_defaults(func=cmd_inspect)
 
     p = sub.add_parser("runs", help="elenca le esecuzioni in archivio")

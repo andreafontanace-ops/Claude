@@ -162,6 +162,22 @@ def render_report(
             tds.append(f'<td class="num heat {cls}" data-tip="{tip}">{pct(v, 0) if v > 0 else "–"}</td>')
         heat_rows.append(f'<tr><th class="kw">{escape(kw)}</th>{"".join(tds)}</tr>')
 
+    # ---- marchi da verificare
+    unsure = [p for p in result.products if p["relevant"] and p["brand_source"] in ("unknown", "title_guess")][:15]
+    verify_html = ""
+    if unsure:
+        items = "".join(
+            f'<li><a href="https://{escape(cfg.domain)}/dp/{escape(p["asin"])}" target="_blank" rel="noopener">{escape(p["asin"])}</a> '
+            f'· {escape(_short(p["title"], 80))} → <b>{escape(p["brand"])}</b> '
+            f'<span class="muted">({"stimato dal titolo" if p["brand_source"] == "title_guess" else "sconosciuto"}, SoV {pct(p["sov_total"], 2)})</span></li>'
+            for p in unsure
+        )
+        verify_html = (
+            '<section><h2>Marchi da verificare</h2><p class="note">Per questi prodotti il marchio non si legge nei risultati '
+            "di ricerca. Lancia <code>amazon-sov brands</code> per leggerlo dalla pagina prodotto, oppure scrivilo tu in "
+            f"<code>[brands.asin_overrides]</code> dentro <code>config.toml</code>.</p><ul>{items}</ul></section>"
+        )
+
     # ---- pagine non lette
     failed = [p for p in pages if p["status"] not in ("ok", "empty")]
     failed_html = ""
@@ -253,6 +269,8 @@ th.kw {{ font-weight: 500; white-space: nowrap; }}
 td.heat {{ border-left: 2px solid var(--surface); }}
 .plain {{ color: var(--ink-2); }}
 ul {{ padding-left: 20px; }}
+li {{ margin: 2px 0; }}
+code {{ font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); padding: 1px 4px; border-radius: 4px; }}
 #tip {{ position: fixed; pointer-events: none; background: var(--ink); color: var(--surface); font-size: 12px; padding: 6px 8px; border-radius: 6px; max-width: 320px; display: none; z-index: 10; }}
 </style>
 </head>
@@ -291,6 +309,8 @@ ul {{ padding-left: 20px; }}
 <thead><tr><th>Keyword</th>{heat_head}</tr></thead>
 <tbody>{"".join(heat_rows)}</tbody>
 </table></div>
+
+{verify_html}
 
 {failed_html}
 

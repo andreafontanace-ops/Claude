@@ -53,9 +53,11 @@ amazon-sov crawl --keyword "ferritina" --keyword "ferro bisglicinato" --pages 1
 amazon-sov crawl --enrich-brands 20
 ```
 
-`--enrich-brands N` apre la pagina prodotto dei primi N prodotti di ferro senza un marchio affidabile e
-ne legge il marchio («Visita lo Store di …»). Il risultato resta in archivio e vale per le esecuzioni
-successive.
+Alla fine del crawl, per i prodotti di ferro il cui marchio non si legge nei risultati, il programma
+apre la pagina prodotto e lo legge da lì («Visita lo Store di …», «Marca: …»). Ne apre al massimo 30
+per esecuzione: il numero si cambia con `brand_lookup` in `config.toml` o con `--enrich-brands N`
+(`0` = mai). I marchi trovati restano in archivio, quindi dalla seconda esecuzione le pagine da aprire
+sono poche.
 
 ### 2. Pagine salvate a mano (senza automazione)
 
@@ -79,12 +81,21 @@ Rigenera report e CSV dell'ultima esecuzione (o di `--run ID`) con la configuraz
 aver aggiunto alias di marchio o correzioni.
 
 ```bash
-amazon-sov inspect data/html/<esecuzione>/ferritina__p1.html
+amazon-sov brands
 ```
 
-Mostra cosa il parser estrae da una pagina: posizione, annuncio sì/no, ASIN, marchio e da dove viene,
+Completa i marchi dell'ultima esecuzione senza rifare le ricerche: apre le pagine prodotto dei prodotti
+con marchio sconosciuto o stimato (al massimo 50, `--max N`) e rigenera il report.
+
+```bash
+amazon-sov inspect
+```
+
+Mostra cosa il parser estrae dalla prima pagina dell'ultima esecuzione (oppure da un file indicato:
+`amazon-sov inspect percorso/pagina.html`): posizione, annuncio sì/no, ASIN, marchio e da dove viene,
 prezzo, valutazione, recensioni, acquisti del mese scorso, badge. È il primo controllo da fare se i
-numeri sembrano strani.
+numeri sembrano strani. Con `--html` aggiunge l'HTML ridotto dei risultati senza riga del marchio: su
+Mac `amazon-sov inspect --html | pbcopy` lo copia negli appunti per mandarlo a chi sistema il parser.
 
 ```bash
 amazon-sov runs
@@ -122,12 +133,13 @@ Per ogni prodotto il marchio viene preso, in ordine di priorità, da:
 
 1. la correzione manuale in `[brands.asin_overrides]`;
 2. la riga del marchio sopra il titolo nei risultati;
-3. la pagina prodotto (con `--enrich-brands`);
+3. la pagina prodotto (letta in automatico alla fine del crawl o con `amazon-sov brands`);
 4. un alias di `[brands.aliases]` trovato nel titolo;
 5. la prima parola del titolo, se non è una parola generica come «Integratore» o «Ferro».
 
-In fondo al report vedi quanta visibilità viene da ciascuna fonte. Se «sconosciuto» o «stima» pesano
-molto, aggiungi alias in `config.toml` e lancia `amazon-sov report`.
+In fondo al report vedi quanta visibilità viene da ciascuna fonte e l'elenco «Marchi da verificare».
+Se restano prodotti sconosciuti, lancia `amazon-sov brands` oppure scrivi il marchio in
+`[brands.asin_overrides]` e lancia `amazon-sov report`.
 
 ## Configurazione (`config.toml`)
 

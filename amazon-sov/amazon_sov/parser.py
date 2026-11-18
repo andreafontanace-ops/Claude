@@ -225,6 +225,20 @@ def _title_and_brand(el: Tag) -> tuple[str, str | None]:
             if text:
                 brand = text
                 break
+    if not brand and scope is not el:
+        # riga del marchio senza h2/h5: testo breve sopra il titolo, fuori dal link del titolo
+        for b in scope.select("div.a-row.a-color-secondary span.a-size-base-plus, div.a-row.a-color-secondary span.a-size-base"):
+            text = _clean(b.get_text(" "))
+            if text and b.find_parent("a") is None and _looks_like_brand(text):
+                brand = text
+                break
+    if not brand:
+        # riga "di Marca" sotto il titolo
+        for row in el.select("div.a-row"):
+            m = re.fullmatch(r"di\s+(.{2,40})", _clean(row.get_text(" ")))
+            if m and _looks_like_brand(m.group(1)):
+                brand = m.group(1)
+                break
     if not title:
         link = el.select_one("a.a-text-normal span, a.s-link-style span") or el.select_one("img.s-image")
         if link is not None:
@@ -233,6 +247,12 @@ def _title_and_brand(el: Tag) -> tuple[str, str | None]:
     if brand and (brand.lower() in SPONSORED_WORDS or len(brand) > 60 or brand == title):
         brand = None
     return title, brand
+
+
+def _looks_like_brand(text: str) -> bool:
+    if text.lower() in SPONSORED_WORDS or len(text) > 40 or len(text.split()) > 5 or text[:1].isdigit():
+        return False
+    return not re.search(r"\d+[.,]?\d*\s*(€|%|stelle|valutazion|acquist)", text, re.I)
 
 
 def _rating(el: Tag) -> float | None:
@@ -278,6 +298,23 @@ def _badges(el: Tag) -> list[str]:
     if any("offerta" in t or "deal" in t for t in texts):
         found.append("Offerta")
     return found
+
+
+def compact_html(html: str, asin: str, limit: int = 3500) -> str:
+    """HTML ridotto all'osso di un risultato (struttura e classi, niente script né immagini)."""
+    soup = BeautifulSoup(html, "lxml")
+    el = soup.select_one(f'{RESULT_SELECTOR}[data-asin="{asin}"]')
+    if el is None:
+        return ""
+    for junk in el.select("script, style, svg, noscript, img, input"):
+        junk.decompose()
+    keep = {"class", "id", "data-cy", "data-component-type", "aria-label", "data-asin", "href"}
+    for tag in [el, *el.find_all(True)]:
+        tag.attrs = {k: v for k, v in tag.attrs.items() if k in keep}
+        if "href" in tag.attrs:
+            tag.attrs["href"] = str(tag.attrs["href"])[:40]
+    text = re.sub(r">\s+<", "><", " ".join(str(el).split()))
+    return text if len(text) <= limit else text[:limit] + " …[tagliato]"
 
 
 # --------------------------------------------------------------------------- widget
@@ -354,10 +391,14 @@ def parse_product_brand(html: str) -> str | None:
             m = re.match(pattern, text, re.I)
             if m:
                 return m.group(1).strip()
-    for row in soup.select("tr.po-brand, #productOverview_feature_div tr"):
-        cells = row.find_all("td")
-        if len(cells) >= 2 and re.search(r"\b(marca|brand)\b", cells[0].get_text(), re.I):
-            value = _clean(cells[1].get_text(" "))
+    for row in soup.select("tr.po-brand, #productOverview_feature_div tr, table.prodDetTable tr, #productDetails_techSpec_section_1 tr"):
+        cells = row.find_all(["th", "td"])
+        if len(cells) >= 2 and re.fullmatch(r"\s*(marca|brand)\s*:?\s*", cells[0].get_text(), re.I):
+            value = _clean(cells[1].get_text(" ")).lstrip("‎‏")
             if value:
                 return value
+    for li in soup.select("#detailBullets_feature_div li"):
+        m = re.match(r"^(?:Marca|Brand)\s*[:‎‏\s]+(.+)$", _clean(li.get_text(" ")), re.I)
+        if m:
+            return m.group(1).strip("‎‏ ")
     return None

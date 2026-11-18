@@ -91,14 +91,14 @@ class BrowserFetcher:
         )
         return self._page.content()
 
-    def _get(self, url: str, wait_selector: str | None) -> str:
-        if self.pages_fetched >= self.cfg.crawl.max_pages_total:
+    def _get(self, url: str, wait_selector: str | None, capped: bool = True) -> str:
+        if capped and self.pages_fetched >= self.cfg.crawl.max_pages_total:
             raise BlockedError(f"Raggiunto il tetto di {self.cfg.crawl.max_pages_total} pagine (crawl.max_pages_total)")
         self._pause()
         log.info("GET %s", url)
         self._page.goto(url, wait_until="domcontentloaded", timeout=60_000)
         self._last_fetch = time.monotonic()
-        self.pages_fetched += 1
+        self.pages_fetched += capped
         self._dismiss_cookie_banner()
         if wait_selector:
             try:
@@ -123,4 +123,5 @@ class BrowserFetcher:
         return self._get(self.search_url(keyword, page), RESULT_SELECTOR)
 
     def fetch_product(self, asin: str) -> str:
-        return self._get(f"https://{self.cfg.domain}/dp/{asin}", "#bylineInfo, #productTitle")
+        # le pagine prodotto hanno il loro limite (crawl.brand_lookup / --max), non il tetto delle ricerche
+        return self._get(f"https://{self.cfg.domain}/dp/{asin}", "#bylineInfo, #productTitle", capped=False)

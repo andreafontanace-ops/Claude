@@ -20,6 +20,7 @@ class CrawlConfig:
     max_pages_total: int = 60
     headless: bool = False
     browser_channel: str = "chromium"
+    brand_lookup: int = 30
 
 
 @dataclass
@@ -70,6 +71,7 @@ def config_from_dict(raw: dict) -> Config:
         max_pages_total=int(crawl_raw.get("max_pages_total", 60)),
         headless=bool(crawl_raw.get("headless", False)),
         browser_channel=str(crawl_raw.get("browser_channel", "chromium")),
+        brand_lookup=int(crawl_raw.get("brand_lookup", 30)),
     )
     if crawl.pages < 1:
         raise ValueError("crawl.pages deve essere almeno 1")

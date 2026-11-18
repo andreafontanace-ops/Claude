@@ -61,7 +61,8 @@ class BrandResolver:
         self._exact = {norm: canonical for norm, canonical in pairs}
         self._generic = {normalize(w) for w in cfg.generic_words}
         self._overrides = {k.upper(): v for k, v in cfg.asin_overrides.items()}
-        self._page_brands = {k.upper(): v for k, v in (product_page_brands or {}).items()}
+        # un valore vuoto vuol dire "pagina già controllata, marchio non trovato"
+        self._page_brands = {k.upper(): v for k, v in (product_page_brands or {}).items() if v}
         self._display: dict[str, str] = {}
 
     def canonical(self, raw_brand: str) -> str:

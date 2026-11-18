@@ -125,6 +125,12 @@ class FakeFetcher:
             raise BlockedError("Amazon ha mostrato una verifica (captcha)")
         return (FIX / f"integratore-ferro__p{page}.html").read_text(encoding="utf-8")
 
+    def fetch_product(self, asin):
+        self.calls.append(("dp", asin))
+        if asin == "B0FERROLIP":
+            return (FIX / "product_ferrolip.html").read_text(encoding="utf-8")
+        return "<html><body><span id='productTitle'>Senza marchio</span></body></html>"
+
 
 def test_crawl_command_with_fake_browser(tmp_path, monkeypatch):
     import amazon_sov.fetcher as fetcher_mod
@@ -140,7 +146,59 @@ def test_crawl_command_with_fake_browser(tmp_path, monkeypatch):
     assert pages == {("integratore ferro", 1): "ok", ("integratore ferro", 2): "ok", ("ferritina", 1): "blocked"}
     assert (tmp_path / "data" / "html" / run_id / "integratore-ferro__p2.html").exists()
     assert len([r for r in store.rows(run_id) if r.placement != "widget"]) == 11
+    # marchi mancanti letti dalla pagina prodotto; "" = controllato ma non trovato
+    assert store.product_brands() == {"B0GENERIC1": "", "B0FERROLIP": "Ferrolip"}
 
     html = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
     assert "Pagine non lette" in html and "ferritina — pagina 1: blocked" in html
     assert "1 keyword su 2" in html
+
+
+def test_resolver_ignores_pages_without_brand():
+    res = BrandResolver(CFG, product_page_brands={"B0GENERIC1": ""})
+    assert res.resolve("B0GENERIC1", None, "Ferro Liposomiale 30 mg") == (UNKNOWN_BRAND, "unknown")
+
+
+class BrandFetcher(FakeFetcher):
+    def fetch_product(self, asin):
+        self.calls.append(("dp", asin))
+        return {"B0GENERIC1": '<div id="bylineInfo">Marca: Pharma Uno</div>',
+                "B0FERROLIP": (FIX / "product_ferrolip.html").read_text(encoding="utf-8")}.get(asin, "<html></html>")
+
+
+def test_brands_command_fills_unknown_brands(tmp_path, monkeypatch, capsys):
+    import amazon_sov.fetcher as fetcher_mod
+
+    html_dir = tmp_path / "pagine"
+    html_dir.mkdir()
+    for name in ("integratore-ferro__p1.html", "integratore-ferro__p2.html"):
+        shutil.copy(FIX / name, html_dir / name)
+    args = ["-c", str(ROOT / "config.toml"), "--data-dir", str(tmp_path / "data")]
+    main(args + ["parse", str(html_dir), "--out", str(tmp_path / "reports")])
+    run_id = Store(tmp_path / "data" / "sov.sqlite").latest_run_id()
+    before = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
+    assert "Marchi da verificare" in before and "B0GENERIC1" in before
+
+    monkeypatch.setattr(fetcher_mod, "BrowserFetcher", BrandFetcher)
+    main(args + ["brands", "--out", str(tmp_path / "reports")])
+
+    with open(tmp_path / "reports" / run_id / "sov_marchi.csv", encoding="utf-8-sig") as fh:
+        brands = {r["marchio"]: r for r in csv.DictReader(fh, delimiter=";")}
+    assert "Pharma Uno" in brands and "(sconosciuto)" not in brands
+    after = (tmp_path / "reports" / run_id / "report.html").read_text(encoding="utf-8")
+    assert "Marchi da verificare" not in after
+
+    # seconda volta: niente da controllare, nessuna pagina riaperta
+    main(args + ["brands", "--out", str(tmp_path / "reports")])
+    assert "hanno già un marchio" in capsys.readouterr().out
+
+
+def test_inspect_latest_page_with_html(tmp_path, capsys):
+    run_dir = tmp_path / "data" / "html" / "20990101-000000"
+    run_dir.mkdir(parents=True)
+    shutil.copy(FIX / "integratore-ferro__p2.html", run_dir / "integratore-ferro__p2.html")
+    shutil.copy(FIX / "integratore-ferro__p1.html", run_dir / "integratore-ferro__p1.html")
+    main(["-c", str(ROOT / "config.toml"), "--data-dir", str(tmp_path / "data"), "inspect", "--html"])
+    out = capsys.readouterr().out
+    assert "file: integratore-ferro__p1.html" in out
+    assert "[B000SOLGAR]" in out and 'data-cy="title-recipe"' in out

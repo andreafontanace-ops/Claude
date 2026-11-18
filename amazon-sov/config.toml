@@ -14,6 +14,9 @@ max_pages_total = 60
 headless = false
 # "chromium" (quello di Playwright) oppure "chrome" per usare Chrome installato sul computer
 browser_channel = "chromium"
+# Prodotti di ferro senza marchio leggibile nei risultati: quante pagine prodotto aprire
+# per leggerlo («Visita lo Store di …»). Il marchio trovato resta in archivio. 0 = mai.
+brand_lookup = 30
 
 [scoring]
 # Peso di ogni posizione nella pagina dei risultati:
