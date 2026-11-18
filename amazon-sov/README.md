@@ -21,7 +21,7 @@ python3 -m venv .venv && source .venv/bin/activate
 ```
 
 ```bash
-pip install -e '.[browser,dev]'
+pip install -e ".[browser,dev]"
 ```
 
 ```bash

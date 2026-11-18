@@ -43,7 +43,7 @@ class BrowserFetcher:
             from playwright.sync_api import sync_playwright
         except ImportError as exc:  # pragma: no cover - dipende dall'installazione
             raise SystemExit(
-                "Playwright non è installato. Esegui:\n  pip install -e '.[browser]'\n  playwright install chromium"
+                "Playwright non è installato. Esegui:\n  pip install -e \".[browser]\"\n  playwright install chromium"
             ) from exc
         self.profile_dir.mkdir(parents=True, exist_ok=True)
         self._pw = sync_playwright().start()
