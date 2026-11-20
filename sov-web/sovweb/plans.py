@@ -19,6 +19,7 @@ class Plan:
     export: bool
     api: bool
     blurb: str
+    public: bool = True  # False = non compare nella pagina dei prezzi (assegnato solo dall'amministratore)
 
     @property
     def frequency_label(self) -> str:
@@ -39,6 +40,9 @@ PLANS: dict[str, Plan] = {
                 "Per il team e-commerce: più categorie, più siti, aggiornamento orario."),
     "enterprise": Plan("enterprise", "Enterprise", None, 20, 10, 15, 50, 730, True, True,
                        "Categorie su misura, aggiornamento ogni 15 minuti, API e supporto dedicato."),
+    "gratuito": Plan("gratuito", "Gratuito – accesso completo", 0, 999, 999, 15, 999, 3650, True, True,
+                     "Accesso completo senza costi, assegnato dall'amministratore (partner, test interni).",
+                     public=False),
 }
 
 TRIAL_DAYS = 14

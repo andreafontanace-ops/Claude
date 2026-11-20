@@ -65,6 +65,22 @@ cd sov-web && python -m sovweb.worker
 
 Apri http://localhost:8000 e registrati. Test: `python -m pytest`.
 
+## Amministrazione
+
+L'amministratore ha accesso completo (piano «Gratuito – accesso completo», senza limiti né scadenza)
+e la pagina **/admin**: elenco degli spazi, cambio di piano, creazione di spazi nuovi. Il piano
+gratuito non compare nella pagina dei prezzi: lo assegna solo l'amministratore.
+
+```bash
+python -m sovweb.admin crea-admin tua@email.it
+```
+
+```bash
+python -m sovweb.admin spazio "Nome azienda" utente@azienda.it gratuito
+```
+
+Altri comandi: `piano EMAIL PIANO` (cambia piano), `elenco` (elenca gli spazi).
+
 ## In produzione
 
 `docker-compose.yml` avvia Postgres, il sito (4 processi) e il worker. Davanti serve un proxy HTTPS.

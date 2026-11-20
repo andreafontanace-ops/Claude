@@ -39,6 +39,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(200), default="")
     password_hash: Mapped[str] = mapped_column(String(300))
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     workspace: Mapped[Workspace] = relationship(back_populates="users")

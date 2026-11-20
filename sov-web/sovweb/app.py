@@ -83,6 +83,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(status_code=303, headers={"Location": "/accedi"})
         return user
 
+    def require_admin(user: User = Depends(require_user)) -> User:
+        if not user.is_admin:
+            raise HTTPException(status_code=404, detail="Non trovato")
+        return user
+
     async def check_csrf(request: Request) -> None:
         form = await request.form()
         if not csrf_ok(request.session, form.get("csrf")):
@@ -356,6 +361,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             session.add(rule)
         session.commit()
         return RedirectResponse("/avvisi?salvato=1", status_code=303)
+
+    # ------------------------------------------------------------------ amministrazione
+
+    @app.get("/admin", response_class=HTMLResponse)
+    def admin_page(request: Request, user: User = Depends(require_admin), session: Session = Depends(get_session)):
+        workspaces = session.scalars(select(Workspace).order_by(Workspace.created_at.desc())).all()
+        created = request.session.pop("admin_created", None)
+        return render(request, "admin.html", _db=session, user=user, workspaces=workspaces, created=created,
+                      error=request.session.pop("admin_error", None))
+
+    @app.post("/admin/spazio", dependencies=[Depends(check_csrf)])
+    def admin_create(request: Request, name: str = Form(...), email: str = Form(...), plan: str = Form("gratuito"),
+                     user: User = Depends(require_admin), session: Session = Depends(get_session)):
+        from .admin import create_workspace
+
+        try:
+            if not EMAIL_RE.match(email.strip().lower()) or not name.strip():
+                raise ValueError("Indica il nome dello spazio e un'email valida.")
+            new_user, password = create_workspace(session, name, email, plan)
+            request.session["admin_created"] = {"name": name.strip(), "email": new_user.email, "password": password}
+        except ValueError as exc:
+            session.rollback()
+            request.session["admin_error"] = str(exc)
+        return RedirectResponse("/admin", status_code=303)
+
+    @app.post("/admin/spazio/{ws_id}/piano", dependencies=[Depends(check_csrf)])
+    def admin_plan(ws_id: int, plan: str = Form(...), user: User = Depends(require_admin),
+                   session: Session = Depends(get_session)):
+        ws = session.get(Workspace, ws_id)
+        if ws is None or plan not in PLANS:
+            raise HTTPException(status_code=404, detail="Non trovato")
+        ws.plan = plan
+        session.flush()
+        for sub in ws.subscriptions:
+            update_feed_interval(session, sub.feed)
+        session.commit()
+        return RedirectResponse("/admin", status_code=303)
 
     # ------------------------------------------------------------------ API di caricamento
 

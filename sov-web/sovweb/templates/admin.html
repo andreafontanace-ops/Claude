@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Amministrazione{% endblock %}
+{% block content %}
+<h1>Amministrazione</h1>
+<p class="lede">Tutti gli spazi clienti. Il piano «Gratuito – accesso completo» non compare tra i prezzi pubblici e non scade.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+{% if created %}
+<div class="banner" role="status"><b>Spazio «{{ created.name }}» creato.</b> Accesso: {{ created.email }} · password temporanea: <code>{{ created.password }}</code><br>
+<span class="small">Copiala ora: non verrà mostrata di nuovo.</span></div>
+{% endif %}
+
+<h2>Nuovo spazio</h2>
+<form class="card admin-new" method="post" action="/admin/spazio">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Azienda <input type="text" name="name" required placeholder="es. Alfasigma"></label>
+  <label>Email del primo utente <input type="email" name="email" required></label>
+  <label>Piano <select name="plan">{% for p in plans.values() %}<option value="{{ p.slug }}" {% if p.slug == 'gratuito' %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select></label>
+  <button class="btn" type="submit">Crea</button>
+</form>
+
+<h2>Spazi ({{ workspaces | length }})</h2>
+<div class="scroll"><table>
+<thead><tr><th>Azienda</th><th>Utenti</th><th class="num">Feed</th><th>Creato</th><th>Piano</th></tr></thead>
+<tbody>
+{% for ws in workspaces %}
+<tr>
+  <td><b>{{ ws.name }}</b></td>
+  <td class="small">{{ ws.users | map(attribute='email') | join(', ') }}</td>
+  <td class="num">{{ ws.subscriptions | length }}</td>
+  <td class="small">{{ ws.created_at | dt }}</td>
+  <td><form class="inline" method="post" action="/admin/spazio/{{ ws.id }}/piano">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <select name="plan" aria-label="Piano di {{ ws.name }}">{% for p in plans.values() %}<option value="{{ p.slug }}" {% if p.slug == ws.plan %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+    <button class="btn ghost small" type="submit">Salva</button></form></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% endblock %}
