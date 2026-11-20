@@ -153,5 +153,5 @@ def test_ingest_api(client):
         {"id": "P2", "title": "Emoplus Ferro gocce", "brand": "Emoplus"},
     ]}}
     assert client.post("/api/ingest", json=body).status_code == 401
-    r = client.post("/api/ingest", json=body, headers={"Authorization": "Bearer tok-123"})
+    r = client.post("/api/ingest", json=body, headers={"Authorization": "Bearer tok-123-prova-abcdefghijklmnop"})
     assert r.status_code == 200 and r.json()["status"] == "ok" and r.json()["keywords"] == 1

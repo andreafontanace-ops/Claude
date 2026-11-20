@@ -4,6 +4,7 @@
   spazio NOME EMAIL [PIANO]   crea uno spazio cliente con il suo primo utente (piano default: gratuito)
   piano EMAIL PIANO           cambia il piano dello spazio di cui fa parte EMAIL
   elenco                      elenca gli spazi
+  init                        crea o aggiorna le tabelle e il catalogo (prima di ogni pubblicazione)
 """
 
 from __future__ import annotations
@@ -33,7 +34,8 @@ def create_workspace(session, name: str, email: str, plan: str, password: str | 
         raise ValueError(f"Esiste già un utente {email}")
     password = password or secrets.token_urlsafe(12)
     ws = Workspace(name=name.strip(), plan=plan)
-    user = User(email=email, name="", password_hash=hash_password(password), workspace=ws, is_admin=admin)
+    user = User(email=email, name="", password_hash=hash_password(password), workspace=ws, is_admin=admin,
+                email_verified=admin)
     session.add_all([ws, user])
     session.flush()
     session.add_all(add_default_rules(ws))
@@ -52,11 +54,14 @@ def main(argv: list[str] | None = None) -> None:
     with db.Session() as s:
         seed_catalog(s)
         cmd, args = argv[0], argv[1:]
-        if cmd == "crea-admin" and len(args) == 1:
+        if cmd == "init":
+            print("Database pronto.")
+        elif cmd == "crea-admin" and len(args) == 1:
             email = args[0].strip().lower()
             user = s.scalar(select(User).where(User.email == email))
             if user:
                 user.is_admin = True
+                user.email_verified = True
                 user.workspace.plan = "gratuito"
                 s.commit()
                 print(f"{email} ora è amministratore, con accesso completo.")

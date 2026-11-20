@@ -24,8 +24,12 @@ from .catalog import seed_catalog
 from .charts import trend_svg
 from .collector import ingest_run, run_feed, update_feed_interval
 from .db import Database
-from .models import (AlertRule, BrandSov, Category, Feed, Notification, ProductSov, Run, Site, Subscription, User,
-                     Workspace, WorkspaceBrand, utcnow)
+from .mailer import send_email
+from .models import (AlertRule, AuditEvent, BrandSov, Category, Feed, Notification, ProductSov, Run, Site,
+                     Subscription, User, Workspace, WorkspaceBrand, utcnow)
+from .ratelimit import RateLimiter
+from .tokens import (make_reset_token, make_verify_token, password_fingerprint, read_reset_token,
+                     read_verify_token)
 from .plans import PLANS, TRIAL_DAYS, get_plan, trial_expired
 from .providers import get_provider
 from .security import csrf_ok, csrf_token, hash_password, verify_password
@@ -46,7 +50,54 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Share of voice e-commerce", docs_url=None, redoc_url=None)
     app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, same_site="lax",
-                       https_only=settings.production, max_age=14 * 24 * 3600)
+                       https_only=settings.online, max_age=14 * 24 * 3600)
+    limiter = RateLimiter()
+    csp = ("default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; "
+           "form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'")
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        if settings.online and request.headers.get("x-forwarded-proto") == "http":
+            return RedirectResponse(str(request.url.replace(scheme="https")), status_code=308)
+        resp = await call_next(request)
+        h = resp.headers
+        h.setdefault("Content-Security-Policy", csp)
+        h.setdefault("X-Content-Type-Options", "nosniff")
+        h.setdefault("X-Frame-Options", "DENY")
+        h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+        h.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        if settings.online:
+            h.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        if not request.url.path.startswith("/static"):
+            h.setdefault("Cache-Control", "no-store")
+        return resp
+
+    def client_ip(request: Request) -> str:
+        return request.client.host if request.client else ""
+
+    def audit(session: Session, request: Request, kind: str, user: User | None = None, email: str = "",
+              detail: str = "") -> None:
+        session.add(AuditEvent(user_id=user.id if user else None, email=(user.email if user else email)[:320],
+                               kind=kind, ip=client_ip(request)[:64], detail=detail[:300]))
+        session.commit()
+
+    def login_session(request: Request, user: User) -> None:
+        request.session.clear()
+        request.session["uid"] = user.id
+        request.session["pw"] = password_fingerprint(user.password_hash)
+
+    def send_verification(user: User) -> None:
+        link = f"{settings.base_url}/verifica?t={make_verify_token(settings.secret_key, user.id, user.email)}"
+        send_email(settings, user.email, "Conferma il tuo indirizzo email",
+                   f"Ciao,\n\nper confermare il tuo indirizzo apri questo link (vale 7 giorni):\n{link}\n\n"
+                   "Se non ti sei registrato tu, ignora questo messaggio.")
+
+    def too_many(request: Request, session: Session, template: str, **ctx) -> HTMLResponse:
+        resp = render(request, template, _db=session,
+                      error="Troppi tentativi. Aspetta qualche minuto e riprova.", **ctx)
+        resp.status_code = 429
+        return resp
     app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
     templates = Jinja2Templates(directory=HERE / "templates")
     templates.env.filters["pct"] = lambda v, d=1: "–" if v is None else f"{v * 100:.{d}f}%".replace(".", ",")
@@ -69,13 +120,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             unread = session.scalar(select(func.count(Notification.id)).where(
                 Notification.workspace_id == ctx["user"].workspace_id, Notification.read.is_(False))) or 0
         return templates.TemplateResponse(
-            request, name, {"csrf": csrf_token(request.session), "plans": PLANS, "unread": unread, **ctx})
+            request, name, {"csrf": csrf_token(request.session), "plans": PLANS, "unread": unread,
+                            "environment": settings.environment, **ctx})
 
     def current_user(request: Request, session: Session | None) -> User | None:
         uid = request.session.get("uid")
         if not uid or session is None:
             return None
-        return session.get(User, uid)
+        user = session.get(User, uid)
+        if user is None or request.session.get("pw") != password_fingerprint(user.password_hash):
+            request.session.clear()  # password cambiata altrove: sessione chiusa
+            return None
+        return user
 
     def require_user(request: Request, session: Session = Depends(get_session)) -> User:
         user = current_user(request, session)
@@ -122,6 +178,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                  name: str = Form(""), session: Session = Depends(get_session)):
         email = email.strip().lower()
         form = {"email": email, "company": company, "name": name}
+        if not limiter.hit(("register", client_ip(request)), 10, 3600):
+            return too_many(request, session, "register.html", form=form)
         error = None
         if not EMAIL_RE.match(email):
             error = "Indirizzo email non valido."
@@ -139,8 +197,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session.flush()
         session.add_all(add_default_rules(ws))
         session.commit()
-        request.session.clear()
-        request.session["uid"] = user.id
+        audit(session, request, "registrazione", user)
+        send_verification(user)
+        login_session(request, user)
         return RedirectResponse("/benvenuto", status_code=303)
 
     @app.get("/accedi", response_class=HTMLResponse)
@@ -150,12 +209,95 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post("/accedi", dependencies=[Depends(check_csrf)])
     def login(request: Request, email: str = Form(...), password: str = Form(...),
               session: Session = Depends(get_session)):
-        user = session.scalar(select(User).where(User.email == email.strip().lower()))
+        email = email.strip().lower()
+        ip = client_ip(request)
+        if not limiter.hit(("login-ip", ip), 30, 900) or not limiter.hit(("login-email", email), 8, 900):
+            audit(session, request, "accesso_bloccato", email=email)
+            return too_many(request, session, "login.html")
+        user = session.scalar(select(User).where(User.email == email))
         if user is None or not verify_password(password, user.password_hash):
+            audit(session, request, "accesso_fallito", email=email)
             return render(request, "login.html", _db=session, error="Email o password non corretti.")
-        request.session.clear()
-        request.session["uid"] = user.id
+        limiter.reset(("login-email", email))
+        audit(session, request, "accesso", user)
+        login_session(request, user)
         return RedirectResponse("/dashboard", status_code=303)
+
+    # ------------------------------------------------------------------ password e verifica email
+
+    @app.get("/password-dimenticata", response_class=HTMLResponse)
+    def forgot_form(request: Request, session: Session = Depends(get_session)):
+        return render(request, "forgot.html", _db=session, sent=False, error=None)
+
+    @app.post("/password-dimenticata", dependencies=[Depends(check_csrf)])
+    def forgot(request: Request, email: str = Form(...), session: Session = Depends(get_session)):
+        email = email.strip().lower()
+        if not limiter.hit(("forgot-ip", client_ip(request)), 10, 3600) or not limiter.hit(("forgot", email), 3, 3600):
+            return too_many(request, session, "forgot.html", sent=False)
+        user = session.scalar(select(User).where(User.email == email))
+        if user is not None:
+            link = f"{settings.base_url}/reimposta?t={make_reset_token(settings.secret_key, user.id, user.password_hash)}"
+            send_email(settings, user.email, "Reimposta la password",
+                       f"Ciao,\n\nper scegliere una nuova password apri questo link (vale 1 ora, una sola volta):\n"
+                       f"{link}\n\nSe non l'hai chiesto tu, ignora questo messaggio: la password non cambia.")
+            audit(session, request, "recupero_password_richiesto", user)
+        # stessa risposta che l'email esista o no: non si rivela chi è registrato
+        return render(request, "forgot.html", _db=session, sent=True, error=None)
+
+    def _reset_user(session: Session, token: str) -> User | None:
+        data = read_reset_token(settings.secret_key, token or "")
+        if not data:
+            return None
+        user = session.get(User, data.get("u"))
+        if user is None or password_fingerprint(user.password_hash) != data.get("p"):
+            return None  # già usato (la password è cambiata) o utente inesistente
+        return user
+
+    @app.get("/reimposta", response_class=HTMLResponse)
+    def reset_form(request: Request, t: str = "", session: Session = Depends(get_session)):
+        valid = _reset_user(session, t) is not None
+        return render(request, "reset.html", _db=session, token=t, valid=valid, error=None, user=None)
+
+    @app.post("/reimposta", dependencies=[Depends(check_csrf)])
+    def reset(request: Request, t: str = Form(...), password: str = Form(...), password2: str = Form(...),
+              session: Session = Depends(get_session)):
+        user = _reset_user(session, t)
+        if user is None:
+            return render(request, "reset.html", _db=session, token=t, valid=False, error=None, user=None)
+        error = None
+        if len(password) < 10:
+            error = "La password deve avere almeno 10 caratteri."
+        elif password != password2:
+            error = "Le due password non coincidono."
+        if error:
+            return render(request, "reset.html", _db=session, token=t, valid=True, error=error, user=None)
+        user.password_hash = hash_password(password)
+        user.email_verified = True  # ha dimostrato di ricevere le email
+        session.commit()
+        audit(session, request, "password_cambiata", user)
+        login_session(request, user)
+        return RedirectResponse("/dashboard", status_code=303)
+
+    @app.get("/verifica", response_class=HTMLResponse)
+    def verify(request: Request, t: str = "", session: Session = Depends(get_session)):
+        data = read_verify_token(settings.secret_key, t)
+        user = session.get(User, data["u"]) if data else None
+        ok = user is not None and user.email == data.get("e")
+        if ok:
+            user.email_verified = True
+            session.commit()
+            audit(session, request, "email_verificata", user)
+        return render(request, "message.html", _db=session,
+                      title="Email confermata" if ok else "Link non valido",
+                      text="Grazie, il tuo indirizzo è confermato: riceverai gli avvisi via email." if ok else
+                      "Il link è scaduto o non è valido. Accedi e chiedine uno nuovo.")
+
+    @app.post("/verifica/invia", dependencies=[Depends(check_csrf)])
+    def verify_resend(request: Request, user: User = Depends(require_user), session: Session = Depends(get_session)):
+        if not user.email_verified and limiter.hit(("verify", user.id), 3, 3600):
+            send_verification(user)
+        return render(request, "message.html", _db=session, user=user, title="Email inviata",
+                      text=f"Ti abbiamo scritto a {user.email}: apri il link per confermare l'indirizzo.")
 
     @app.post("/esci", dependencies=[Depends(check_csrf)])
     def logout(request: Request):
@@ -368,8 +510,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def admin_page(request: Request, user: User = Depends(require_admin), session: Session = Depends(get_session)):
         workspaces = session.scalars(select(Workspace).order_by(Workspace.created_at.desc())).all()
         created = request.session.pop("admin_created", None)
+        events = session.scalars(select(AuditEvent).order_by(AuditEvent.id.desc()).limit(40)).all()
         return render(request, "admin.html", _db=session, user=user, workspaces=workspaces, created=created,
-                      error=request.session.pop("admin_error", None))
+                      error=request.session.pop("admin_error", None), events=events)
 
     @app.post("/admin/spazio", dependencies=[Depends(check_csrf)])
     def admin_create(request: Request, name: str = Form(...), email: str = Form(...), plan: str = Form("gratuito"),
@@ -380,6 +523,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             if not EMAIL_RE.match(email.strip().lower()) or not name.strip():
                 raise ValueError("Indica il nome dello spazio e un'email valida.")
             new_user, password = create_workspace(session, name, email, plan)
+            audit(session, request, "admin_spazio_creato", user, detail=f"{name.strip()} · {new_user.email} · {plan}")
             request.session["admin_created"] = {"name": name.strip(), "email": new_user.email, "password": password}
         except ValueError as exc:
             session.rollback()
@@ -387,13 +531,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return RedirectResponse("/admin", status_code=303)
 
     @app.post("/admin/spazio/{ws_id}/piano", dependencies=[Depends(check_csrf)])
-    def admin_plan(ws_id: int, plan: str = Form(...), user: User = Depends(require_admin),
+    def admin_plan(ws_id: int, request: Request, plan: str = Form(...), user: User = Depends(require_admin),
                    session: Session = Depends(get_session)):
         ws = session.get(Workspace, ws_id)
         if ws is None or plan not in PLANS:
             raise HTTPException(status_code=404, detail="Non trovato")
+        old_plan = ws.plan
         ws.plan = plan
         session.flush()
+        audit(session, request, "admin_piano_cambiato", user, detail=f"{ws.name}: {old_plan} → {plan}")
         for sub in ws.subscriptions:
             update_feed_interval(session, sub.feed)
         session.commit()

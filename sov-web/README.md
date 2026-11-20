@@ -81,6 +81,28 @@ python -m sovweb.admin spazio "Nome azienda" utente@azienda.it gratuito
 
 Altri comandi: `piano EMAIL PIANO` (cambia piano), `elenco` (elenca gli spazi).
 
+## Ambiente di prova su Render
+
+Il file `render.yaml` nella radice del repository crea, nella regione di Francoforte, il database
+Postgres, il sito (2 processi) e il worker, con chiave segreta e token generati da Render.
+Render → New → Blueprint → scegli il repository. Dopo la prima pubblicazione:
+
+1. imposta `SOV_BASE_URL` (indirizzo del sito) nei due servizi;
+2. dalla Shell del servizio web crea l'amministratore:
+   `cd sov-web && python -m sovweb.admin crea-admin tua@email.it`;
+3. per le email (verifica, password, avvisi) compila le variabili `SOV_SMTP_*` e `SOV_MAIL_FROM`.
+
+Il comando `python -m sovweb.admin init` (eseguito da Render prima di ogni pubblicazione) crea o
+aggiorna le tabelle. I test girano anche su Postgres: `SOV_TEST_DATABASE_URL=postgresql://... pytest`.
+
+## Sicurezza
+
+HTTPS forzato e HSTS online; Content-Security-Policy senza script in linea; protezione dalle pagine
+incorniciate; cookie di sessione firmati, solo HTTPS e chiusi su tutti i dispositivi al cambio password;
+password con scrypt; protezione CSRF su tutti i moduli; limite ai tentativi di accesso, registrazione e
+recupero password; link di recupero monouso e a scadenza; registro di sicurezza in /admin. Online il
+sito rifiuta di partire con chiave segreta debole, SQLite o (in produzione) dati dimostrativi.
+
 ## In produzione
 
 `docker-compose.yml` avvia Postgres, il sito (4 processi) e il worker. Davanti serve un proxy HTTPS.

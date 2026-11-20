@@ -38,7 +38,7 @@ def test_crawler_results_feed_the_dashboard(client, settings, tmp_path):
     choose(client, ["Ferro"], ["Amazon.it"])
     set_brands(client, own="Nutravita")
     payload = crawler_payload(tmp_path)
-    r = client.post("/api/ingest", json=payload, headers={"Authorization": "Bearer tok-123"})
+    r = client.post("/api/ingest", json=payload, headers={"Authorization": "Bearer tok-123-prova-abcdefghijklmnop"})
     assert r.status_code == 200 and r.json()["status"] == "ok"
     feed_id = re.search(r'href="/dashboard/(\d+)"', client.get("/dashboard").text).group(1)
     page = client.get(f"/dashboard/{feed_id}").text
@@ -55,7 +55,7 @@ def test_no_provider_means_no_empty_runs(client, settings):
 
 
 def test_ingest_rejects_bad_input(client):
-    h = {"Authorization": "Bearer tok-123"}
+    h = {"Authorization": "Bearer tok-123-prova-abcdefghijklmnop"}
     assert client.post("/api/ingest", json={"category": "ferro", "site": "amazon-it", "results": {}}, headers=h).status_code == 422
     bad = {"category": "ferro", "site": "amazon-it", "collected_at": "ieri", "results": {"x": [{"id": "1"}]}}
     assert client.post("/api/ingest", json=bad, headers=h).status_code == 422

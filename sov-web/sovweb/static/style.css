@@ -128,3 +128,5 @@ header.top nav a:hover { color: var(--ink); }
 select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .admin-new { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; align-items: end; }
 code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.env-banner { margin: 0; padding: 6px 16px; text-align: center; font-size: 13px; font-weight: 600; background: var(--warn-bg); color: var(--ink); }
+.banner.verify { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

@@ -23,18 +23,4 @@
   {% endfor %}
   <p class="actions"><button class="btn" type="submit">Vai alla dashboard</button> <button class="btn ghost" type="submit" name="skip" value="1">Salta per ora</button></p>
 </form>
-<script>
-document.querySelectorAll(".chip[data-target]").forEach((chip) => {
-  let taps = 0, timer;
-  chip.addEventListener("click", () => {
-    taps += 1; clearTimeout(timer);
-    timer = setTimeout(() => {
-      const field = document.getElementById(taps > 1 ? chip.dataset.own : chip.dataset.target);
-      const names = field.value.split(",").map((s) => s.trim()).filter(Boolean);
-      if (!names.includes(chip.textContent)) names.push(chip.textContent);
-      field.value = names.join(", "); chip.classList.add("on"); taps = 0;
-    }, 250);
-  });
-});
-</script>
 {% endblock %}

@@ -1,0 +1,77 @@
+# Blueprint di Render per l'ambiente di prova (staging) della piattaforma sov-web.
+# Render → New → Blueprint → scegli questo repository: crea database, sito e worker.
+# Regione Francoforte (dati in UE). Costo indicativo: ~20 $/mese (web 7, worker 7, database 6).
+
+envVarGroups:
+  - name: vetrina-staging
+    envVars:
+      - key: SOV_ENV
+        value: staging
+      - key: SOV_SECRET_KEY
+        generateValue: true          # chiave casuale creata da Render, non serve sceglierla
+      - key: SOV_INGEST_TOKEN
+        generateValue: true          # token per `amazon-sov push`: lo copi dal pannello di Render
+      - key: SOV_DATA_PROVIDER
+        value: demo                  # in prova: dati dimostrativi; "none" per usare solo il crawler
+      - key: PYTHON_VERSION
+        value: 3.12.8
+
+databases:
+  - name: vetrina-db-staging
+    region: frankfurt
+    plan: basic-256mb
+    databaseName: vetrina
+    user: vetrina
+
+services:
+  - type: web
+    name: vetrina-staging
+    runtime: python
+    region: frankfurt
+    plan: starter
+    branch: claude/bold-turing-uyee99
+    buildCommand: pip install ./amazon-sov "./sov-web[postgres]"
+    preDeployCommand: cd sov-web && python -m sovweb.admin init
+    startCommand: cd sov-web && uvicorn sovweb.app:create_app --factory --host 0.0.0.0 --port $PORT --workers 2 --proxy-headers --forwarded-allow-ips "*"
+    healthCheckPath: /salute
+    envVars:
+      - fromGroup: vetrina-staging
+      - key: SOV_DATABASE_URL
+        fromDatabase:
+          name: vetrina-db-staging
+          property: connectionString
+      - key: SOV_BASE_URL
+        sync: false                  # indirizzo del sito, es. https://vetrina-staging.onrender.com
+      - key: SOV_SMTP_HOST
+        sync: false
+      - key: SOV_SMTP_USER
+        sync: false
+      - key: SOV_SMTP_PASSWORD
+        sync: false
+      - key: SOV_MAIL_FROM
+        sync: false
+
+  - type: worker
+    name: vetrina-worker-staging
+    runtime: python
+    region: frankfurt
+    plan: starter
+    branch: claude/bold-turing-uyee99
+    buildCommand: pip install ./amazon-sov "./sov-web[postgres]"
+    startCommand: cd sov-web && python -m sovweb.worker
+    envVars:
+      - fromGroup: vetrina-staging
+      - key: SOV_DATABASE_URL
+        fromDatabase:
+          name: vetrina-db-staging
+          property: connectionString
+      - key: SOV_BASE_URL
+        sync: false
+      - key: SOV_SMTP_HOST
+        sync: false
+      - key: SOV_SMTP_USER
+        sync: false
+      - key: SOV_SMTP_PASSWORD
+        sync: false
+      - key: SOV_MAIL_FROM
+        sync: false

@@ -1,5 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Amministrazione{% endblock %}
+{% block title %}Amministrazione
+<h2>Registro di sicurezza</h2>
+<p class="note">Ultimi accessi, tentativi falliti e azioni da amministratore.</p>
+<div class="scroll"><table>
+<thead><tr><th>Quando</th><th>Evento</th><th>Utente</th><th>IP</th><th>Dettaglio</th></tr></thead>
+<tbody>{% for e in events %}<tr><td class="small">{{ e.at | dt }}</td><td>{{ e.kind | replace('_', ' ') }}</td><td class="small">{{ e.email }}</td><td class="small">{{ e.ip }}</td><td class="small">{{ e.detail }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endblock %}
 {% block content %}
 <h1>Amministrazione</h1>
 <p class="lede">Tutti gli spazi clienti. Il piano «Gratuito – accesso completo» non compare tra i prezzi pubblici e non scade.</p>
@@ -35,4 +42,11 @@
 </tr>
 {% endfor %}
 </tbody></table></div>
+
+<h2>Registro di sicurezza</h2>
+<p class="note">Ultimi accessi, tentativi falliti e azioni da amministratore.</p>
+<div class="scroll"><table>
+<thead><tr><th>Quando</th><th>Evento</th><th>Utente</th><th>IP</th><th>Dettaglio</th></tr></thead>
+<tbody>{% for e in events %}<tr><td class="small">{{ e.at | dt }}</td><td>{{ e.kind | replace('_', ' ') }}</td><td class="small">{{ e.email }}</td><td class="small">{{ e.ip }}</td><td class="small">{{ e.detail }}</td></tr>{% endfor %}</tbody>
+</table></div>
 {% endblock %}

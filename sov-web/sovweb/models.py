@@ -40,6 +40,7 @@ class User(Base):
     name: Mapped[str] = mapped_column(String(200), default="")
     password_hash: Mapped[str] = mapped_column(String(300))
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     workspace: Mapped[Workspace] = relationship(back_populates="users")
@@ -205,3 +206,16 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     emailed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class AuditEvent(Base):
+    """Registro degli eventi di sicurezza: accessi riusciti e falliti, cambi password, azioni da amministratore."""
+
+    __tablename__ = "audit_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    email: Mapped[str] = mapped_column(String(320), default="")
+    kind: Mapped[str] = mapped_column(String(40))
+    ip: Mapped[str] = mapped_column(String(64), default="")
+    detail: Mapped[str] = mapped_column(String(300), default="")

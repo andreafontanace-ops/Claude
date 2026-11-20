@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import logging
-import smtplib
 from collections import defaultdict
-from email.message import EmailMessage
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -86,8 +84,10 @@ def _messages(rule: AlertRule, cur: dict, old: dict, own: set[str]) -> list[str]
 
 
 def send_pending_emails(session: Session, settings) -> int:
-    """Una email riassuntiva per cliente con gli avvisi non ancora inviati. Senza SMTP non fa nulla."""
-    if not settings.smtp_host or not settings.mail_from:
+    """Una email riassuntiva per cliente con gli avvisi non ancora inviati, solo agli indirizzi confermati."""
+    from .mailer import send_email
+
+    if not settings.email_enabled:
         return 0
     pending = session.scalars(select(Notification).where(Notification.emailed.is_(False))
                               .order_by(Notification.created_at)).all()
@@ -97,27 +97,15 @@ def send_pending_emails(session: Session, settings) -> int:
     sent = 0
     for ws_id, items in by_ws.items():
         ws = session.get(Workspace, ws_id)
-        recipients = [u.email for u in ws.users]
-        if not recipients:
-            continue
-        msg = EmailMessage()
-        msg["Subject"] = f"Share of voice: {len(items)} {'novità' if len(items) > 1 else 'novità'} da controllare"
-        msg["From"] = settings.mail_from
-        msg["To"] = ", ".join(recipients)
-        lines = [f"• {n.text}" for n in items]
-        msg.set_content("\n".join(lines) + f"\n\nApri la dashboard: {settings.base_url}/dashboard\n"
-                        f"Gestisci gli avvisi: {settings.base_url}/avvisi\n")
-        try:
-            with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as smtp:
-                smtp.starttls()
-                if settings.smtp_user:
-                    smtp.login(settings.smtp_user, settings.smtp_password)
-                smtp.send_message(msg)
-        except (OSError, smtplib.SMTPException):
-            log.exception("Invio email non riuscito per il cliente %s", ws_id)
-            continue
+        recipients = [u.email for u in ws.users if u.email_verified]
+        if recipients:
+            body = "\n".join(f"• {n.text}" for n in items)
+            body += (f"\n\nApri la dashboard: {settings.base_url}/dashboard\n"
+                     f"Gestisci gli avvisi: {settings.base_url}/avvisi\n")
+            if not send_email(settings, recipients, f"Share of voice: {len(items)} novità da controllare", body):
+                continue
+            sent += 1
         for n in items:
             n.emailed = True
-        sent += 1
     session.commit()
     return sent

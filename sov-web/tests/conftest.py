@@ -1,3 +1,4 @@
+import os
 import re
 
 import pytest
@@ -7,10 +8,19 @@ from sovweb.app import create_app
 from sovweb.settings import Settings
 
 
+PG_URL = os.environ.get("SOV_TEST_DATABASE_URL", "")
+
+
 @pytest.fixture
 def settings(tmp_path):
-    return Settings(database_url=f"sqlite:///{tmp_path / 'test.sqlite'}", secret_key="test", data_provider="demo",
-                    ingest_token="tok-123")
+    url = PG_URL or f"sqlite:///{tmp_path / 'test.sqlite'}"
+    if PG_URL:  # database Postgres vero: si riparte da zero a ogni test
+        from sovweb.db import Base, Database
+        from sovweb import models  # noqa: F401
+
+        Base.metadata.drop_all(Database(PG_URL).engine)
+    return Settings(database_url=url, secret_key="test", data_provider="demo",
+                    ingest_token="tok-123-prova-abcdefghijklmnop")
 
 
 @pytest.fixture

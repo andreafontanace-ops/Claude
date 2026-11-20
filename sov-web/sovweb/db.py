@@ -12,8 +12,17 @@ class Base(DeclarativeBase):
     pass
 
 
+def normalize_url(url: str) -> str:
+    """Gli hosting danno spesso postgres:// o postgresql://: SQLAlchemy con psycopg 3 vuole postgresql+psycopg://."""
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 class Database:
     def __init__(self, url: str):
+        url = normalize_url(url)
         kwargs = {"pool_pre_ping": True}
         if url.startswith("sqlite"):
             kwargs["connect_args"] = {"check_same_thread": False}
@@ -40,7 +49,15 @@ class Database:
                     if col.name not in have:
                         ddl = col.type.compile(dialect=self.engine.dialect)
                         default = col.default.arg if col.default is not None and not callable(col.default.arg) else None
-                        extra = f" DEFAULT {int(default) if isinstance(default, bool) else repr(default)}" if default is not None else ""
+                        if isinstance(default, bool):
+                            literal = "true" if default else "false"  # vale sia per Postgres sia per SQLite
+                        elif isinstance(default, (int, float)):
+                            literal = repr(default)
+                        elif isinstance(default, str):
+                            literal = "'" + default.replace("'", "''") + "'"
+                        else:
+                            literal = None
+                        extra = f" DEFAULT {literal}" if literal is not None else ""
                         conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {col.name} {ddl}{extra}'))
 
     def session(self) -> Iterator[Session]:

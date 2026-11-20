@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Vetrina{% endblock %} · Vetrina</title>
-{% if inline_css %}<style>{{ inline_css | safe }}</style>{% else %}<link rel="stylesheet" href="/static/style.css">{% endif %}
+{% if inline_css %}<style>{{ inline_css | safe }}</style>{% else %}<link rel="stylesheet" href="/static/style.css">
+<script src="/static/app.js" defer></script>{% endif %}
 </head>
 <body>
 {% if not standalone %}
@@ -26,6 +27,15 @@
   </nav>
 </header>
 {% endif %}
-<main>{% block content %}{% endblock %}</main>
+{% if environment == 'staging' and not standalone %}<p class="env-banner">Ambiente di prova: i dati possono essere dimostrativi e venire cancellati.</p>{% endif %}
+<main>
+{% if user and not user.email_verified and not standalone %}
+<form class="banner verify" method="post" action="/verifica/invia">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  Conferma il tuo indirizzo email ({{ user.email }}) per ricevere gli avvisi. <button class="link" type="submit">Mandami di nuovo il link</button>
+</form>
+{% endif %}
+{% block content %}{% endblock %}
+</main>
 </body>
 </html>

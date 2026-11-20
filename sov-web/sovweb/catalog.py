@@ -14,7 +14,15 @@ from sqlalchemy.orm import Session
 
 from .models import Category, Site
 
-AMAZON_SOV_CONFIG = Path(__file__).resolve().parents[2] / "amazon-sov" / "config.toml"
+import os
+
+
+def _amazon_sov_config() -> Path | None:
+    """config.toml di amazon-sov: accanto al repository, nella cartella corrente o indicato da SOV_FERRO_CONFIG."""
+    candidates = [Path(os.environ["SOV_FERRO_CONFIG"])] if os.environ.get("SOV_FERRO_CONFIG") else []
+    candidates += [Path(__file__).resolve().parents[2] / "amazon-sov" / "config.toml",
+                   Path.cwd() / "amazon-sov" / "config.toml", Path.cwd().parent / "amazon-sov" / "config.toml"]
+    return next((p for p in candidates if p.is_file()), None)
 
 
 def _kw(*terms: str) -> list[dict]:
@@ -22,8 +30,9 @@ def _kw(*terms: str) -> list[dict]:
 
 
 def _ferro_config() -> dict:
-    if AMAZON_SOV_CONFIG.exists():
-        with open(AMAZON_SOV_CONFIG, "rb") as fh:
+    path = _amazon_sov_config()
+    if path is not None:
+        with open(path, "rb") as fh:
             return tomllib.load(fh)
     return {"keywords": _kw("integratore ferro", "ferritina", "ferro bisglicinato"),
             "relevance": {"include": ["ferro", "ferritina", "iron"], "exclude": ["senza ferro"]}}
@@ -110,6 +119,15 @@ SITES = [
 
 def seed_catalog(session: Session) -> None:
     """Crea le categorie e i siti mancanti (non tocca quelli già presenti)."""
+    from sqlalchemy.exc import IntegrityError
+
+    try:
+        _seed(session)
+    except IntegrityError:  # un altro processo li ha appena creati
+        session.rollback()
+
+
+def _seed(session: Session) -> None:
     have_cat = {c.slug for c in session.scalars(select(Category))}
     for c in CATEGORIES:
         if c["slug"] not in have_cat:
