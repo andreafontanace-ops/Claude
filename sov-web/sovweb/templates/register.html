@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Prova gratis{% endblock %}
+{% block content %}
+<div class="narrow">
+<h1>Prova gratis per 14 giorni</h1>
+<p class="lede">Niente carta di credito. In due minuti vedi la prima classifica.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form class="form" method="post" action="/registrati">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label>Azienda <input type="text" name="company" value="{{ form.company or '' }}" required autocomplete="organization"></label>
+  <label>Il tuo nome <input type="text" name="name" value="{{ form.name or '' }}" autocomplete="name"></label>
+  <label>Email di lavoro <input type="email" name="email" value="{{ form.email or '' }}" required autocomplete="email"></label>
+  <label>Password <input type="password" name="password" required minlength="10" autocomplete="new-password"><span class="hint">Almeno 10 caratteri</span></label>
+  <button class="btn" type="submit">Crea l'account</button>
+  <p class="muted">Hai già un account? <a href="/accedi">Accedi</a></p>
+</form>
+</div>
+{% endblock %}

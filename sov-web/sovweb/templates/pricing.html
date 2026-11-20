@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Prezzi{% endblock %}
+{% block content %}
+<h1>Prezzi semplici</h1>
+<p class="lede">Paghi in base a quante categorie e quanti siti segui e a quanto spesso vuoi i dati aggiornati. Prezzi IVA esclusa.</p>
+<div class="plans">
+{% for p in plans.values() %}
+  <div class="card plan{% if p.slug == 'pro' %} featured{% endif %}">
+    {% if p.slug == 'pro' %}<span class="tag">Il più scelto</span>{% endif %}
+    <h3>{{ p.name }}</h3>
+    <div class="price">{% if p.price_month_eur is none %}Su misura{% elif p.price_month_eur == 0 %}Gratis{% else %}{{ p.price_month_eur }} €<small>/mese</small>{% endif %}</div>
+    <p class="muted">{{ p.blurb }}</p>
+    <ul>
+      <li>{{ p.categories }} {{ 'categoria' if p.categories == 1 else 'categorie' }}, {{ p.sites }} siti</li>
+      <li>Aggiornamento {{ p.frequency_label }}</li>
+      <li>{{ p.users }} {{ 'utente' if p.users == 1 else 'utenti' }}, storico {{ p.history_days }} giorni</li>
+      <li>Avvisi nella piattaforma e via email</li>
+      {% if p.export %}<li>Scarica in Excel, CSV e HTML</li>{% endif %}
+      {% if p.api %}<li>API e categorie su misura</li>{% endif %}
+    </ul>
+    {% if p.slug == 'enterprise' %}<a class="btn ghost" href="mailto:">Contattaci</a>{% else %}<a class="btn{% if p.slug != 'pro' %} ghost{% endif %}" href="/registrati">Inizia</a>{% endif %}
+  </div>
+{% endfor %}
+</div>
+{% endblock %}

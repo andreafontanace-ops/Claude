@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Panoramica{% endblock %}
+{% block content %}
+{% if expired %}<p class="banner">La prova gratuita è finita: i dati non si aggiornano più. <a href="/prezzi">Scegli un piano</a> per continuare.</p>{% endif %}
+<h1>Panoramica</h1>
+<p class="lede">{{ user.workspace.name }} · piano {{ plan.name }} · dati aggiornati {{ plan.frequency_label }}.</p>
+<div class="grid cards">
+{% for c in cards %}
+  <a class="card tile" href="/dashboard/{{ c.feed.id }}">
+    <p class="eyebrow">{{ c.feed.category.name }} · {{ c.feed.site.name }}</p>
+    {% if not c.run %}
+      <p class="big muted">In arrivo</p><p class="muted">La prima raccolta è in corso.</p>
+    {% elif c.mine %}
+      {% for m in c.mine[:2] %}
+      <p class="big">{{ m.sov_total | pct }}</p>
+      <p><b>{{ m.brand }}</b> · {% if m.rank %}{{ m.rank }}° posto{% else %}fuori classifica{% endif %}</p>
+      {% endfor %}
+      {% if c.leader and c.leader.brand not in c.mine | map(attribute='brand') | list %}<p class="muted">Primo: {{ c.leader.brand }} ({{ c.leader.sov_total | pct }})</p>{% endif %}
+    {% elif c.leader %}
+      <p class="big">{{ c.leader.sov_total | pct }}</p>
+      <p><b>{{ c.leader.brand }}</b> è primo</p>
+      <p class="muted">Indica i tuoi marchi per vederli qui.</p>
+    {% endif %}
+    {% if c.run %}<p class="muted small">Aggiornato {{ c.run.started_at | dt }}{% if c.run.source == 'demo' %} · dati dimostrativi{% endif %}</p>{% endif %}
+  </a>
+{% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Share of voice per l'e-commerce{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">Share of voice per l'e-commerce</p>
+  <h1>Quanto spazio occupa il tuo marchio quando i clienti cercano online?</h1>
+  <p class="lede">Vetrina guarda le ricerche su Amazon, sulle farmacie online e su Google Shopping, e ti dice in un colpo d'occhio chi si prende la visibilità: tu, i concorrenti, gli annunci.</p>
+  <p><a class="btn" href="/registrati">Prova gratis per 14 giorni</a> <a class="btn ghost" href="/prezzi">Vedi i prezzi</a></p>
+</section>
+<section class="steps">
+  <div class="step"><span>1</span><h3>Scegli cosa seguire</h3><p class="muted">Una categoria (es. ferro, magnesio) e i siti che ti interessano.</p></div>
+  <div class="step"><span>2</span><h3>Guarda la classifica</h3><p class="muted">Quota di visibilità di ogni marchio, organica e da annunci, con l'andamento nel tempo.</p></div>
+  <div class="step"><span>3</span><h3>Ricevi gli avvisi</h3><p class="muted">Ti scriviamo quando perdi quota o quando un concorrente ti supera.</p></div>
+</section>
+<h2>Categorie disponibili</h2>
+<div class="chips">{% for c in categories %}<span class="chip big">{{ c.name }}</span>{% endfor %}</div>
+<h2>Siti</h2>
+<div class="chips">{% for s in sites %}<span class="chip big">{{ s.name }}</span>{% endfor %}</div>
+{% endblock %}

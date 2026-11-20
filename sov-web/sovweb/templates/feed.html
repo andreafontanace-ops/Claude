@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ feed.category.name }} su {{ feed.site.name }}{% endblock %}
+{% block content %}
+{% if not standalone %}<p><a href="/dashboard">← Panoramica</a></p>{% endif %}
+<div class="head">
+  <div>
+    <p class="eyebrow">{{ feed.site.name }}</p>
+    <h1>{{ feed.category.name }}</h1>
+    {% if run %}<p class="muted">Dati del {{ run.started_at | dt }} · {{ run.keywords_scored }} ricerche analizzate{% if run.source == 'demo' %} · <b>dati dimostrativi</b>{% endif %}</p>{% endif %}
+  </div>
+  {% if run and not standalone %}
+  <div class="downloads">
+    {% if plan.export %}
+      <span class="muted">Scarica:</span>
+      <a class="btn ghost small" href="/dashboard/{{ feed.id }}/scarica/xlsx">Excel</a>
+      <a class="btn ghost small" href="/dashboard/{{ feed.id }}/scarica/csv?tabella=marchi">CSV</a>
+      <a class="btn ghost small" href="/dashboard/{{ feed.id }}/scarica/html">HTML</a>
+    {% else %}
+      <span class="muted">Lo scaricamento è incluso dal piano Base. <a href="/prezzi">Vedi i piani</a></span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if not run %}
+<p class="card">La prima raccolta per questa categoria è in corso. Torna tra qualche minuto.</p>
+{% else %}
+{% set ranked = brands | selectattr('rank') | list %}
+<div class="grid kpis">
+  {% for b in brands if b.brand.lower() in own %}
+  <div class="card kpi"><div class="l">{{ b.brand }}</div><div class="v">{{ b.sov_total | pct }}</div>
+    <div class="l">{% if b.rank %}{{ b.rank }}° posto su {{ ranked | length }}{% else %}fuori classifica{% endif %}{% if b.brand in prev_sov %} · {{ (b.sov_total - prev_sov[b.brand]) | pp }} dall'ultimo aggiornamento{% endif %}</div></div>
+  {% else %}
+  {% if ranked %}<div class="card kpi"><div class="l">Primo marchio</div><div class="v">{{ ranked[0].brand }}</div><div class="l">{{ ranked[0].sov_total | pct }} della visibilità</div></div>{% endif %}
+  {% endfor %}
+  <div class="card kpi"><div class="l">Spazio agli annunci</div><div class="v">{{ run.sponsored_slot_share | pct(0) }}</div><div class="l">dei risultati sono sponsorizzati</div></div>
+  <div class="card kpi"><div class="l">Marchi in classifica</div><div class="v">{{ ranked | length }}</div><div class="l">trovati nelle ricerche</div></div>
+</div>
+
+<h2>Andamento</h2>
+<p class="note">Share of voice dei primi 5 marchi{% if own %}, dei tuoi{% endif %}{% if competitors %} e dei concorrenti che segui{% endif %}. Passa sopra i punti per i valori.</p>
+<div class="card">{{ chart | safe }}</div>
+
+<h2>Classifica dei marchi</h2>
+<p class="note">Quota della visibilità nelle ricerche, pesando di più le prime posizioni. Blu = posizioni organiche, arancio = annunci.</p>
+<div class="scroll"><table>
+<thead><tr><th class="num">#</th><th>Marchio</th><th>Visibilità</th><th class="num">Totale</th><th class="num">Organica</th><th class="num">Annunci</th><th class="num">Nei primi 10</th><th class="num">Prodotti</th><th class="num">Variazione</th></tr></thead>
+<tbody>
+{% for b in brands %}
+  {% set is_mine = b.brand.lower() in own %}
+  <tr class="{% if is_mine %}mine{% endif %}{% if not b.rank %} unranked{% endif %}">
+    <td class="num muted">{{ b.rank or '' }}</td>
+    <td><b>{{ b.brand | label }}</b>{% if is_mine %}<span class="tag">tuo</span>{% elif b.brand.lower() in competitors %}<span class="tag">concorrente</span>{% endif %}</td>
+    <td>{% if b.rank %}<div class="bar" title="Organica {{ (b.sov_total * (1 - b.ads_share)) | pct }} · annunci {{ (b.sov_total * b.ads_share) | pct }}"><span class="org" style="width:{{ (b.sov_total * (1 - b.ads_share) / max_sov * 100) | round(2) }}%"></span><span class="paid" style="width:{{ (b.sov_total * b.ads_share / max_sov * 100) | round(2) }}%"></span></div>{% endif %}</td>
+    <td class="num"><b>{{ b.sov_total | pct }}</b></td>
+    <td class="num">{{ b.sov_organic | pct }}</td>
+    <td class="num">{{ b.sov_paid | pct }}</td>
+    <td class="num">{{ b.shelf_top10 | pct }}</td>
+    <td class="num">{{ b.n_products }}</td>
+    <td class="num muted">{% if b.brand in prev_sov %}{{ (b.sov_total - prev_sov[b.brand]) | pp }}{% elif prev_sov %}nuovo{% endif %}</td>
+  </tr>
+{% endfor %}
+</tbody></table></div>
+
+<h2>Prodotti più visibili</h2>
+<div class="scroll"><table>
+<thead><tr><th class="num">#</th><th>Prodotto</th><th>Formulazione</th><th class="num">Visibilità</th><th class="num">Miglior posizione</th><th class="num">Prezzo</th><th class="num">Valutazione</th></tr></thead>
+<tbody>
+{% for p in products %}
+  <tr class="{% if p.brand.lower() in own %}mine{% endif %}">
+    <td class="num muted">{{ p.rank }}</td>
+    <td>{{ p.title[:90] }}{% if p.title | length > 90 %}…{% endif %}<div class="muted small">{{ p.brand }}</div></td>
+    <td>{{ p.form or '–' }}{% if p.variant %}<div class="muted small">{{ p.variant }}</div>{% endif %}</td>
+    <td class="num"><b>{{ p.sov_total | pct(2) }}</b></td>
+    <td class="num">{{ p.best_organic_rank or '–' }}</td>
+    <td class="num">{% if p.price %}{{ '%.2f' | format(p.price) | replace('.', ',') }} €{% else %}–{% endif %}</td>
+    <td class="num">{% if p.rating %}{{ p.rating | num }}★ <span class="muted">({{ p.reviews or 0 }})</span>{% else %}–{% endif %}</td>
+  </tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}

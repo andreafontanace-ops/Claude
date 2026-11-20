@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sov-web"
+version = "0.1.0"
+description = "Servizio web di share of voice per l'e-commerce (dashboard multi-categoria e multi-sito)"
+requires-python = ">=3.11"
+# il calcolo della share of voice viene dal pacchetto amazon-sov (cartella ../amazon-sov)
+dependencies = [
+    "amazon-sov",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "sqlalchemy>=2.0",
+    "jinja2>=3.1",
+    "itsdangerous>=2.1",
+    "python-multipart>=0.0.9",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+postgres = ["psycopg[binary]>=3.1"]
+
+[tool.setuptools]
+packages = ["sovweb"]
+
+[tool.setuptools.package-data]
+sovweb = ["templates/*.html", "static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

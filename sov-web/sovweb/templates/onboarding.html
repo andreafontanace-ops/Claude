@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Cosa vuoi seguire{% endblock %}
+{% block content %}
+<p class="eyebrow">Passo 1 di 2</p>
+<h1>Cosa vuoi seguire?</h1>
+<p class="lede">Scegli le categorie di prodotto e i siti. Il piano {{ plan.name }} comprende <b>{{ plan.categories }} {{ 'categoria' if plan.categories == 1 else 'categorie' }}</b> e <b>{{ plan.sites }} siti</b>, aggiornati {{ plan.frequency_label }}.</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/benvenuto">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>Categorie</h2>
+  <div class="grid">
+  {% for c in categories %}
+    <label class="check"><input type="checkbox" name="category" value="{{ c.id }}" {% if c.id in chosen_cats %}checked{% endif %}>
+      <span><b>{{ c.name }}</b><br><span class="muted">{{ c.description }}</span></span></label>
+  {% endfor %}
+  </div>
+  <h2>Siti</h2>
+  <div class="grid">
+  {% for s in sites %}
+    <label class="check"><input type="checkbox" name="site" value="{{ s.id }}" {% if s.id in chosen_sites %}checked{% endif %}>
+      <span><b>{{ s.name }}</b><br><span class="muted">{{ {'marketplace': 'Marketplace', 'farmacia': 'Farmacia online', 'comparatore': 'Comparatore prezzi'}[s.kind] }}</span></span></label>
+  {% endfor %}
+  </div>
+  <p class="actions"><button class="btn" type="submit">Continua</button></p>
+</form>
+{% endblock %}

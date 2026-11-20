@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}I tuoi marchi{% endblock %}
+{% block content %}
+<p class="eyebrow">Passo 2 di 2 · facoltativo</p>
+<h1>Quali marchi vuoi evidenziare?</h1>
+<p class="lede">La classifica comprende già <b>tutti</b> i marchi che compaiono nelle ricerche. Qui puoi indicare i tuoi, per vederli in evidenza e ricevere gli avvisi, e se vuoi qualche concorrente da tenere d'occhio. Puoi saltare e farlo più tardi.</p>
+<form method="post" action="/benvenuto/marchi">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% for c in categories %}
+  <section class="card stack">
+    <h2>{{ c.name }}</h2>
+    <label>I tuoi marchi <span class="muted">(facoltativo, separati da virgola)</span>
+      <input type="text" name="own_{{ c.id }}" id="own_{{ c.id }}" value="{{ current[c.id]['own'] | join(', ') }}"></label>
+    <label>Concorrenti da tenere d'occhio <span class="muted">(facoltativo)</span>
+      <input type="text" name="competitor_{{ c.id }}" id="competitor_{{ c.id }}" value="{{ current[c.id]['competitor'] | join(', ') }}"></label>
+    {% if suggestions[c.id] %}
+    <div><span class="muted">Marchi più visibili adesso, tocca per aggiungerli:</span>
+      <div class="chips">{% for b in suggestions[c.id] %}<button type="button" class="chip" data-target="competitor_{{ c.id }}" data-own="own_{{ c.id }}">{{ b }}</button>{% endfor %}</div>
+      <p class="hint">Un tocco lo aggiunge ai concorrenti, due tocchi ai tuoi marchi.</p>
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+  <p class="actions"><button class="btn" type="submit">Vai alla dashboard</button> <button class="btn ghost" type="submit" name="skip" value="1">Salta per ora</button></p>
+</form>
+<script>
+document.querySelectorAll(".chip[data-target]").forEach((chip) => {
+  let taps = 0, timer;
+  chip.addEventListener("click", () => {
+    taps += 1; clearTimeout(timer);
+    timer = setTimeout(() => {
+      const field = document.getElementById(taps > 1 ? chip.dataset.own : chip.dataset.target);
+      const names = field.value.split(",").map((s) => s.trim()).filter(Boolean);
+      if (!names.includes(chip.textContent)) names.push(chip.textContent);
+      field.value = names.join(", "); chip.classList.add("on"); taps = 0;
+    }, 250);
+  });
+});
+</script>
+{% endblock %}

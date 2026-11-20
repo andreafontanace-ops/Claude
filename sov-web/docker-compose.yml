@@ -1,0 +1,29 @@
+# Avvio: dalla cartella che contiene amazon-sov/ e sov-web/
+#   docker compose -f sov-web/docker-compose.yml --env-file sov-web/.env up -d --build
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: sov
+      POSTGRES_USER: sov
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+  web:
+    build: { context: .., dockerfile: sov-web/Dockerfile }
+    env_file: .env
+    environment:
+      SOV_DATABASE_URL: postgresql+psycopg://sov:${POSTGRES_PASSWORD}@db/sov
+    ports: ["127.0.0.1:8000:8000"]  # davanti va un proxy HTTPS (Caddy, Nginx o il bilanciatore del cloud)
+    depends_on: [db]
+    restart: unless-stopped
+  worker:
+    build: { context: .., dockerfile: sov-web/Dockerfile }
+    command: ["python", "-m", "sovweb.worker"]
+    env_file: .env
+    environment:
+      SOV_DATABASE_URL: postgresql+psycopg://sov:${POSTGRES_PASSWORD}@db/sov
+    depends_on: [db]
+    restart: unless-stopped
+volumes:
+  pgdata:
