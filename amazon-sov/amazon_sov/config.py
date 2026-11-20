@@ -50,6 +50,16 @@ DEFAULT_WEB_EXCLUDE = [
 
 
 @dataclass
+class PlatformConfig:
+    """Piattaforma web (sov-web) a cui mandare i risultati. Il token sta nella variabile AMAZON_SOV_TOKEN."""
+
+    url: str = ""
+    category: str = "ferro"
+    site: str = "amazon-it"
+    push_after_crawl: bool = False
+
+
+@dataclass
 class Config:
     domain: str
     keywords: list[Keyword]
@@ -66,6 +76,7 @@ class Config:
     forms: dict[str, list[str]] = field(default_factory=lambda: dict(DEFAULT_FORMS))
     iron_types: dict[str, list[str]] = field(default_factory=lambda: dict(DEFAULT_IRON_TYPES))
     websearch: WebSearchConfig = field(default_factory=WebSearchConfig)
+    platform: PlatformConfig = field(default_factory=PlatformConfig)
 
     @property
     def keyword_weights(self) -> dict[str, float]:
@@ -175,6 +186,12 @@ def config_from_dict(raw: dict) -> Config:
         forms=_rules(raw.get("formulation", {}).get("forms"), DEFAULT_FORMS),
         iron_types=_rules(raw.get("formulation", {}).get("iron_types"), DEFAULT_IRON_TYPES),
         websearch=_websearch(raw.get("websearch", {})),
+        platform=PlatformConfig(
+            url=str(raw.get("platform", {}).get("url", "")).rstrip("/"),
+            category=str(raw.get("platform", {}).get("category", "ferro")),
+            site=str(raw.get("platform", {}).get("site", "amazon-it")),
+            push_after_crawl=bool(raw.get("platform", {}).get("push_after_crawl", False)),
+        ),
     )
 
 

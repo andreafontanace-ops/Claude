@@ -6,7 +6,7 @@ import csv
 import io
 import re
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from amazon_sov.parser import SerpItem
@@ -383,7 +383,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 placement="sponsored" if it.get("sponsored") else "organic", price=it.get("price"),
                 rating=it.get("rating"), reviews=it.get("reviews"),
             ) for i, it in enumerate(items, 1)]
-        run = ingest_run(session, feed, results)
+        collected_at = None
+        if data.get("collected_at"):
+            try:
+                collected_at = datetime.fromisoformat(str(data["collected_at"]))
+                if collected_at.tzinfo is not None:  # la piattaforma ragiona in UTC
+                    collected_at = collected_at.astimezone(timezone.utc).replace(tzinfo=None)
+            except ValueError:
+                raise HTTPException(status_code=422, detail="collected_at non valido (formato ISO 8601)")
+        if not results or not any(results.values()):
+            raise HTTPException(status_code=422, detail="Nessun risultato da caricare")
+        run = ingest_run(session, feed, results, collected_at)
         return JSONResponse({"run_id": run.id, "status": run.status, "keywords": run.keywords_scored})
 
     return app

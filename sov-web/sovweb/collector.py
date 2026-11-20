@@ -143,6 +143,8 @@ def _save_run(session: Session, run: Run, cfg: Config, per_keyword: dict[str, li
 
 def run_due(session: Session, provider: Provider, now: datetime | None = None, limit: int = 20) -> int:
     """Esegue i feed scaduti che hanno almeno un cliente. Con Postgres più worker non si pestano i piedi."""
+    if provider.name == "none":
+        return 0  # nessuna fonte automatica: i dati arrivano solo dall'API di caricamento
     now = now or utcnow()
     feeds = session.scalars(
         select(Feed)

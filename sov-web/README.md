@@ -29,6 +29,10 @@ dati in Excel, CSV e HTML.
 - `none`: nessuna raccolta automatica; i dati arrivano dall'API `POST /api/ingest`
   (token `SOV_INGEST_TOKEN`), per esempio dal crawler amazon-sov eseguito in locale.
 
+Con il crawler amazon-sov il collegamento è già pronto: `amazon-sov push` (vedi il README di
+amazon-sov). Per vedere solo dati veri avvia la piattaforma con `SOV_DATA_PROVIDER=none`, altrimenti i
+dati dimostrativi si mescolano a quelli caricati.
+
 Per la raccolta automatica in produzione serve un fornitore di dati SERP con licenza: si aggiunge in
 `sovweb/providers.py` implementando `Provider.fetch` (restituisce i risultati di una keyword nell'ordine
 del sito). Il resto (calcolo, storico, avvisi, dashboard) non cambia.

@@ -164,6 +164,13 @@ def cmd_crawl(args, cfg: Config) -> None:
     except KeyboardInterrupt:
         print("\nInterrotto: calcolo la SoV su quanto già scaricato.")
     store.finish_run(run_id)
+    if store.rows(run_id) and cfg.platform.push_after_crawl:
+        from .platform import PushError
+
+        try:
+            push_run(store, cfg, run_id)
+        except PushError as exc:
+            print(f"Invio alla piattaforma non riuscito: {exc}\nPuoi riprovare con `amazon-sov push`.")
     if store.rows(run_id):
         make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
     else:
@@ -436,6 +443,33 @@ def cmd_report(args, cfg: Config) -> None:
     make_report(store, cfg, run_id, Path(args.out), args.denominator, args.top, _should_open(args))
 
 
+def push_run(store: Store, cfg: Config, run_id: str, url: str | None = None, token: str | None = None) -> dict:
+    from .platform import build_payload, push, token_from_env
+
+    resolver, relevance = _filters(cfg, store)
+    rows = reclassify(store.rows(run_id), resolver, relevance)
+    info = store.run_info(run_id) or {}
+    payload = build_payload(rows, cfg.platform.category, cfg.platform.site, info.get("started_at"))
+    n = sum(len(v) for v in payload["results"].values())
+    print(f"Invio {n} risultati di {len(payload['results'])} keyword alla piattaforma…")
+    answer = push(url or cfg.platform.url, token or token_from_env(), payload)
+    print(f"Fatto: esecuzione {answer.get('run_id')} sulla piattaforma ({answer.get('status')}).")
+    return answer
+
+
+def cmd_push(args, cfg: Config) -> None:
+    from .platform import PushError
+
+    store = Store(Path(args.data_dir) / "sov.sqlite")
+    run_id = args.run or store.latest_run_id()
+    if not run_id:
+        raise SystemExit("Nessuna esecuzione nell'archivio: lancia prima `crawl`.")
+    try:
+        push_run(store, cfg, run_id, args.url)
+    except PushError as exc:
+        raise SystemExit(str(exc))
+
+
 def cmd_runs(args, cfg: Config) -> None:
     store = Store(Path(args.data_dir) / "sov.sqlite")
     runs = store.runs()
@@ -599,6 +633,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("file", nargs="?")
     p.add_argument("--html", action="store_true", help="aggiunge l'HTML ridotto dei risultati senza marchio, per la diagnosi")
     p.set_defaults(func=cmd_inspect)
+
+    p = sub.add_parser("push", help="manda i risultati di un'esecuzione alla piattaforma web (default: l'ultima)")
+    p.add_argument("--run", help="esecuzione da mandare")
+    p.add_argument("--url", help="indirizzo della piattaforma (default: [platform] url in config.toml)")
+    p.set_defaults(func=cmd_push)
 
     p = sub.add_parser("runs", help="elenca le esecuzioni in archivio")
     p.set_defaults(func=cmd_runs)

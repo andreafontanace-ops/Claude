@@ -126,6 +126,23 @@ Scarica da GitHub l'ultima versione del programma e la installa al posto di quel
 report restano dove sono; se le impostazioni cambiano, le tue precedenti vengono salvate in
 `config.backup.toml`.
 
+## Collegamento alla piattaforma web (sov-web)
+
+Il crawler può mandare i risultati alla piattaforma, che li mostra nella dashboard con storico e avvisi.
+In `config.toml`, sezione `[platform]`: indirizzo, categoria e sito sulla piattaforma, e
+`push_after_crawl = true` per mandarli da solo alla fine di ogni crawl. Il token si mette nella
+variabile d'ambiente `AMAZON_SOV_TOKEN` (deve coincidere con `SOV_INGEST_TOKEN` della piattaforma).
+
+```bash
+export AMAZON_SOV_TOKEN="il-token"
+```
+
+```bash
+amazon-sov push
+```
+
+Manda l'ultima esecuzione (oppure `--run ID`), con i marchi già corretti con le pagine prodotto.
+
 ## Come si calcola la share of voice
 
 Per ogni keyword ogni risultato riceve un **peso per posizione** che scende man mano che si va giù
